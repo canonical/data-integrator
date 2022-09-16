@@ -1,0 +1,14 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: database-integrator
+description: |
+  Data platform libs application charm used for getting database credentials for non-juju applications.
+summary: |
+  Data platform libs application charm used for getting database credentials for non-juju applications.
+requires:
+  mysql:
+    interface: mysql_client
+  postgresql:
+    interface: postgresql_client
+  mongodb:
+    interface: mongodb_client

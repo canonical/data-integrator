@@ -1,0 +1,19 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+type: "charm"
+parts:
+  charm:
+    build-packages:
+      - build-essential
+      - curl
+    override-build: |
+       craftctl default
+       curl --create-dirs -o /root/prime/lib/charms/data_platform_libs/v0/database_requires.py https://raw.githubusercontent.com/canonical/data-platform-libs/main/lib/charms/data_platform_libs/v0/database_requires.py
+bases:
+  - build-on:
+      - name: "ubuntu"
+        channel: "20.04"
+    run-on:
+      - name: "ubuntu"
+        channel: "20.04"
