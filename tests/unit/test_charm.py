@@ -92,9 +92,11 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_get_credentials_action(action_event)
         action_event.set_results.assert_called_once_with(
             {
-                "0-username": "test-username",
-                "0-password": "test-password",
-                "0-database": "test-database",
                 "ok": True,
+                "mysql": {
+                    "username": "test-username",
+                    "password": "test-password",
+                    "database": "test-database",
+                },
             }
         )

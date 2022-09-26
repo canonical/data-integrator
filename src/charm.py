@@ -76,13 +76,13 @@ class IntegratorCharm(CharmBase):
             event.set_results({"ok": False})
             return
 
-        result = {
-            f"{relation_id}-{k}": v
-            for db in [mysql, postgresql, mongodb]
-            for relation_id, data in db.items()
-            for k, v in data.items()
-        }
-        result["ok"] = True
+        result = {"ok": True}
+        if mysql:
+            result["mysql"] = list(mysql.values())[0]
+        if postgresql:
+            result["postgresql"] = list(postgresql.values())[0]
+        if mongodb:
+            result["mongodb"] = list(mongodb.values())[0]
         event.set_results(result)
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
