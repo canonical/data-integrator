@@ -2,9 +2,13 @@
 # See LICENSE file for licensing details.
 name: database-integrator
 description: |
-  Data platform libs application charm used for getting database credentials for non-juju applications.
+  Integrator charm for getting database credentials for non-native applications.
 summary: |
-  Data platform libs application charm used for getting database credentials for non-juju applications.
+  Integrator charm for getting database credentials for non-native applications.
+  Not all applications implement a database relation interface but allow setting
+  credentials via config. Also, some of the applications are run outside of juju.
+  This integrator charm allows receiving credentials which can be passed into
+  application config directly without implementing juju-native relation.
 requires:
   mysql:
     interface: mysql_client
