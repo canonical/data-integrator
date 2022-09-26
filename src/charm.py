@@ -19,7 +19,6 @@ from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
 logger = logging.getLogger(__name__)
-PEER = "database-peers"
 
 
 class IntegratorCharm(CharmBase):
