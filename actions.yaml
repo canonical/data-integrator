@@ -1,0 +1,2 @@
+get-credentials:
+  description: Action for fetching all available credentials from relations.

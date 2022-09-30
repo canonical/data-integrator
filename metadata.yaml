@@ -1,0 +1,21 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: database-integrator
+description: |
+  Integrator charm for getting database credentials for non-native applications.
+summary: |
+  Integrator charm for getting database credentials for non-native applications.
+  Not all applications implement a database relation interface but allow setting
+  credentials via config. Also, some of the applications are run outside of juju.
+  This integrator charm allows receiving credentials which can be passed into
+  application config directly without implementing juju-native relation.
+requires:
+  mysql:
+    interface: mysql_client
+    limit: 1
+  postgresql:
+    interface: postgresql_client
+    limit: 1
+  mongodb:
+    interface: mongodb_client
+    limit: 1
