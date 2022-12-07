@@ -1,6 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: database-integrator
+name: data-integrator
 description: |
   Integrator charm for getting database credentials for non-native applications.
 summary: |
