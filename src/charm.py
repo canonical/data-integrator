@@ -56,9 +56,12 @@ class IntegratorCharm(CharmBase):
         elif event:
             self.unit.status = ActiveStatus(f"database: {self.database}")
 
-        self.mysql.database = self.database
-        self.postgresql.database = self.database
-        self.mongodb.database = self.database
+        for rel in self.mysql.relations:
+            self.mysql._update_relation_data(rel.id, {"database": self.database})
+        for rel in self.postgresql.relations:
+            self.postgresql._update_relation_data(rel.id, {"database": self.database})
+        for rel in self.mongodb.relations:
+            self.mongodb._update_relation_data(rel.id, {"database": self.database})
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
