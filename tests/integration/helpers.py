@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple
 from connector import MysqlConnector
 from juju.unit import Unit
 
-from tests.integration.constants import DATABASE_NAME, POSTGRESQL
+from tests.integration.constants import DATABASE_NAME, MYSQL, POSTGRESQL
 
 
 async def fetch_action_get_credentials(unit: Unit) -> Dict:
@@ -109,3 +109,14 @@ def read_data_mysql(cursor, user: str, database: str) -> List[Tuple]:
     """Read data from the specified database."""
     cursor.execute(f"SELECT * FROM app_data where username = '{user}'")
     return cursor.fetchall()
+
+
+def check_my_sql_data(rows: List[Tuple], credentials: Dict):
+    """Check if the correspondace of mysql table values."""
+    first_row = rows[0]
+    # username, password, endpoints, version, ro-endpoints
+    assert first_row[1] == credentials[MYSQL]["username"]
+    assert first_row[2] == credentials[MYSQL]["password"]
+    assert first_row[3] == credentials[MYSQL]["endpoints"]
+    assert first_row[4] == credentials[MYSQL]["version"]
+    assert first_row[5] == credentials[MYSQL]["read-only-endpoints"]

@@ -9,7 +9,7 @@ import mysql.connector
 class MysqlConnector:
     """Context manager for mysql connector."""
 
-    def __init__(self, config: dict, commit: bool = True):
+    def __init__(self, config: dict):
         """Initialize the context manager.
 
         Args:
@@ -24,7 +24,6 @@ class MysqlConnector:
             commit: Commit the transaction after the context is exited.
         """
         self.config = config
-        self.commit = commit
 
     def __enter__(self):
         """Create the connection and return a cursor."""
@@ -34,7 +33,6 @@ class MysqlConnector:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Handle transaction and connection close."""
-        if self.commit:
-            self.connection.commit()
+        self.connection.commit()
         self.cursor.close()
         self.connection.close()

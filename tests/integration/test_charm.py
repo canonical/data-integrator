@@ -20,6 +20,7 @@ from tests.integration.constants import (
 )
 from tests.integration.helpers import (
     build_postgresql_connection_string,
+    check_my_sql_data,
     create_table_mysql,
     fetch_action_get_credentials,
     insert_data_mysql,
@@ -91,14 +92,11 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
             credentials[MYSQL]["read-only-endpoints"],
         )
 
+    with MysqlConnector(config) as cursor:
+
         rows = read_data_mysql(cursor, credentials[MYSQL]["username"])
-        first_row = rows[0]
-        # username, password, endpoints, version, ro-endpoints
-        assert first_row[1] == credentials[MYSQL]["username"]
-        assert first_row[2] == credentials[MYSQL]["password"]
-        assert first_row[3] == credentials[MYSQL]["endpoints"]
-        assert first_row[4] == credentials[MYSQL]["version"]
-        assert first_row[5] == credentials[MYSQL]["read-only-endpoints"]
+        # check that values are written in the table
+        check_my_sql_data(rows, credentials)
 
     #  remove relation and test connection again
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
@@ -121,16 +119,11 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         "database": DATABASE_NAME,
         "raise_on_warnings": False,
     }
-
+    # test connection with new credentials and check the previously committed data are present.
     with MysqlConnector(new_config) as cursor:
         rows = read_data_mysql(cursor, credentials[MYSQL]["username"])
-        first_row = rows[0]
-        # username, password, endpoints, version, ro-endpoints
-        assert first_row[1] == credentials[MYSQL]["username"]
-        assert first_row[2] == credentials[MYSQL]["password"]
-        assert first_row[3] == credentials[MYSQL]["endpoints"]
-        assert first_row[4] == credentials[MYSQL]["version"]
-        assert first_row[5] == credentials[MYSQL]["read-only-endpoints"]
+        # check that values are written in the table
+        check_my_sql_data(rows, credentials)
 
 
 @pytest.mark.skip  # skipping as we can't reconnect to same database (https://github.com/canonical/postgresql-k8s-operator/issues/64)
