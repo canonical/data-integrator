@@ -2,7 +2,11 @@
 # See LICENSE file for licensing details.
 
 options:
-  database:
+  database-name:
     type: string
     default:
     description: database name
+  topic-name:
+    type: string
+    default: string
+    description: topic name

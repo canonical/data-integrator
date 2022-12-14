@@ -23,7 +23,7 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_action_failures(self):
-        self.harness.update_config({"database": ""})
+        self.harness.update_config({"database-name": ""})
         action_event = Mock()
         self.harness.charm._on_get_credentials_action(action_event)
 
@@ -32,7 +32,7 @@ class TestCharm(unittest.TestCase):
             [("The database name is not specified in the config.",)],
         )
 
-        self.harness.update_config({"database": "foo"})
+        self.harness.update_config({"database-name": "foo"})
         action_event = Mock()
         self.harness.charm._on_get_credentials_action(action_event)
 
@@ -42,28 +42,28 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_config_changed(self):
-        self.harness.update_config({"database": "foo"})
+        self.harness.update_config({"database-name": "foo"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(self.harness.model.unit.status, ActiveStatus("database: foo"))
-        self.assertEqual(self.harness.charm.config["database"], "foo")
+        self.assertEqual(self.harness.charm.config["database-name"], "foo")
         self.assertEqual(self.harness.charm.mysql.database, "foo")
         self.assertEqual(self.harness.charm.postgresql.database, "foo")
         self.assertEqual(self.harness.charm.mongodb.database, "foo")
 
-        self.harness.update_config({"database": ""})
+        self.harness.update_config({"database-name": ""})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status, BlockedStatus("The database name is not specified.")
         )
-        self.assertEqual(self.harness.charm.config["database"], "")
+        self.assertEqual(self.harness.charm.config["database-name"], "")
         self.assertEqual(self.harness.charm.mysql.database, "")
         self.assertEqual(self.harness.charm.postgresql.database, "")
         self.assertEqual(self.harness.charm.mongodb.database, "")
 
-        self.harness.update_config({"database": "bar"})
+        self.harness.update_config({"database-name": "bar"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(self.harness.model.unit.status, ActiveStatus("database: bar"))
-        self.assertEqual(self.harness.charm.config["database"], "bar")
+        self.assertEqual(self.harness.charm.config["database-name"], "bar")
         self.assertEqual(self.harness.charm.mysql.database, "bar")
         self.assertEqual(self.harness.charm.postgresql.database, "bar")
         self.assertEqual(self.harness.charm.mongodb.database, "bar")
@@ -71,7 +71,7 @@ class TestCharm(unittest.TestCase):
     def test_relation_created(self):
         """Asserts on_database_created is called when the credentials are set in the relation."""
         # Set database
-        self.harness.update_config({"database": "test-database"})
+        self.harness.update_config({"database-name": "test-database"})
         self.harness.charm._on_config_changed(Mock())
 
         self.rel_id = self.harness.add_relation("mysql", "database")

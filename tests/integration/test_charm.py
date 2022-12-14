@@ -43,7 +43,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     # config database name
 
-    config = {"database": DATABASE_NAME}
+    config = {"database-name": DATABASE_NAME}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # test the active/waiting status for relation
