@@ -4,6 +4,8 @@
 
 
 import mysql.connector
+import psycopg2
+from pymongo import MongoClient
 
 
 class MysqlConnector:
@@ -21,7 +23,6 @@ class MysqlConnector:
                     "database": database,
                     "raise_on_warnings": False,
                 }
-            commit: Commit the transaction after the context is exited.
         """
         self.config = config
 
@@ -35,4 +36,56 @@ class MysqlConnector:
         """Handle transaction and connection close."""
         self.connection.commit()
         self.cursor.close()
+        self.connection.close()
+
+
+class PostgreSQLConnector:
+    """Context manager for PostrgreSQL connector."""
+
+    def __init__(self, config: str):
+        """Initialize the context manager.
+
+        Args:
+            config: Connection string for the postgresql connector
+        """
+        self.config = config
+
+    def __enter__(self):
+        """Create the connection and return a cursor."""
+        self.connection = psycopg2.connect(self.config)
+        self.connection.autocommit = True
+        self.cursor = self.connection.cursor()
+        return self.cursor
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Handle connection close."""
+        self.cursor.close()
+        self.connection.close()
+
+
+class MongoDBConnector:
+    """Context manager for PostrgreSQL connector."""
+
+    def __init__(self, config: str):
+        """Initialize the context manager.
+
+        Args:
+            config: Configuration uri for the mongodb connector
+        """
+        self.config = config
+
+    def __enter__(self):
+        """Create the connection and return a connection."""
+        self.connection = MongoClient(
+            self.config,
+            directConnection=False,
+            connect=False,
+            serverSelectionTimeoutMS=1000,
+            connectTimeoutMS=2000,
+        )
+
+        return self.connection
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Handle connection close."""
         self.connection.close()
