@@ -10,7 +10,7 @@ of the libraries in this repository.
 
 import logging
 
-from charms.data_platform_libs.v0.database_requires import (
+from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseRequires,
 )
@@ -59,6 +59,13 @@ class IntegratorCharm(CharmBase):
         self.mysql.database = self.database
         self.postgresql.database = self.database
         self.mongodb.database = self.database
+
+        for rel in self.mysql.relations:
+            self.mysql._update_relation_data(rel.id, {"database": self.database})
+        for rel in self.postgresql.relations:
+            self.postgresql._update_relation_data(rel.id, {"database": self.database})
+        for rel in self.mongodb.relations:
+            self.mongodb._update_relation_data(rel.id, {"database": self.database})
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""

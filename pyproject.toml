@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 [tool.poetry]
-name = "database-integrator"
+name = "data-integrator"
 version = "0.1.0"
 description = "An integrator charm for handling database credentials"
 authors = [
@@ -27,6 +27,10 @@ flake8-builtins = "^1.5.3"
 pep8-naming = "^0.13.2"
 codespell = "^2.2.1"
 pytest-operator = "^0.22.0"
+mysql-connector-python = "^8.0.31"
+psycopg2-binary = "^2.9.5"
+pymongo = "^4.2.0"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
