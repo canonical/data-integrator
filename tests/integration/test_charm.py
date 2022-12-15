@@ -5,14 +5,12 @@
 import asyncio
 import logging
 
+import psycopg2
 import pytest
+from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.connector import (
-    MongoDBConnector,
-    MysqlConnector,
-    PostgreSQLConnector,
-)
+from tests.integration.connector import MysqlConnector
 from tests.integration.constants import (
     DATA_INTEGRATOR,
     DATABASE_NAME,
@@ -151,9 +149,10 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     version = credentials[POSTGRESQL]["version"]
 
     # test connection for PostgreSQL with retrieved credentials
-    with PostgreSQLConnector(connection_string) as cursor:
+    with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
         # Check that it's possible to write and read data from the database that
         # was created for the application.
+        connection.autocommit = True
         cursor.execute(f"DROP TABLE IF EXISTS {DATABASE_NAME};")
         cursor.execute(f"CREATE TABLE {DATABASE_NAME}(data TEXT);")
         cursor.execute(f"INSERT INTO {DATABASE_NAME}(data) VALUES('some data');")
@@ -185,8 +184,8 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     # check that new credentials are provided
     assert new_connection_string != connection_string
 
-    # Connect to the database using different credentials.
-    with PostgreSQLConnector(new_connection_string) as cursor:
+    # Connect to the database using new credentials.
+    with psycopg2.connect(new_connection_string) as connection, connection.cursor() as cursor:
         # Read data from previously created database.
         cursor.execute(f"SELECT data FROM {DATABASE_NAME};")
         data = cursor.fetchone()
@@ -213,22 +212,31 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
 
     connection_string = credentials[MONGODB]["uris"]
 
-    with MongoDBConnector(connection_string) as client:
-        # test some operations
-        db = client[DATABASE_NAME]
-        test_collection = db["test_collection"]
-        ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
-        test_collection.insert_one(ubuntu)
+    client = MongoClient(
+        connection_string,
+        directConnection=False,
+        connect=False,
+        serverSelectionTimeoutMS=1000,
+        connectTimeoutMS=2000,
+    )
 
-        query = test_collection.find({}, {"release_name": 1})
-        assert query[0]["release_name"] == "Focal Fossa"
+    # test some operations
+    db = client[DATABASE_NAME]
+    test_collection = db["test_collection"]
+    ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
+    test_collection.insert_one(ubuntu)
 
-        ubuntu_version = {"version": 20.04}
-        ubuntu_name_updated = {"$set": {"release_name": "Fancy Fossa"}}
-        test_collection.update_one(ubuntu_version, ubuntu_name_updated)
+    query = test_collection.find({}, {"release_name": 1})
+    assert query[0]["release_name"] == "Focal Fossa"
 
-        query = test_collection.find({}, {"release_name": 1})
-        assert query[0]["release_name"] == "Fancy Fossa"
+    ubuntu_version = {"version": 20.04}
+    ubuntu_name_updated = {"$set": {"release_name": "Fancy Fossa"}}
+    test_collection.update_one(ubuntu_version, ubuntu_name_updated)
+
+    query = test_collection.find({}, {"release_name": 1})
+    assert query[0]["release_name"] == "Fancy Fossa"
+
+    client.close()
 
     # drop relation and get new credential for the same collection
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
@@ -246,9 +254,27 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
 
     # test that different credentials are provided
     assert connection_string != new_connection_string
-    with MongoDBConnector(new_connection_string) as client:
-        # test collection accessibility
-        db = client[DATABASE_NAME]
-        test_collection = db["test_collection"]
-        query = test_collection.find({}, {"release_name": 1})
-        assert query[0]["release_name"] == "Fancy Fossa"
+
+    client = MongoClient(
+        connection_string,
+        directConnection=False,
+        connect=False,
+        serverSelectionTimeoutMS=1000,
+        connectTimeoutMS=2000,
+    )
+
+    client = MongoClient(
+        new_connection_string,
+        directConnection=False,
+        connect=False,
+        serverSelectionTimeoutMS=1000,
+        connectTimeoutMS=2000,
+    )
+
+    # test collection accessibility
+    db = client[DATABASE_NAME]
+    test_collection = db["test_collection"]
+    query = test_collection.find({}, {"release_name": 1})
+    assert query[0]["release_name"] == "Fancy Fossa"
+
+    client.close()
