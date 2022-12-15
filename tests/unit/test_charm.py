@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock
 
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import BlockedStatus
 from ops.testing import Harness
 
 from charm import IntegratorCharm
@@ -19,7 +19,8 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.start.emit()
         # Ensure we set an ActiveStatus with no message
         self.assertEqual(
-            self.harness.model.unit.status, BlockedStatus("The database name or topic name is not specified.")
+            self.harness.model.unit.status,
+            BlockedStatus("The database name or topic name is not specified."),
         )
 
     def test_action_failures(self):
