@@ -9,6 +9,11 @@ summary: |
   credentials via config. Also, some of the applications are run outside of juju.
   This integrator charm allows receiving credentials which can be passed into
   application config directly without implementing juju-native relation.
+
+peers:
+  data-integrator-peers:
+    interface: data-integrator-peers
+
 requires:
   mysql:
     interface: mysql_client

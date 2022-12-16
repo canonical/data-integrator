@@ -9,7 +9,7 @@ of the libraries in this repository.
 """
 
 import logging
-from typing import Dict
+from typing import Dict, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -19,11 +19,12 @@ from charms.data_platform_libs.v0.data_interfaces import (
 )
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 logger = logging.getLogger(__name__)
 
 KAFKA_EXTRA_USER_ROLES = "consumer,producer"
+PEER = "data-integrator-peers"
 
 
 class IntegratorCharm(CharmBase):
@@ -32,12 +33,7 @@ class IntegratorCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.database = self.model.config.get("database-name", "")
-        self.topic = self.model.config.get("topic-name", "")
-        self.extra_user_roles = self.model.config.get("extra-user-roles", "")
-
         self.framework.observe(self.on.get_credentials_action, self._on_get_credentials_action)
-        self.framework.observe(self.on.start, self._on_config_changed)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
         # MySQL
@@ -48,74 +44,67 @@ class IntegratorCharm(CharmBase):
             extra_user_roles=self.extra_user_roles,
         )
         self.framework.observe(self.mysql.on.database_created, self._on_database_created)
-        self.framework.observe(self.on["mysql"].relation_broken, self._on_database_relation_broken)
 
         # PostgreSQL
         self.postgresql = DatabaseRequires(
             self, relation_name="postgresql", database_name=self.database
         )
         self.framework.observe(self.postgresql.on.database_created, self._on_database_created)
-        self.framework.observe(
-            self.on["postgresql"].relation_broken, self._on_database_relation_broken
-        )
 
         # MongoDB
         self.mongodb = DatabaseRequires(self, relation_name="mongodb", database_name=self.database)
         self.framework.observe(self.mongodb.on.database_created, self._on_database_created)
-        self.framework.observe(
-            self.on["mongodb"].relation_broken, self._on_database_relation_broken
-        )
 
         kafka_user_roles = KAFKA_EXTRA_USER_ROLES + self.extra_user_roles
         self.kafka = KafkaRequires(
             self, relation_name="kafka", topic=self.topic, extra_user_roles=kafka_user_roles
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
-        self.framework.observe(self.on["kafka"].relation_broken, self._on_database_relation_broken)
-
-        self._on_config_changed(None)
 
     def _on_config_changed(self, event):
-
-        # database
+        """Handle on config changed event."""
+        # Read new parameters
         new_database_name = self.model.config.get("database-name", "")
         new_topic = self.model.config.get("topic-name", "")
         new_extra_user_roles = self.model.config.get("extra-user-roles", "")
 
-        # database name not specified
-        if self.database == "":
-            self.database == new_database_name
+        # check the
+        if self.database == "" or not self.is_database_related:
+            self.set_secret("app", "database", new_database_name)
         elif self.database != new_database_name:
-            self.unit.status = ActiveStatus(
+            self.unit.status = WaitingStatus(
                 f"New database name specified: {new_database_name}. Please remove current relation/s and add a new relation!"
             )
+            self.set_secret("app", "database", new_database_name)
             return
 
-        if self.topic == "":
-            self.topic == new_topic
+        if self.topic == "" or not self.is_kafka_related:
+            self.set_secret("app", "topic", new_topic)
         elif self.topic != new_topic:
-            self.unit.status = ActiveStatus(
+            self.unit.status = WaitingStatus(
                 f"New database name specified: {new_database_name}. Please remove current relation/s and add a new relation!"
             )
+            self.set_secret("app", "topic", new_topic)
             return
 
         if self.extra_user_roles == "":
-            self.extra_user_roles == new_extra_user_roles
+            self.set_secret("app", "extra-user-roles", new_extra_user_roles)
         elif self.extra_user_roles != new_extra_user_roles:
-            self.unit.status = ActiveStatus(
+            self.unit.status = BlockedStatus(
                 f"New user-extra-roles specified: {new_extra_user_roles}. Please remove current relation/s and add a new relation!"
             )
+            self.set_secret("app", "extra-user-roles", new_extra_user_roles)
             return
 
         # kafka
-        self.mysql.database = self.database
-        self.postgresql.database = self.database
-        self.mongodb.database = self.database
-        self.kafka.topic = self.topic
+        self.mysql.database = self.get_secret("app", "database")
+        self.postgresql.database = self.get_secret("app", "database")
+        self.mongodb.database = self.get_secret("app", "database")
+        self.kafka.topic = self.get_secret("app", "topic")
 
         database_relation_data = {
-            "database": self.database,
-            "extra-user-roles": self.extra_user_roles,
+            "database": self.get_secret("app", "database"),
+            "extra-user-roles": self.get_secret("app", "extra-user-roles"),
         }
 
         self.update_database_relations(database_relation_data)
@@ -126,7 +115,8 @@ class IntegratorCharm(CharmBase):
                 rel.id,
                 {
                     "topic": self.topic,
-                    "extra-user-roles": KAFKA_EXTRA_USER_ROLES + self.extra_user_roles,
+                    "extra-user-roles": KAFKA_EXTRA_USER_ROLES
+                    + self.get_secret("app", "extra-user-roles"),
                 },
             )
 
@@ -150,7 +140,7 @@ class IntegratorCharm(CharmBase):
             if self.is_kafka_related:
                 self.unit.status = ActiveStatus(f"The topic name is specified: {self.topic}.")
             else:
-                self.unit.status = ActiveStatus(
+                self.unit.status = WaitingStatus(
                     f"The topic name is specified: {self.topic}. Add relation with Kakfa operator."
                 )
         elif self.topic == "":
@@ -159,7 +149,7 @@ class IntegratorCharm(CharmBase):
                     f"The database name is specified: {self.database}."
                 )
             else:
-                self.unit.status = ActiveStatus(
+                self.unit.status = WaitingStatus(
                     f"The database name is specified: {self.database}. Add relation with a database."
                 )
 
@@ -209,15 +199,24 @@ class IntegratorCharm(CharmBase):
         logger.info(f"Topic credentials are received: {event.username}")
         self.unit.status = ActiveStatus(f"Received credentials for topic: {self.topic}")
 
-    def _on_database_relation_broken(self, _):
-        """Event triggered when the database relation is removed."""
-        if not self.is_database_related:
-            self.database = ""
+    @property
+    def database(self):
+        """Return the configured database name."""
+        return self.get_secret("app", "database") if self.get_secret("app", "database") else ""
 
-    def _on_kafka_relation_broken(self, _):
-        """Event triggered when kafka relatoion is removed."""
-        if not self.is_database_related:
-            self.kafka = ""
+    @property
+    def topic(self):
+        """Return the configured topic name."""
+        return self.get_secret("app", "topic") if self.get_secret("app", "topic") else ""
+
+    @property
+    def extra_user_roles(self):
+        """Return the configured user-extra-roles parameter."""
+        return (
+            self.get_secret("app", "extra-user-roles")
+            if self.get_secret("app", "extra-user-roles")
+            else ""
+        )
 
     @property
     def is_database_related(self):
@@ -238,6 +237,48 @@ class IntegratorCharm(CharmBase):
             return True
         # no reltation with kafka
         return False
+
+    @property
+    def app_peer_data(self) -> Dict:
+        """Application peer relation data object."""
+        relation = self.model.get_relation(PEER)
+        if not relation:
+            return {}
+
+        return relation.data[self.app]
+
+    @property
+    def unit_peer_data(self) -> Dict:
+        """Peer relation data object."""
+        relation = self.model.get_relation(PEER)
+        if relation is None:
+            return {}
+
+        return relation.data[self.unit]
+
+    def get_secret(self, scope: str, key: str) -> Optional[str]:
+        """Get secret from the secret storage."""
+        if scope == "unit":
+            return self.unit_peer_data.get(key, None)
+        elif scope == "app":
+            return self.app_peer_data.get(key, None)
+        else:
+            raise RuntimeError("Unknown secret scope.")
+
+    def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
+        """Set secret in the secret storage."""
+        if scope == "unit":
+            if not value:
+                del self.unit_peer_data[key]
+                return
+            self.unit_peer_data.update({key: value})
+        elif scope == "app":
+            if not value:
+                del self.app_peer_data[key]
+                return
+            self.app_peer_data.update({key: value})
+        else:
+            raise RuntimeError("Unknown secret scope.")
 
 
 if __name__ == "__main__":
