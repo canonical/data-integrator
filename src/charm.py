@@ -94,15 +94,14 @@ class IntegratorCharm(CharmBase):
             self.set_secret("app", "extra-user-roles", new_extra_user_roles)
             return
 
-        # kafka
-        self.mysql.database = self.get_secret("app", "database")
-        self.postgresql.database = self.get_secret("app", "database")
-        self.mongodb.database = self.get_secret("app", "database")
-        self.kafka.topic = self.get_secret("app", "topic")
+        self.mysql.database = self.database
+        self.postgresql.database = self.database
+        self.mongodb.database = self.database
+        self.kafka.topic = self.topic
 
         database_relation_data = {
-            "database": self.get_secret("app", "database"),
-            "extra-user-roles": self.get_secret("app", "extra-user-roles"),
+            "database": self.database,
+            "extra-user-roles": self.extra_user_roles,
         }
 
         self.update_database_relations(database_relation_data)
@@ -111,11 +110,7 @@ class IntegratorCharm(CharmBase):
         for rel in self.kafka.relations:
             self.kafka._update_relation_data(
                 rel.id,
-                {
-                    "topic": self.topic,
-                    "extra-user-roles": self.extra_user_roles
-                    + self.get_secret("app", "extra-user-roles"),
-                },
+                {"topic": self.topic, "extra-user-roles": self.extra_user_roles},
             )
 
         # output the correct message.
