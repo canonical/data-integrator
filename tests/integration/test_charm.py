@@ -55,7 +55,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     # test the active/waiting status for relation
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "waiting"
 
 
 @pytest.mark.skip  # skipping as we can't deploy MYSQL (https://github.com/canonical/mysql-operator/pull/73)
