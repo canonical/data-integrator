@@ -14,9 +14,15 @@ class TestCharm(unittest.TestCase):
         self.harness = Harness(IntegratorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+        self.peer_relation_id = self.harness.add_relation(
+            "data-integrator-peers", "data-integrator-peers"
+        )
+        self.charm = self.harness.charm
 
     def test_on_start(self):
-        self.harness.charm.on.start.emit()
+        self.harness.set_leader(True)
+        self.charm.on.config_changed.emit()
+        self.charm.on.start.emit()
         # Ensure we set an ActiveStatus with no message
         self.assertEqual(
             self.harness.model.unit.status,
@@ -24,6 +30,7 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_action_failures(self):
+        self.harness.set_leader(True)
         self.harness.update_config({"database-name": ""})
         action_event = Mock()
         self.harness.charm._on_get_credentials_action(action_event)
@@ -71,6 +78,7 @@ class TestCharm(unittest.TestCase):
 
     def test_relation_created(self):
         """Asserts on_database_created is called when the credentials are set in the relation."""
+        self.harness.set_leader(True)
         # Set database
         self.harness.update_config({"database-name": "test-database"})
         self.harness.charm._on_config_changed(Mock())

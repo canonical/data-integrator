@@ -5,7 +5,7 @@ description: |
   Integrator charm for getting credentials for non-native applications.
 summary: |
   Integrator charm for getting credentials for non-native applications.
-  Not all applications implement a data_ionterfaces relation interface but allow setting
+  Not all applications implement a data_interfaces relation but allow setting
   credentials via config. Also, some of the applications are run outside of juju.
   This integrator charm allows receiving credentials which can be passed into
   application config directly without implementing juju-native relation.

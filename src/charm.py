@@ -23,7 +23,6 @@ from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 
 logger = logging.getLogger(__name__)
 
-KAFKA_EXTRA_USER_ROLES = "consumer,producer"
 PEER = "data-integrator-peers"
 
 
@@ -55,9 +54,8 @@ class IntegratorCharm(CharmBase):
         self.mongodb = DatabaseRequires(self, relation_name="mongodb", database_name=self.database)
         self.framework.observe(self.mongodb.on.database_created, self._on_database_created)
 
-        kafka_user_roles = KAFKA_EXTRA_USER_ROLES + self.extra_user_roles
         self.kafka = KafkaRequires(
-            self, relation_name="kafka", topic=self.topic, extra_user_roles=kafka_user_roles
+            self, relation_name="kafka", topic=self.topic, extra_user_roles=self.extra_user_roles
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
 
@@ -115,7 +113,7 @@ class IntegratorCharm(CharmBase):
                 rel.id,
                 {
                     "topic": self.topic,
-                    "extra-user-roles": KAFKA_EXTRA_USER_ROLES
+                    "extra-user-roles": self.extra_user_roles
                     + self.get_secret("app", "extra-user-roles"),
                 },
             )
