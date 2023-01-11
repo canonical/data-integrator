@@ -2,13 +2,18 @@
 # See LICENSE file for licensing details.
 name: data-integrator
 description: |
-  Integrator charm for getting database credentials for non-native applications.
+  Integrator charm for getting credentials for non-native applications.
 summary: |
-  Integrator charm for getting database credentials for non-native applications.
-  Not all applications implement a database relation interface but allow setting
+  Integrator charm for getting credentials for non-native applications.
+  Not all applications implement a data_interfaces relation but allow setting
   credentials via config. Also, some of the applications are run outside of juju.
   This integrator charm allows receiving credentials which can be passed into
   application config directly without implementing juju-native relation.
+
+peers:
+  data-integrator-peers:
+    interface: data-integrator-peers
+
 requires:
   mysql:
     interface: mysql_client
@@ -18,4 +23,7 @@ requires:
     limit: 1
   mongodb:
     interface: mongodb_client
+    limit: 1
+  kafka:
+    interface: kafka_client
     limit: 1

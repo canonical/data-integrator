@@ -2,7 +2,15 @@
 # See LICENSE file for licensing details.
 
 options:
-  database:
+  database-name:
     type: string
     default:
     description: database name
+  topic-name:
+    type: string
+    default:
+    description: topic name
+  extra-user-roles:
+    type: string
+    default:
+    description: extra user roles for the related applications

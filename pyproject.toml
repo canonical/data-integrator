@@ -30,7 +30,8 @@ pytest-operator = "^0.22.0"
 mysql-connector-python = "^8.0.31"
 psycopg2-binary = "^2.9.5"
 pymongo = "^4.2.0"
-
+kazoo = "^2.8.0"
+kafka-python = "^2.0.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
