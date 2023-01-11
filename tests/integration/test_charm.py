@@ -46,7 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
         )
     )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "waiting"
 
     # config database name
 
@@ -55,10 +55,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     # test the active/waiting status for relation
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "waiting"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.skip  # skipping as we can't deploy MYSQL (https://github.com/canonical/mysql-operator/pull/73)
+# @pytest.mark.skip
+# # skipping as we can't deploy MYSQL (https://github.com/canonical/mysql-operator/pull/73)
 async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     """Test the relation with MySQL and database accessibility."""
     await asyncio.gather(

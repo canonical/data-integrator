@@ -17,13 +17,17 @@ from charms.data_platform_libs.v0.data_interfaces import (
     KafkaRequires,
     TopicCreatedEvent,
 )
-from ops.charm import ActionEvent, CharmBase
+from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent, RelationEvent
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, StatusBase, WaitingStatus
 
 logger = logging.getLogger(__name__)
 
 PEER = "data-integrator-peers"
+MYSQL = "mysql"
+POSTGRESQL = "postgresql"
+MONGODB = "mongodb"
+KAFKA = "kafka"
 
 
 class IntegratorCharm(CharmBase):
@@ -34,53 +38,62 @@ class IntegratorCharm(CharmBase):
 
         self.framework.observe(self.on.get_credentials_action, self._on_get_credentials_action)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
         # MySQL
         self.mysql = DatabaseRequires(
             self,
-            relation_name="mysql",
+            relation_name=MYSQL,
             database_name=self.database or "",
             extra_user_roles=self.extra_user_roles or "",
         )
         self.framework.observe(self.mysql.on.database_created, self._on_database_created)
-        self.framework.observe(self.on["mysql"].relation_broken, self._on_relation_broken)
+        self.framework.observe(self.on[MYSQL].relation_broken, self._on_relation_broken)
 
         # PostgreSQL
         self.postgresql = DatabaseRequires(
             self,
-            relation_name="postgresql",
+            relation_name=POSTGRESQL,
             database_name=self.database or "",
             extra_user_roles=self.extra_user_roles or "",
         )
         self.framework.observe(self.postgresql.on.database_created, self._on_database_created)
-        self.framework.observe(self.on["postgresql"].relation_broken, self._on_relation_broken)
+        self.framework.observe(self.on[POSTGRESQL].relation_broken, self._on_relation_broken)
 
         # MongoDB
         self.mongodb = DatabaseRequires(
             self,
-            relation_name="mongodb",
+            relation_name=MONGODB,
             database_name=self.database or "",
             extra_user_roles=self.extra_user_roles or "",
         )
         self.framework.observe(self.mongodb.on.database_created, self._on_database_created)
-        self.framework.observe(self.on["mongodb"].relation_broken, self._on_relation_broken)
+        self.framework.observe(self.on[MONGODB].relation_broken, self._on_relation_broken)
 
         # Kafka
         self.kafka = KafkaRequires(
             self,
-            relation_name="kafka",
+            relation_name=KAFKA,
             topic=self.topic or "",
             extra_user_roles=self.extra_user_roles or "",
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
-        self.framework.observe(self.on["kafka"].relation_broken, self._on_relation_broken)
+        self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
 
-    def _on_relation_broken(self, _):
+    def _on_relation_broken(self, event: RelationBrokenEvent):
         """Handle relation broken event."""
-        logger.info("On relation broken!")
-        logger.info(f"Is database related: {self.is_database_related}")
-        logger.info(f"Is Kafka related: {self.is_kafka_related}")
-        self._on_config_changed(None)
+        if not self.unit.is_leader:
+            return
+        # update peer databag to trigger the charm status update
+        self._update_active_relations(event, "broken")
+
+    def _set_config_parameters(self, status: StatusBase):
+        """Return if the new parameters must be set."""
+        if isinstance(status, ActiveStatus):
+            return True
+        if isinstance(status, BlockedStatus) and "add relation" in status.message:
+            return True
+        return False
 
     def _on_config_changed(self, _):
         """Handle on config changed event."""
@@ -97,7 +110,7 @@ class IntegratorCharm(CharmBase):
         status = self._get_unit_status()
 
         # if the status is active set new values otherwise return
-        if not isinstance(status, ActiveStatus):
+        if not self._set_config_parameters(status):
             # set status
             self.unit.status = status
             return
@@ -107,9 +120,14 @@ class IntegratorCharm(CharmBase):
         self.set_secret("app", "topic", new_topic)
         self.set_secret("app", "extra-user-roles", new_extra_user_roles)
 
+        # update database and extra-user-roles
         self.mysql.database = self.database or ""
+        self.mysql.extra_user_roles = self.extra_user_roles or ""
         self.postgresql.database = self.database or ""
+        self.postgresql.extra_user_roles = self.extra_user_roles or ""
         self.mongodb.database = self.database or ""
+        self.mongodb.extra_user_roles = self.extra_user_roles or ""
+
         # Update relation databag
         database_relation_data = {
             "database": self.database,
@@ -117,7 +135,9 @@ class IntegratorCharm(CharmBase):
         }
         self.update_database_relations(database_relation_data)
 
+        # update topic and extra-user-roles
         self.kafka.topic = self.topic or ""
+        self.kafka.extra_user_roles = self.extra_user_roles or ""
         # Update relation databag
         for rel in self.kafka.relations:
             self.kafka._update_relation_data(
@@ -131,47 +151,73 @@ class IntegratorCharm(CharmBase):
         # set status
         self.unit.status = status
 
+    def _get_status_database(self, database_name: str):
+        """Return unit status based on the database parameter read from config."""
+        if database_name:
+            if database_name != self.database:
+                if self.is_database_related:
+                    return BlockedStatus(
+                        f"New database name specified: {database_name}. Please remove existing relation/s!"
+                    )
+        return None
+
+    def _get_status_topic(self, topic_name: str):
+        """Return unit status based on the topic parameter read from config."""
+        if topic_name:
+            if topic_name != self.topic:
+                if self.is_kafka_related:
+                    return BlockedStatus(
+                        f"New topic name specified: {topic_name}. Please remove existing relation/s!"
+                    )
+        return None
+
+    def _get_status_extra_user_roles(self, extra_user_roles: str):
+        """Return unit status based on the extra-user-roles parameter read from config."""
+        if extra_user_roles:
+            if extra_user_roles != self.extra_user_roles:
+                if self.is_kafka_related or self.is_database_related:
+                    return BlockedStatus(
+                        f"New extra-user-roles specified: {extra_user_roles}. Please remove existing relation/s!."
+                    )
+        return None
+
     def _get_unit_status(self):
-        """Return the status based on the configured and new parameters."""
-        # read new parameters
+        """Return the unit status and if the based on the configured and new parameters."""
+        # read parameters from config
         new_database_name = self.model.config.get("database-name", None)
         new_topic = self.model.config.get("topic-name", None)
         new_extra_user_roles = self.model.config.get("extra-user-roles", None)
 
         if not new_database_name and not new_topic:
+            # Parameters reset (e.g., juju model-config --reset PARAMETER)
             if self.is_database_related or self.is_kafka_related:
                 return BlockedStatus(
                     "Remove existing relation and then provide new database or new topic name!"
                 )
             else:
                 return WaitingStatus("Please provide database or topic name!")
+        # check configured database and emit status if needed
+        database_status = self._get_status_database(new_database_name)
+        if database_status:
+            return database_status
 
-        if new_database_name:
-            if new_database_name != self.database:
-                if self.is_database_related:
-                    return BlockedStatus(
-                        f"New database name specified: {new_database_name}. Please remove existing relation/s!"
-                    )
+        # check configured topic and emit status if needed
+        topic_status = self._get_status_topic(new_topic)
+        if topic_status:
+            return topic_status
 
-        if new_topic:
-            if new_topic != self.topic:
-                if self.is_kafka_related:
-                    return BlockedStatus(
-                        f"New topic name specified: {new_topic}. Please remove existing relation/s!."
-                    )
+        # check configured extra-user-roles and emit status if needed
+        extra_user_roles_status = self._get_status_extra_user_roles(new_extra_user_roles)
+        if extra_user_roles_status:
+            return extra_user_roles_status
 
-        if new_extra_user_roles:
-            if new_extra_user_roles != self.extra_user_roles:
-                if self.is_kafka_related or self.is_database_related:
-                    return BlockedStatus(
-                        f"New extra-user-roles specified: {new_extra_user_roles}. Please remove existing relation/s!."
-                    )
-        extra_msg = ""
         if not self.is_kafka_related and not self.is_database_related:
-            extra_msg = " Please add relation!"
+            return BlockedStatus(
+                f"Database: {new_database_name}, topic: {new_topic} and extra-user-roles: {new_extra_user_roles}. Please add relation with a database or Kafka."
+            )
 
         return ActiveStatus(
-            f"Database: {new_database_name}, topic: {new_topic} and extra-user-roles: {new_extra_user_roles}.{extra_msg}"
+            f"Database: {new_database_name}, topic: {new_topic} and extra-user-roles: {new_extra_user_roles}."
         )
 
     def update_database_relations(self, database_relation_data: Dict):
@@ -185,7 +231,7 @@ class IntegratorCharm(CharmBase):
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
-        if self.model.config.get("database-name", None) and self.model.config.get(
+        if not self.model.config.get("database-name", None) and not self.model.config.get(
             "topic-name", None
         ):
             event.fail("The database name or topic name is not specified in the config.")
@@ -204,24 +250,54 @@ class IntegratorCharm(CharmBase):
 
         result = {"ok": True}
         if mysql:
-            result["mysql"] = list(mysql.values())[0]
+            result[MYSQL] = list(mysql.values())[0]
         if postgresql:
-            result["postgresql"] = list(postgresql.values())[0]
+            result[POSTGRESQL] = list(postgresql.values())[0]
         if mongodb:
-            result["mongodb"] = list(mongodb.values())[0]
+            result[MONGODB] = list(mongodb.values())[0]
         if kafka:
-            result["kafka"] = list(kafka.values())[0]
+            result[KAFKA] = list(kafka.values())[0]
         event.set_results(result)
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
-        logger.info(f"database credentials are received: {event.username}")
+        logger.debug(f"database credentials are received: {event.username}")
         self._on_config_changed(None)
+        if not self.unit.is_leader:
+            return
+        # update values in the databag
+        self._update_active_relations(event, "active")
 
     def _on_topic_created(self, event: TopicCreatedEvent) -> None:
         """Event triggered when a topic was created for this application."""
-        logger.info(f"Kafka credentials are received: {event.username}")
+        logger.debug(f"Kafka credentials are received: {event.username}")
         self._on_config_changed(None)
+        if not self.unit.is_leader:
+            return
+        # update values in the databag
+        self._update_active_relations(event, "active")
+
+    def _update_active_relations(self, event: RelationEvent, status: str):
+        """Update the relation status in the peer-relation databag."""
+        self.set_secret("app", f"relation-{ event.relation.id}", status)
+
+    def _on_peer_relation_changed(self, _: RelationEvent):
+        """Handle the peer relation changed event."""
+        if not self.unit.is_leader:
+            return
+        removed_relations = []
+        # check for relation that has been removed
+        for k, v in self.app_peer_data.items():
+            if "relation-" in k:
+                if v == "broken":
+                    removed_relations.append(k)
+
+        if removed_relations:
+            # update configuration
+            self._on_config_changed(None)
+            # update relation status to removed
+            for relation in removed_relations:
+                self.set_secret("app", relation, "removed")
 
     @property
     def database(self):
@@ -242,27 +318,26 @@ class IntegratorCharm(CharmBase):
     def is_database_related(self):
         """Return if a relation with database is present."""
         possible_relations = [
-            self._is_related(self.mysql.relations),
-            self._is_related(self.postgresql.relations),
-            self._is_related(self.mongodb.relations),
+            self._check_for_credentials(self.mysql.relations),
+            self._check_for_credentials(self.postgresql.relations),
+            self._check_for_credentials(self.mongodb.relations),
         ]
-        logger.info(f"Possible relations: {possible_relations}")
         return any(possible_relations)
 
-    def _is_related(self, relations) -> bool:
+    def _check_for_credentials(self, relations) -> bool:
         """Check if credentials are present in the relation databag."""
-        for r in relations:
-            logger.info(f"relation data: {r.data}")
-            logger.info(f"relation app: {r.app}")
-            logger.info(f"relation app data: {r.data[r.app]}")
-            if "username" in r.data[r.app] and "password" in r.data[r.app]:
+        for relation in relations:
+            if (
+                "username" in relation.data[relation.app]
+                and "password" in relation.data[relation.app]
+            ):
                 return True
         return False
 
     @property
     def is_kafka_related(self):
         """Return if a relation with kafka is present."""
-        return self._is_related(self.kafka.relations)
+        return self._check_for_credentials(self.kafka.relations)
 
     @property
     def app_peer_data(self) -> Dict:
