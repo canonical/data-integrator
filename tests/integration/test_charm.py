@@ -313,6 +313,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
     await ops_test.model.wait_for_idle(apps=[KAFKA, DATA_INTEGRATOR])
     await ops_test.model.add_relation(KAFKA, DATA_INTEGRATOR)
+    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
     time.sleep(10)
     assert ops_test.model.applications[KAFKA].status == "active"
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
