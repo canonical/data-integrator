@@ -46,7 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
         )
     )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "waiting"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # config database name
 

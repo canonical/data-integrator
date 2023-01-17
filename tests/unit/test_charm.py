@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock
 
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import IntegratorCharm
@@ -26,7 +26,7 @@ class TestCharm(unittest.TestCase):
         # Ensure we set an ActiveStatus with no message
         self.assertEqual(
             self.harness.model.unit.status,
-            WaitingStatus("Please provide database or topic name!"),
+            BlockedStatus("Please specify either topic or database name"),
         )
 
     def test_action_failures(self):
@@ -55,53 +55,34 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus(
-                "Database: foo, topic: None and extra-user-roles: None. Please add relation with a database or Kafka."
-            ),
+            BlockedStatus("Please relate the data-integrator with the desired product"),
         )
         self.assertEqual(self.harness.charm.config["database-name"], "foo")
-        self.assertEqual(self.harness.charm.mysql.database, "foo")
-        self.assertEqual(self.harness.charm.postgresql.database, "foo")
-        self.assertEqual(self.harness.charm.mongodb.database, "foo")
 
         self.harness.update_config({"database-name": "foo1"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus(
-                "Database: foo1, topic: None and extra-user-roles: None. Please add relation with a database or Kafka."
-            ),
+            BlockedStatus("Please relate the data-integrator with the desired product"),
         )
 
         self.assertEqual(self.harness.charm.config["database-name"], "foo1")
-        self.assertEqual(self.harness.charm.mysql.database, "foo1")
-        self.assertEqual(self.harness.charm.postgresql.database, "foo1")
-        self.assertEqual(self.harness.charm.mongodb.database, "foo1")
 
         self.harness.update_config({"topic-name": "bar"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus(
-                "Database: foo1, topic: bar and extra-user-roles: None. Please add relation with a database or Kafka."
-            ),
+            BlockedStatus("Please relate the data-integrator with the desired product"),
         )
         self.assertEqual(self.harness.charm.config["topic-name"], "bar")
-        self.assertEqual(self.harness.charm.kafka.topic, "bar")
 
         self.harness.update_config({"extra-user-roles": "admin"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus(
-                "Database: foo1, topic: bar and extra-user-roles: admin. Please add relation with a database or Kafka."
-            ),
+            BlockedStatus("Please relate the data-integrator with the desired product"),
         )
         self.assertEqual(self.harness.charm.config["extra-user-roles"], "admin")
-        self.assertEqual(self.harness.charm.kafka.extra_user_roles, "admin")
-        self.assertEqual(self.harness.charm.mysql.extra_user_roles, "admin")
-        self.assertEqual(self.harness.charm.postgresql.extra_user_roles, "admin")
-        self.assertEqual(self.harness.charm.mongodb.extra_user_roles, "admin")
 
     def test_get_unit_status(self):
         self.harness.set_leader(True)
@@ -109,9 +90,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus(
-                "Database: foo, topic: None and extra-user-roles: None. Please add relation with a database or Kafka."
-            ),
+            BlockedStatus("Please relate the data-integrator with the desired product"),
         )
         self.assertEqual(self.harness.charm.config["database-name"], "foo")
 
@@ -130,7 +109,7 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.model.unit.status,
-            ActiveStatus("Database: foo, topic: None and extra-user-roles: None."),
+            ActiveStatus(),
         )
 
         self.harness.update_config({"database-name": "foo1"})
@@ -138,16 +117,14 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("New database name specified: foo1. Please remove existing relation/s!"),
+            BlockedStatus("To change database name, please remove relation and add it again"),
         )
 
         self.harness.remove_relation(self.rel_id)
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus(
-                "Database: foo1, topic: None and extra-user-roles: None. Please add relation with a database or Kafka."
-            ),
+            BlockedStatus("Please relate the data-integrator with the desired product"),
         )
 
         self.harness.update_config({"topic-name": "bar"})
@@ -155,9 +132,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.charm.config["topic-name"], "bar")
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus(
-                "Database: foo1, topic: bar and extra-user-roles: None. Please add relation with a database or Kafka."
-            ),
+            BlockedStatus("Please relate the data-integrator with the desired product"),
         )
 
         self.rel_id = self.harness.add_relation("kafka", "kafka")
@@ -168,20 +143,21 @@ class TestCharm(unittest.TestCase):
             self.rel_id,
             "kafka",
             {
+                "topic": "bar",
                 "username": "test-username",
                 "password": "test-password",
             },
         )
-
+        self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            ActiveStatus("Database: foo1, topic: bar and extra-user-roles: None."),
+            ActiveStatus(""),
         )
         self.harness.update_config({"topic-name": "bar1"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("New topic name specified: bar1. Please remove existing relation/s!"),
+            BlockedStatus("To change topic, please remove relation and add it again"),
         )
 
     def test_relation_created(self):
