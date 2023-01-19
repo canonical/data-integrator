@@ -8,31 +8,45 @@ from ops.testing import Harness
 
 from charm import IntegratorCharm
 
+BLOCKED_STATUS_NO_CONFIG = BlockedStatus("Please specify either topic or database name")
+BLOCKED_STATUS_RELATE = BlockedStatus("Please relate the data-integrator with the desired product")
+BLOCKED_STATUS_REMOVE_DB = BlockedStatus(
+    "To change database name: foo, please remove relation and add it again"
+)
+BLOCKED_STATUS_REMOVE_KF = BlockedStatus(
+    "To change topic: bar, please remove relation and add it again"
+)
+
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(IntegratorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+        self.peer_relation_id = self.harness.add_relation(
+            "data-integrator-peers", "data-integrator-peers"
+        )
+        self.charm = self.harness.charm
 
     def test_on_start(self):
-        self.harness.charm.on.start.emit()
+        self.harness.set_leader(True)
+        self.charm.on.config_changed.emit()
+        self.charm.on.start.emit()
         # Ensure we set an ActiveStatus with no message
-        self.assertEqual(
-            self.harness.model.unit.status, BlockedStatus("The database name is not specified.")
-        )
+        self.assertEqual(self.harness.model.unit.status, BLOCKED_STATUS_NO_CONFIG)
 
     def test_action_failures(self):
-        self.harness.update_config({"database": ""})
+        self.harness.set_leader(True)
+        self.harness.update_config({"database-name": None})
         action_event = Mock()
         self.harness.charm._on_get_credentials_action(action_event)
 
         self.assertEqual(
             action_event.fail.call_args,
-            [("The database name is not specified in the config.",)],
+            [("The database name or topic name is not specified in the config.",)],
         )
 
-        self.harness.update_config({"database": "foo"})
+        self.harness.update_config({"database-name": "foo"})
         action_event = Mock()
         self.harness.charm._on_get_credentials_action(action_event)
 
@@ -42,36 +56,121 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_config_changed(self):
-        self.harness.update_config({"database": "foo"})
-        self.harness.charm._on_config_changed(Mock())
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus("database: foo"))
-        self.assertEqual(self.harness.charm.config["database"], "foo")
-        self.assertEqual(self.harness.charm.mysql.database, "foo")
-        self.assertEqual(self.harness.charm.postgresql.database, "foo")
-        self.assertEqual(self.harness.charm.mongodb.database, "foo")
-
-        self.harness.update_config({"database": ""})
+        self.harness.set_leader(True)
+        self.harness.update_config({"database-name": "foo"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
-            self.harness.model.unit.status, BlockedStatus("The database name is not specified.")
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
         )
-        self.assertEqual(self.harness.charm.config["database"], "")
-        self.assertEqual(self.harness.charm.mysql.database, "")
-        self.assertEqual(self.harness.charm.postgresql.database, "")
-        self.assertEqual(self.harness.charm.mongodb.database, "")
+        self.assertEqual(self.harness.charm.config["database-name"], "foo")
 
-        self.harness.update_config({"database": "bar"})
+        self.harness.update_config({"database-name": "foo1"})
         self.harness.charm._on_config_changed(Mock())
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus("database: bar"))
-        self.assertEqual(self.harness.charm.config["database"], "bar")
-        self.assertEqual(self.harness.charm.mysql.database, "bar")
-        self.assertEqual(self.harness.charm.postgresql.database, "bar")
-        self.assertEqual(self.harness.charm.mongodb.database, "bar")
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+
+        self.assertEqual(self.harness.charm.config["database-name"], "foo1")
+
+        self.harness.update_config({"topic-name": "bar"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+        self.assertEqual(self.harness.charm.config["topic-name"], "bar")
+
+        self.harness.update_config({"extra-user-roles": "admin"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+        self.assertEqual(self.harness.charm.config["extra-user-roles"], "admin")
+
+    def test_get_unit_status(self):
+        self.harness.set_leader(True)
+        self.harness.update_config({"database-name": "foo"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+        self.assertEqual(self.harness.charm.config["database-name"], "foo")
+
+        self.rel_id = self.harness.add_relation("mysql", "mysql")
+        self.harness.add_relation_unit(self.rel_id, "mysql/0")
+
+        # Simulate sharing the credentials of a new created database.
+        self.harness.update_relation_data(
+            self.rel_id,
+            "mysql",
+            {
+                "username": "test-username",
+                "password": "test-password",
+            },
+        )
+
+        self.assertEqual(
+            self.harness.model.unit.status,
+            ActiveStatus(),
+        )
+
+        self.harness.update_config({"database-name": "foo1"})
+        self.harness.charm._on_config_changed(Mock())
+
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_REMOVE_DB,
+        )
+
+        self.harness.remove_relation(self.rel_id)
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+
+        self.harness.update_config({"topic-name": "bar"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(self.harness.charm.config["topic-name"], "bar")
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+
+        self.rel_id = self.harness.add_relation("kafka", "kafka")
+        self.harness.add_relation_unit(self.rel_id, "kafka/0")
+
+        # Simulate sharing the credentials of a new created topic.
+        self.harness.update_relation_data(
+            self.rel_id,
+            "kafka",
+            {
+                "topic": "bar",
+                "username": "test-username",
+                "password": "test-password",
+            },
+        )
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            ActiveStatus(),
+        )
+        self.harness.update_config({"topic-name": "bar1"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_REMOVE_KF,
+        )
 
     def test_relation_created(self):
         """Asserts on_database_created is called when the credentials are set in the relation."""
+        self.harness.set_leader(True)
         # Set database
-        self.harness.update_config({"database": "test-database"})
+        self.harness.update_config({"database-name": "test-database"})
         self.harness.charm._on_config_changed(Mock())
 
         self.rel_id = self.harness.add_relation("mysql", "database")

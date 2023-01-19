@@ -4,6 +4,8 @@
 
 import asyncio
 import logging
+import time
+from subprocess import PIPE, check_output
 
 import psycopg2
 import pytest
@@ -14,9 +16,13 @@ from tests.integration.connector import MysqlConnector
 from tests.integration.constants import (
     DATA_INTEGRATOR,
     DATABASE_NAME,
+    EXTRA_USER_ROLES,
+    KAFKA,
     MONGODB,
     MYSQL,
     POSTGRESQL,
+    TOPIC_NAME,
+    ZOOKEEPER,
 )
 from tests.integration.helpers import (
     build_postgresql_connection_string,
@@ -26,6 +32,7 @@ from tests.integration.helpers import (
     insert_data_mysql,
     read_data_mysql,
 )
+from tests.integration.kafka_client import KafkaClient
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +50,12 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     # config database name
 
-    config = {"database": DATABASE_NAME}
+    config = {"database-name": DATABASE_NAME}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # test the active/waiting status for relation
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
 @pytest.mark.skip  # skipping as we can't deploy MYSQL (https://github.com/canonical/mysql-operator/pull/73)
@@ -66,7 +73,9 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     # get credential for MYSQL
-    credentials = fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR][0])
+    credentials = fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
 
     # test connection for MYSQL with retrieved credentials
     # connection configuration
@@ -278,3 +287,90 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     assert query[0]["release_name"] == "Fancy Fossa"
 
     client.close()
+
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB}:database"
+    )
+
+    await ops_test.model.wait_for_idle(apps=[MONGODB, DATA_INTEGRATOR])
+
+
+@pytest.mark.abort_on_fail
+async def test_deploy_and_relate_kafka(ops_test: OpsTest):
+    """Test the relation with Kafka and the correct production and consumption of messagges."""
+    await asyncio.gather(
+        ops_test.model.deploy(
+            ZOOKEEPER, channel="edge", application_name=ZOOKEEPER, num_units=1, series="focal"
+        ),
+        ops_test.model.deploy(
+            KAFKA, channel="edge", application_name=KAFKA, num_units=1, series="jammy"
+        ),
+    )
+
+    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
+    assert ops_test.model.applications[KAFKA].status == "waiting"
+    assert ops_test.model.applications[ZOOKEEPER].status == "active"
+
+    await ops_test.model.add_relation(KAFKA, ZOOKEEPER)
+    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
+    assert ops_test.model.applications[KAFKA].status == "active"
+    assert ops_test.model.applications[ZOOKEEPER].status == "active"
+
+    #
+    config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
+    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+
+    # test the active/waiting status for relation
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    await ops_test.model.wait_for_idle(apps=[KAFKA, DATA_INTEGRATOR])
+    await ops_test.model.add_relation(KAFKA, DATA_INTEGRATOR)
+    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
+    time.sleep(10)
+    assert ops_test.model.applications[KAFKA].status == "active"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
+
+    # get credential for MYSQL
+    credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
+
+    # test connection for MYSQL with retrieved credentials
+    # connection configuration
+
+    username = credentials[KAFKA]["username"]
+    password = credentials[KAFKA]["password"]
+    servers = credentials[KAFKA]["endpoints"].split(",")
+    security_protocol = "SASL_PLAINTEXT"
+
+    if not (username and password and servers):
+        raise KeyError("missing relation data from app charm")
+
+    client = KafkaClient(
+        servers=servers,
+        username=username,
+        password=password,
+        topic=TOPIC_NAME,
+        consumer_group_prefix=None,
+        security_protocol=security_protocol,
+    )
+
+    client.create_topic()
+    client.run_producer()
+
+    logs = check_output(
+        f"JUJU_MODEL={ops_test.model_full_name} juju ssh {KAFKA}/0 'find /var/snap/kafka/common/log-data'",
+        stderr=PIPE,
+        shell=True,
+        universal_newlines=True,
+    ).splitlines()
+
+    logger.debug(f"{logs=}")
+
+    passed = False
+    for log in logs:
+        if TOPIC_NAME and "index" in log:
+            passed = True
+            break
+
+    assert passed, "logs not found"

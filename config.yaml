@@ -2,7 +2,15 @@
 # See LICENSE file for licensing details.
 
 options:
-  database:
+  database-name:
     type: string
     default:
-    description: database name
+    description: The value for the database name to be created or get permissions for, during relation to the provider application.
+  topic-name:
+    type: string
+    default:
+    description: The value for topic to be created and permissions granted for, during relation to the provider application.
+  extra-user-roles:
+    type: string
+    default:
+    description: The extra user roles that need to be granted.
