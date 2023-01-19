@@ -4,7 +4,6 @@
 
 """Literals used by the data-integrator charm."""
 
-from typing import Literal
 
 PEER = "data-integrator-peers"
 MYSQL = "mysql"
@@ -13,4 +12,3 @@ MONGODB = "mongodb"
 KAFKA = "kafka"
 
 DATABASES = [MYSQL, MONGODB, POSTGRESQL]
-STATUSES = Literal["active", "broken", "removed"]

@@ -9,6 +9,7 @@ of the libraries in this repository.
 """
 
 import logging
+from enum import Enum
 from typing import Dict, List, MutableMapping, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import (
@@ -18,12 +19,14 @@ from charms.data_platform_libs.v0.data_interfaces import (
     TopicCreatedEvent,
 )
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent, RelationEvent
+from ops.framework import EventBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
 
-from literals import DATABASES, KAFKA, PEER, STATUSES
+from literals import DATABASES, KAFKA, PEER
 
 logger = logging.getLogger(__name__)
+Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
 
 
 class IntegratorCharm(CharmBase):
@@ -48,6 +51,8 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
 
+        self.framework.observe(self.on.update_status, self._on_update_status)
+
         # Databases: MySQL, PostgreSQL and MongoDB
         self.databases: Dict[str, DatabaseRequires] = {
             name: self._setup_database_requirer(name) for name in DATABASES
@@ -68,7 +73,7 @@ class IntegratorCharm(CharmBase):
         if not self.unit.is_leader:
             return
         # update peer databag to trigger the charm status update
-        self._update_active_relations(event, "broken")
+        self._update_relation_status(event, Statuses.BROKEN.name)
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
@@ -79,20 +84,31 @@ class IntegratorCharm(CharmBase):
             return BlockedStatus("Please relate the data-integrator with the desired product")
 
         if self.is_kafka_related and self.topic_active != self.topic_name:
-            logger.error("Trying to change Kafka configuration for existing relation")
-            return BlockedStatus("To change topic, please remove relation and add it again")
+            logger.error(
+                f"Trying to change Kafka configuration for existing relation : To change topic: {self.topic_active}, please remove relation and add it again"
+            )
+            return BlockedStatus(
+                f"To change topic: {self.topic_active}, please remove relation and add it again"
+            )
 
         if self.is_database_related and any(
             [database != self.database_name for database in self.databases_active.values()]
         ):
-            logger.error("Trying to change database-name configuration for existing relation")
+            current_database = list(self.databases_active.values())[0]
+            logger.error(
+                f"Trying to change database-name configuration for existing relation. To change database name: {current_database}, please remove relation and add it again"
+            )
             return BlockedStatus(
-                "To change database name, please remove relation and add it again"
+                f"To change database name: {current_database}, please remove relation and add it again"
             )
 
         return ActiveStatus()
 
-    def _on_config_changed(self, _) -> None:
+    def _on_update_status(self, _: EventBase) -> None:
+        """Handle the status update."""
+        self.unit.status = self.get_status()
+
+    def _on_config_changed(self, _: EventBase) -> None:
         """Handle on config changed event."""
         # Only execute in the unit leader
         if not self.unit.is_leader():
@@ -123,7 +139,7 @@ class IntegratorCharm(CharmBase):
     def _update_database_relations(self, database_relation_data: Dict[str, str]):
         """Update the relation data of the related databases."""
         for db_name, relation in self.database_relations.items():
-            logger.debug(f"Update databag for database: {db_name}")
+            logger.debug(f"Updating databag for database: {db_name}")
             self.databases[db_name]._update_relation_data(relation.id, database_relation_data)
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
@@ -150,12 +166,12 @@ class IntegratorCharm(CharmBase):
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:
         """Event triggered when a database was created for this application."""
-        logger.debug(f"database credentials are received: {event.username}")
+        logger.debug(f"Database credentials are received: {event.username}")
         self._on_config_changed(event)
         if not self.unit.is_leader:
             return
         # update values in the databag
-        self._update_active_relations(event, "active")
+        self._update_relation_status(event, Statuses.ACTIVE.name)
 
     def _on_topic_created(self, event: TopicCreatedEvent) -> None:
         """Event triggered when a topic was created for this application."""
@@ -164,29 +180,30 @@ class IntegratorCharm(CharmBase):
         if not self.unit.is_leader:
             return
         # update status of the relations in the peer-databag
-        self._update_active_relations(event, "active")
+        self._update_relation_status(event, Statuses.ACTIVE.name)
 
-    def _update_active_relations(self, event: RelationEvent, status: STATUSES) -> None:
+    def _update_relation_status(self, event: RelationEvent, status: str) -> None:
         """Update the relation status in the peer-relation databag."""
-        self.set_secret("app", f"relation-{ event.relation.id}", status)
+        self.set_secret("app", event.relation.name, status)
 
-    def _on_peer_relation_changed(self, event: RelationEvent) -> None:
+    def _on_peer_relation_changed(self, _: RelationEvent) -> None:
         """Handle the peer relation changed event."""
         if not self.unit.is_leader:
             return
         removed_relations = []
         # check for relation that has been removed
         for relation_data_key, relation_value in self.app_peer_data.items():
-            if "relation-" in relation_data_key:
-                if relation_value == "broken":
-                    removed_relations.append(relation_data_key)
-
+            if relation_value == Statuses.BROKEN.name:
+                removed_relations.append(relation_data_key)
         if removed_relations:
-            # update configuration
-            self._on_config_changed(event)
-            # update relation status to removed
-            for relation in removed_relations:
-                self.set_secret("app", relation, "removed")
+            # update the unit status
+            self.unit.status = self.get_status()
+            # update relation status to removed if relation databag is empty
+            for relation_name in removed_relations:
+                # check if relation databag is not empty
+                if self.model.relations[relation_name]:
+                    continue
+                self.set_secret("app", relation_name, Statuses.REMOVED.name)
 
     @property
     def topic_name(self) -> Optional[str]:
@@ -206,7 +223,7 @@ class IntegratorCharm(CharmBase):
     @property
     def kafka_relation(self) -> Optional[Relation]:
         """Return the kafka relation if present."""
-        return self.kafka.relations[0] if len(self.kafka.relations) > 0 else None
+        return self.kafka.relations[0] if len(self.kafka.relations) else None
 
     @property
     def database_relations(self) -> Dict[str, Relation]:
@@ -214,7 +231,7 @@ class IntegratorCharm(CharmBase):
         return {
             name: requirer.relations[0]
             for name, requirer in self.databases.items()
-            if len(requirer.relations) > 0
+            if len(requirer.relations)
         }
 
     @property

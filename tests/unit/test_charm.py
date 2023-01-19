@@ -8,6 +8,15 @@ from ops.testing import Harness
 
 from charm import IntegratorCharm
 
+BLOCKED_STATUS_NO_CONFIG = BlockedStatus("Please specify either topic or database name")
+BLOCKED_STATUS_RELATE = BlockedStatus("Please relate the data-integrator with the desired product")
+BLOCKED_STATUS_REMOVE_DB = BlockedStatus(
+    "To change database name: foo, please remove relation and add it again"
+)
+BLOCKED_STATUS_REMOVE_KF = BlockedStatus(
+    "To change topic: bar, please remove relation and add it again"
+)
+
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
@@ -24,10 +33,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.config_changed.emit()
         self.charm.on.start.emit()
         # Ensure we set an ActiveStatus with no message
-        self.assertEqual(
-            self.harness.model.unit.status,
-            BlockedStatus("Please specify either topic or database name"),
-        )
+        self.assertEqual(self.harness.model.unit.status, BLOCKED_STATUS_NO_CONFIG)
 
     def test_action_failures(self):
         self.harness.set_leader(True)
@@ -55,7 +61,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("Please relate the data-integrator with the desired product"),
+            BLOCKED_STATUS_RELATE,
         )
         self.assertEqual(self.harness.charm.config["database-name"], "foo")
 
@@ -63,7 +69,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("Please relate the data-integrator with the desired product"),
+            BLOCKED_STATUS_RELATE,
         )
 
         self.assertEqual(self.harness.charm.config["database-name"], "foo1")
@@ -72,7 +78,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("Please relate the data-integrator with the desired product"),
+            BLOCKED_STATUS_RELATE,
         )
         self.assertEqual(self.harness.charm.config["topic-name"], "bar")
 
@@ -80,7 +86,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("Please relate the data-integrator with the desired product"),
+            BLOCKED_STATUS_RELATE,
         )
         self.assertEqual(self.harness.charm.config["extra-user-roles"], "admin")
 
@@ -90,7 +96,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("Please relate the data-integrator with the desired product"),
+            BLOCKED_STATUS_RELATE,
         )
         self.assertEqual(self.harness.charm.config["database-name"], "foo")
 
@@ -117,14 +123,14 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("To change database name, please remove relation and add it again"),
+            BLOCKED_STATUS_REMOVE_DB,
         )
 
         self.harness.remove_relation(self.rel_id)
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("Please relate the data-integrator with the desired product"),
+            BLOCKED_STATUS_RELATE,
         )
 
         self.harness.update_config({"topic-name": "bar"})
@@ -132,7 +138,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.charm.config["topic-name"], "bar")
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("Please relate the data-integrator with the desired product"),
+            BLOCKED_STATUS_RELATE,
         )
 
         self.rel_id = self.harness.add_relation("kafka", "kafka")
@@ -151,13 +157,13 @@ class TestCharm(unittest.TestCase):
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            ActiveStatus(""),
+            ActiveStatus(),
         )
         self.harness.update_config({"topic-name": "bar1"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("To change topic, please remove relation and add it again"),
+            BLOCKED_STATUS_REMOVE_KF,
         )
 
     def test_relation_created(self):
