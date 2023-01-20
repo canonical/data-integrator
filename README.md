@@ -13,6 +13,7 @@ It grants access to several charmed applications developed by the data-platform 
 This charm enables applications or users outside Juju to connect with the desired charmed application by providing credentials and endpoints that are needed to use the desired product. 
 
 
+
 ## Config options
 
 The supported configuration options are the following: 
@@ -32,6 +33,7 @@ extra-user-roles - `string`; a comma-separated list of values that contains the 
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
+
 
 ## Usage
 
@@ -84,6 +86,7 @@ juju relate data-integrator <application>
 After the relation has been created, the credentials and connection information can be retrieved with an action.
 
 > **IMPORTANT** In order to change the current credentials (username and password), remove the relation with the application and establish a new one. 
+
 When the relation is removed, the access with the previous credentials will be removed.
 
 ```shell
