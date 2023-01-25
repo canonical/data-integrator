@@ -300,7 +300,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     """Test the relation with Kafka and the correct production and consumption of messagges."""
     await asyncio.gather(
         ops_test.model.deploy(
-            ZOOKEEPER, channel="edge", application_name=ZOOKEEPER, num_units=1, series="focal"
+            ZOOKEEPER, channel="edge", application_name=ZOOKEEPER, num_units=1, series="jammy"
         ),
         ops_test.model.deploy(
             KAFKA, channel="edge", application_name=KAFKA, num_units=1, series="jammy"
