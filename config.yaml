@@ -1,16 +1,16 @@
-# Copyright 2021 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 options:
   database-name:
     type: string
     default:
-    description: The value for the database name to be created or get permissions for, during relation to the provider application.
+    description: The desired database name for which the access will be granted (this parameter is needed for MongoDB, MySQL and PostgreSQL).
   topic-name:
     type: string
     default:
-    description: The value for topic to be created and permissions granted for, during relation to the provider application.
+    description: The topic name for which the access is granted (this parameter is needed for Kafka).
   extra-user-roles:
     type: string
     default:
-    description: The extra user roles that need to be granted.
+    description: a comma-separated list of values that contains the required extra roles, e.g. `admin` in case of a database or `producer`, `consumer` in case of Kafka.

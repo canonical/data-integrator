@@ -1,2 +1,5 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 get-credentials:
   description: Action for fetching all available credentials from relations.
