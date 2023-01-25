@@ -58,27 +58,30 @@ async def test_build_and_deploy(ops_test: OpsTest):
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.skip  # skipping as we can't deploy MYSQL (https://github.com/canonical/mysql-operator/pull/73)
+@pytest.mark.abort_on_fail
 async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     """Test the relation with MySQL and database accessibility."""
+
+    logger.info(f"Deploy {MYSQL} and wait for 'active'")
     await asyncio.gather(
         ops_test.model.deploy(
-            "mysql", channel="edge", application_name=MYSQL, num_units=1, series="focal"
+            "mysql", channel="edge", application_name=MYSQL, num_units=1, series="jammy"
         )
     )
     await ops_test.model.wait_for_idle(apps=[MYSQL])
     assert ops_test.model.applications[MYSQL].status == "active"
+
+    logger.info(f"Relate {DATA_INTEGRATOR} with {MYSQL} and wait for 'active'")
     await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL)
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
-    # get credential for MYSQL
-    credentials = fetch_action_get_credentials(
+    logger.info("Get credential for MYSQL")
+    credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    # test connection for MYSQL with retrieved credentials
-    # connection configuration
+    logger.info("Test connection to MYSQL with retrieved credentials")
     config = {
         "user": credentials[MYSQL]["username"],
         "password": credentials[MYSQL]["password"],
@@ -87,6 +90,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         "raise_on_warnings": False,
     }
 
+    logger.info("Create test table with a data")
     with MysqlConnector(config) as cursor:
 
         create_table_mysql(cursor, DATABASE_NAME)
@@ -101,26 +105,27 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
             credentials[MYSQL]["read-only-endpoints"],
         )
 
+    logger.info("Get the recently written data back")
     with MysqlConnector(config) as cursor:
 
         rows = read_data_mysql(cursor, credentials[MYSQL]["username"])
-        # check that values are written in the table
+        logger.info("Check that values are written in the table")
         check_my_sql_data(rows, credentials)
 
-    #  remove relation and test connection again
+    logger.info("Remove relation (to relate the second time)")
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mysql", f"{MYSQL}:database"
     )
 
     await ops_test.model.wait_for_idle(apps=[MYSQL, DATA_INTEGRATOR])
+    logger.info("Relate the second time")
     await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL)
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL])
 
-    # join with another relation and check the accessibility of the previously created database
+    logger.info("Get new credential for MYSQL")
     new_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
-
     new_config = {
         "user": new_credentials[MYSQL]["username"],
         "password": new_credentials[MYSQL]["password"],
@@ -128,13 +133,15 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         "database": DATABASE_NAME,
         "raise_on_warnings": False,
     }
-    # test connection with new credentials and check the previously committed data are present.
+
+    logger.info("Check the previously committed data using new credentials")
     with MysqlConnector(new_config) as cursor:
         rows = read_data_mysql(cursor, credentials[MYSQL]["username"])
-        # check that values are written in the table
+        logger.info("Check that values are written in the table")
         check_my_sql_data(rows, credentials)
 
 
+@pytest.mark.abort_on_fail
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     """Test the relation with PostgreSQL and database accessibility."""
     await asyncio.gather(
@@ -200,6 +207,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         assert data[0] == "some data"
 
 
+@pytest.mark.abort_on_fail
 async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     """Test the relation with MongoDB and database accessibility."""
     await asyncio.gather(
