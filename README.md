@@ -11,7 +11,7 @@ This charm allows to automatically create and manage product credentials needed 
 It grants access to several charmed applications developed by the data-platform by handling the management of their credentials. In particular, a user can request access to a database (MySQL, PostgreSQL and MongoDB) or a topic (Kafka). Moreover, a user can require additional privileges by specifying extra-user-roles.
 
 This charm enables applications or users outside Juju to connect with the desired charmed application by providing credentials and endpoints that are needed to use the desired product. 
-
+mments)
 
 
 ## Config options
@@ -33,7 +33,6 @@ extra-user-roles - `string`; a comma-separated list of values that contains the 
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
-
 
 ## Usage
 
