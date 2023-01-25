@@ -2,7 +2,15 @@
 
 ## Overview
 
-This charm allows to retrieve product credentials needed to authenticate (SCRAM) with different kinds of data platform products([MongoDB](https://github.com/canonical/mongodb-operator), [MySQL](https://github.com/canonical/mysql-operator), [PostgreSQL](https://github.com/canonical/postgresql-operator), and [Kafka](https://github.com/canonical/kafka-operator)). 
+This charm allows to automatically create and manage product credentials needed to authenticate with different kinds of data platform charmed products:
+* [MongoDB](https://github.com/canonical/mongodb-operator)
+* [MySQL](https://github.com/canonical/mysql-operator) 
+* [PostgreSQL](https://github.com/canonical/postgresql-operator)
+* [Kafka](https://github.com/canonical/kafka-operator) 
+
+It grants access to several charmed applications developed by the data-platform by handling the management of their credentials. In particular, a user can request access to a database (MySQL, PostgreSQL and MongoDB) or a topic (Kafka). Moreover, a user can require additional privileges by specifying extra-user-roles.
+
+This charm enables applications or users outside Juju to connect with the desired charmed application by providing credentials and endpoints that are needed to use the desired product. 
 
 
 ## Config options
@@ -15,6 +23,15 @@ topic-name - `string`; The topic name for which the access is granted.
 
 extra-user-roles - `string`; a comma-separated list of values that contains the required extra roles, e.g. `admin` in case of a database or `producer`, `consumer` in case of Kafka. 
 
+| Product    | database-name      | topic-name         | extra-user-roles   |
+|------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: | :heavy_check_mark: |
+
+:heavy_check_mark: -> mandatory field
+:white_check_mark: -> optional field
 
 ## Usage
 
@@ -66,14 +83,14 @@ juju relate data-integrator <application>
 
 After the relation has been created, the credentials and connection information can be retrieved with an action.
 
-In order to change the current credentials (username and password), remove the relation with the application and establish a new one. 
+> **IMPORTANT** In order to change the current credentials (username and password), remove the relation with the application and establish a new one. 
 When the relation is removed, the access with the previous credentials will be removed.
 
 ```shell
 juju remove-relation data-integrator <application>
 ```
 
-If you need to modify `database-name`, `topic-name` or `extra-user-roles` and the relation has been already established, you need to remove the relation and then change the `database-name`, `topic-name` or `extra-user-roles`, and finally relate the data-integrator with the desidered application.
+> If you need to modify `database-name`, `topic-name` or `extra-user-roles` and the relation has been already established, you need to remove the relation and then change the `database-name`, `topic-name` or `extra-user-roles`, and finally relate the data-integrator with the desidered application.
 
 #### Retrieve credentials
 
@@ -83,6 +100,7 @@ In order to retrieve the credentials use the following action:
 juju run-action data-integrator/leader get-credentials --wait
 ```
 
+## Tutorial
 
 #### Relate Data Integrator with MongoDB
 
@@ -144,7 +162,7 @@ mongodb:database-peers                 mongodb:database-peers                 mo
 ```
 To retrieve information such as the username, password, and database. Enter:
 ```shell
-juju run-action  data-integrator/leader get-credentials --wait
+juju run-action data-integrator/leader get-credentials --wait
 ```
 This should output something like:
 ```yaml
