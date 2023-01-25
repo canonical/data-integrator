@@ -31,7 +31,7 @@ jobs:
   
   integration-test:
     name: Integration tests for (lxd)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs:
       - lint
       - unit-test
@@ -42,7 +42,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          bootstrap-options: "--agent-version 2.9.34"
+          bootstrap-options: "--agent-version 2.9.38"
       - name: Install tox
         run: python3 -m pip install tox
       - name: Install poetry
