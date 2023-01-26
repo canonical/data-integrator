@@ -58,7 +58,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.skip
+@pytest.mark.abort_on_fail
 async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     """Test the relation with MySQL and database accessibility."""
     logger.info(f"Deploy {MYSQL} and wait for 'active'")
