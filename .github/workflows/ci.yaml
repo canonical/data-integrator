@@ -29,7 +29,7 @@ jobs:
       - name: Run tests
         run: tox -e unit
   
-  integration-test:
+  integration-test-lxd:
     name: Integration tests for (lxd)
     runs-on: ubuntu-22.04
     needs:
@@ -42,10 +42,28 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          bootstrap-options: "--agent-version 2.9.34"
+          bootstrap-options: "--agent-version 2.9.38"
       - name: Install tox
         run: python3 -m pip install tox
       - name: Install poetry
         run: curl -sSL https://install.python-poetry.org | python3 -
       - name: Run integration tests
-        run: tox -e integration
+        run: tox -e integration-lxd
+  
+  integration-test-k8s:
+    name: Integration tests for (microk8s)
+    needs:
+      - lint
+      - unit-test
+      - security-test
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          bootstrap-options: "--agent-version 2.9.38"
+      - name: Run integration tests
+        run: tox -e integration-k8s
