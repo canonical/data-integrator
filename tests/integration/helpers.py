@@ -120,3 +120,24 @@ def check_my_sql_data(rows: List[Tuple], credentials: Dict):
     assert first_row[3] == credentials[MYSQL]["endpoints"]
     assert first_row[4] == credentials[MYSQL]["version"]
     assert first_row[5] == credentials[MYSQL]["read-only-endpoints"]
+
+
+async def fetch_action_database(
+    unit: Unit, action_name: str, product: str, credentials: str, database_name: str
+) -> Dict:
+    """Helper to run an action to sync credentials.
+
+    Args:
+        unit: The juju unit on which to run the action
+        action_name: name of the action
+        product: the name of the product
+        credentials: credentials used to connect
+        database_name: name of the database
+    Returns:
+        The result of the action
+    """
+    parameters = {"product": product, "credentials": credentials, "database-name": database_name}
+    action = await unit.run_action(action_name=action_name, **parameters)
+    result = await action.wait()
+    print(type(result))
+    return result

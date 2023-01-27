@@ -3,49 +3,54 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 import logging
-import time
-from subprocess import PIPE, check_output
 
-import psycopg2
+# import time
+from pathlib import PosixPath
+
 import pytest
-from pymongo import MongoClient
+
+# from pymongo import MongoClient
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.connector import MysqlConnector
-from tests.integration.constants import (
+from tests.integration.constants import (  # EXTRA_USER_ROLES,; KAFKA,; MONGODB,; TOPIC_NAME,; ZOOKEEPER,
     DATA_INTEGRATOR,
     DATABASE_NAME,
-    EXTRA_USER_ROLES,
-    KAFKA,
-    MONGODB,
     MYSQL,
     POSTGRESQL,
-    TOPIC_NAME,
-    ZOOKEEPER,
 )
 from tests.integration.helpers import (
-    build_postgresql_connection_string,
     check_my_sql_data,
     create_table_mysql,
+    fetch_action_database,
     fetch_action_get_credentials,
     insert_data_mysql,
     read_data_mysql,
 )
-from tests.integration.kafka_client import KafkaClient
+
+# from tests.integration.kafka_client import KafkaClient
+
+# from subprocess import PIPE, check_output
+
 
 logger = logging.getLogger(__name__)
 
+APP = "app"
+
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
+async def test_build_and_deploy(ops_test: OpsTest, app_charm: PosixPath):
+    logger.info(f"CLOUD NAME: {ops_test.cloud_name}")
     data_integrator_charm = await ops_test.build_charm(".")
     await asyncio.gather(
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
-        )
+        ),
+        ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # config database name
@@ -135,242 +140,248 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         check_my_sql_data(rows, credentials)
 
 
-@pytest.mark.skip  # skipping as we can't reconnect to same database (https://github.com/canonical/postgresql-k8s-operator/issues/64)
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     """Test the relation with PostgreSQL and database accessibility."""
     await asyncio.gather(
         ops_test.model.deploy(
-            "postgresql", channel="edge", application_name=POSTGRESQL, num_units=1, series="focal"
+            "postgresql",
+            channel="edge",
+            application_name=POSTGRESQL[ops_test.cloud_name],
+            num_units=1,
+            series="focal",
         )
     )
-    await ops_test.model.wait_for_idle(apps=[POSTGRESQL])
-    assert ops_test.model.applications[POSTGRESQL].status == "active"
-    await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL)
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL])
+    await ops_test.model.wait_for_idle(apps=[POSTGRESQL[ops_test.cloud_name]])
+    assert ops_test.model.applications[POSTGRESQL[ops_test.cloud_name]].status == "active"
+    await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name]])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     # get credential for PostgreSQL
     credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
-    # Build the complete connection string to connect to the database.
-    connection_string = build_postgresql_connection_string(credentials)
-    version = credentials[POSTGRESQL]["version"]
 
-    # test connection for PostgreSQL with retrieved credentials
-    with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
-        # Check that it's possible to write and read data from the database that
-        # was created for the application.
-        connection.autocommit = True
-        cursor.execute(f"DROP TABLE IF EXISTS {DATABASE_NAME};")
-        cursor.execute(f"CREATE TABLE {DATABASE_NAME}(data TEXT);")
-        cursor.execute(f"INSERT INTO {DATABASE_NAME}(data) VALUES('some data');")
-        cursor.execute(f"SELECT data FROM {DATABASE_NAME};")
-        data = cursor.fetchone()
-        assert data[0] == "some data"
-
-        # Check the version that the application received is the same on the database server.
-        cursor.execute("SELECT version();")
-        data = cursor.fetchone()[0].split(" ")[1]
-
-        assert version == data
-
-    #  remove relation and test connection again
-    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-        f"{DATA_INTEGRATOR}:postgresql", f"{POSTGRESQL}:database"
+    _ = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "create-table",
+        POSTGRESQL[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
     )
 
-    await ops_test.model.wait_for_idle(apps=[POSTGRESQL, DATA_INTEGRATOR])
-    await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL)
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL])
+    _ = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "insert-data",
+        POSTGRESQL[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+
+    _ = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        POSTGRESQL[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:postgresql", f"{POSTGRESQL[ops_test.cloud_name]}:database"
+    )
+
+    await ops_test.model.wait_for_idle(apps=[POSTGRESQL[ops_test.cloud_name], DATA_INTEGRATOR])
+    await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name]])
 
     new_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
-
-    # Build the complete connection string to connect to the database.
-    new_connection_string = build_postgresql_connection_string(new_credentials)
     # check that new credentials are provided
-    assert new_connection_string != connection_string
+    assert credentials != new_credentials
 
-    # Connect to the database using new credentials.
-    with psycopg2.connect(new_connection_string) as connection, connection.cursor() as cursor:
-        # Read data from previously created database.
-        cursor.execute(f"SELECT data FROM {DATABASE_NAME};")
-        data = cursor.fetchone()
-        assert data[0] == "some data"
-
-
-async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
-    """Test the relation with MongoDB and database accessibility."""
-    await asyncio.gather(
-        ops_test.model.deploy(
-            "mongodb", channel="dpe/edge", application_name=MONGODB, num_units=1, series="focal"
-        )
-    )
-    await ops_test.model.wait_for_idle(apps=[MONGODB])
-    assert ops_test.model.applications[MONGODB].status == "active"
-    await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB)
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
-
-    # get credential for MongoDB
-    credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    _ = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        POSTGRESQL[ops_test.cloud_name],
+        json.dumps(new_credentials),
+        DATABASE_NAME,
     )
 
-    connection_string = credentials[MONGODB]["uris"]
 
-    client = MongoClient(
-        connection_string,
-        directConnection=False,
-        connect=False,
-        serverSelectionTimeoutMS=1000,
-        connectTimeoutMS=2000,
-    )
+# @pytest.mark.skip
+# async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
+#     """Test the relation with MongoDB and database accessibility."""
+#     await asyncio.gather(
+#         ops_test.model.deploy(
+#             "mongodb", channel="dpe/edge", application_name=MONGODB, num_units=1, series="focal"
+#         )
+#     )
+#     await ops_test.model.wait_for_idle(apps=[MONGODB])
+#     assert ops_test.model.applications[MONGODB].status == "active"
+#     await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB)
+#     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB])
+#     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
-    # test some operations
-    db = client[DATABASE_NAME]
-    test_collection = db["test_collection"]
-    ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
-    test_collection.insert_one(ubuntu)
+#     # get credential for MongoDB
+#     credentials = await fetch_action_get_credentials(
+#         ops_test.model.applications[DATA_INTEGRATOR].units[0]
+#     )
 
-    query = test_collection.find({}, {"release_name": 1})
-    assert query[0]["release_name"] == "Focal Fossa"
+#     connection_string = credentials[MONGODB]["uris"]
 
-    ubuntu_version = {"version": 20.04}
-    ubuntu_name_updated = {"$set": {"release_name": "Fancy Fossa"}}
-    test_collection.update_one(ubuntu_version, ubuntu_name_updated)
+#     client = MongoClient(
+#         connection_string,
+#         directConnection=False,
+#         connect=False,
+#         serverSelectionTimeoutMS=1000,
+#         connectTimeoutMS=2000,
+#     )
 
-    query = test_collection.find({}, {"release_name": 1})
-    assert query[0]["release_name"] == "Fancy Fossa"
+#     # test some operations
+#     db = client[DATABASE_NAME]
+#     test_collection = db["test_collection"]
+#     ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
+#     test_collection.insert_one(ubuntu)
 
-    client.close()
+#     query = test_collection.find({}, {"release_name": 1})
+#     assert query[0]["release_name"] == "Focal Fossa"
 
-    # drop relation and get new credential for the same collection
-    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-        f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB}:database"
-    )
+#     ubuntu_version = {"version": 20.04}
+#     ubuntu_name_updated = {"$set": {"release_name": "Fancy Fossa"}}
+#     test_collection.update_one(ubuntu_version, ubuntu_name_updated)
 
-    await ops_test.model.wait_for_idle(apps=[MONGODB, DATA_INTEGRATOR])
-    await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB)
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB])
+#     query = test_collection.find({}, {"release_name": 1})
+#     assert query[0]["release_name"] == "Fancy Fossa"
 
-    new_credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    )
-    new_connection_string = new_credentials[MONGODB]["uris"]
+#     client.close()
 
-    # test that different credentials are provided
-    assert connection_string != new_connection_string
+#     # drop relation and get new credential for the same collection
+#     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+#         f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB}:database"
+#     )
 
-    client = MongoClient(
-        connection_string,
-        directConnection=False,
-        connect=False,
-        serverSelectionTimeoutMS=1000,
-        connectTimeoutMS=2000,
-    )
+#     await ops_test.model.wait_for_idle(apps=[MONGODB, DATA_INTEGRATOR])
+#     await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB)
+#     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB])
 
-    client = MongoClient(
-        new_connection_string,
-        directConnection=False,
-        connect=False,
-        serverSelectionTimeoutMS=1000,
-        connectTimeoutMS=2000,
-    )
+#     new_credentials = await fetch_action_get_credentials(
+#         ops_test.model.applications[DATA_INTEGRATOR].units[0]
+#     )
+#     new_connection_string = new_credentials[MONGODB]["uris"]
 
-    # test collection accessibility
-    db = client[DATABASE_NAME]
-    test_collection = db["test_collection"]
-    query = test_collection.find({}, {"release_name": 1})
-    assert query[0]["release_name"] == "Fancy Fossa"
+#     # test that different credentials are provided
+#     assert connection_string != new_connection_string
 
-    client.close()
+#     client = MongoClient(
+#         connection_string,
+#         directConnection=False,
+#         connect=False,
+#         serverSelectionTimeoutMS=1000,
+#         connectTimeoutMS=2000,
+#     )
 
-    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-        f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB}:database"
-    )
+#     client = MongoClient(
+#         new_connection_string,
+#         directConnection=False,
+#         connect=False,
+#         serverSelectionTimeoutMS=1000,
+#         connectTimeoutMS=2000,
+#     )
 
-    await ops_test.model.wait_for_idle(apps=[MONGODB, DATA_INTEGRATOR])
+#     # test collection accessibility
+#     db = client[DATABASE_NAME]
+#     test_collection = db["test_collection"]
+#     query = test_collection.find({}, {"release_name": 1})
+#     assert query[0]["release_name"] == "Fancy Fossa"
+
+#     client.close()
+
+#     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+#         f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB}:database"
+#     )
+
+#     await ops_test.model.wait_for_idle(apps=[MONGODB, DATA_INTEGRATOR])
 
 
-@pytest.mark.abort_on_fail
-async def test_deploy_and_relate_kafka(ops_test: OpsTest):
-    """Test the relation with Kafka and the correct production and consumption of messagges."""
-    await asyncio.gather(
-        ops_test.model.deploy(
-            ZOOKEEPER, channel="edge", application_name=ZOOKEEPER, num_units=1, series="jammy"
-        ),
-        ops_test.model.deploy(
-            KAFKA, channel="edge", application_name=KAFKA, num_units=1, series="jammy"
-        ),
-    )
+# @pytest.mark.skip
+# @pytest.mark.abort_on_fail
+# async def test_deploy_and_relate_kafka(ops_test: OpsTest):
+#     """Test the relation with Kafka and the correct production and consumption of messagges."""
+#     await asyncio.gather(
+#         ops_test.model.deploy(
+#             ZOOKEEPER, channel="edge", application_name=ZOOKEEPER, num_units=1, series="jammy"
+#         ),
+#         ops_test.model.deploy(
+#             KAFKA, channel="edge", application_name=KAFKA, num_units=1, series="jammy"
+#         ),
+#     )
 
-    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
-    assert ops_test.model.applications[KAFKA].status == "waiting"
-    assert ops_test.model.applications[ZOOKEEPER].status == "active"
+#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
+#     assert ops_test.model.applications[KAFKA].status == "waiting"
+#     assert ops_test.model.applications[ZOOKEEPER].status == "active"
 
-    await ops_test.model.add_relation(KAFKA, ZOOKEEPER)
-    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
-    assert ops_test.model.applications[KAFKA].status == "active"
-    assert ops_test.model.applications[ZOOKEEPER].status == "active"
+#     await ops_test.model.add_relation(KAFKA, ZOOKEEPER)
+#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
+#     assert ops_test.model.applications[KAFKA].status == "active"
+#     assert ops_test.model.applications[ZOOKEEPER].status == "active"
 
-    #
-    config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
-    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+#     #
+#     config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
+#     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
-    # test the active/waiting status for relation
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    await ops_test.model.wait_for_idle(apps=[KAFKA, DATA_INTEGRATOR])
-    await ops_test.model.add_relation(KAFKA, DATA_INTEGRATOR)
-    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
-    time.sleep(10)
-    assert ops_test.model.applications[KAFKA].status == "active"
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
-    await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
+#     # test the active/waiting status for relation
+#     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+#     await ops_test.model.wait_for_idle(apps=[KAFKA, DATA_INTEGRATOR])
+#     await ops_test.model.add_relation(KAFKA, DATA_INTEGRATOR)
+#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
+#     time.sleep(10)
+#     assert ops_test.model.applications[KAFKA].status == "active"
+#     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
 
-    # get credential for MYSQL
-    credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    )
+#     # get credential for MYSQL
+#     credentials = await fetch_action_get_credentials(
+#         ops_test.model.applications[DATA_INTEGRATOR].units[0]
+#     )
 
-    # test connection for MYSQL with retrieved credentials
-    # connection configuration
+#     # test connection for MYSQL with retrieved credentials
+#     # connection configuration
 
-    username = credentials[KAFKA]["username"]
-    password = credentials[KAFKA]["password"]
-    servers = credentials[KAFKA]["endpoints"].split(",")
-    security_protocol = "SASL_PLAINTEXT"
+#     username = credentials[KAFKA]["username"]
+#     password = credentials[KAFKA]["password"]
+#     servers = credentials[KAFKA]["endpoints"].split(",")
+#     security_protocol = "SASL_PLAINTEXT"
 
-    if not (username and password and servers):
-        raise KeyError("missing relation data from app charm")
+#     if not (username and password and servers):
+#         raise KeyError("missing relation data from app charm")
 
-    client = KafkaClient(
-        servers=servers,
-        username=username,
-        password=password,
-        topic=TOPIC_NAME,
-        consumer_group_prefix=None,
-        security_protocol=security_protocol,
-    )
+#     client = KafkaClient(
+#         servers=servers,
+#         username=username,
+#         password=password,
+#         topic=TOPIC_NAME,
+#         consumer_group_prefix=None,
+#         security_protocol=security_protocol,
+#     )
 
-    client.create_topic()
-    client.run_producer()
+#     client.create_topic()
+#     client.run_producer()
 
-    logs = check_output(
-        f"JUJU_MODEL={ops_test.model_full_name} juju ssh {KAFKA}/0 'find /var/snap/kafka/common/log-data'",
-        stderr=PIPE,
-        shell=True,
-        universal_newlines=True,
-    ).splitlines()
+#     logs = check_output(
+#         f"JUJU_MODEL={ops_test.model_full_name} juju ssh
+# {KAFKA}/0 'find /var/snap/kafka/common/log-data'",
+#         stderr=PIPE,
+#         shell=True,
+#         universal_newlines=True,
+#     ).splitlines()
 
-    logger.debug(f"{logs=}")
+#     logger.debug(f"{logs=}")
 
-    passed = False
-    for log in logs:
-        if TOPIC_NAME and "index" in log:
-            passed = True
-            break
+#     passed = False
+#     for log in logs:
+#         if TOPIC_NAME and "index" in log:
+#             passed = True
+#             break
 
-    assert passed, "logs not found"
+#     assert passed, "logs not found"

@@ -1,0 +1,44 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+create-table: 
+  description: creates a table 
+  params:
+    product:
+      type: string
+      description: Name of the data product to test
+    database-name:
+      type: string
+      description: The name of the database
+    credentials:
+      type: string
+      description: The credentials exposed by the data-integrator.
+  required: [product,database-name,credentials]
+
+insert-data: 
+  description: insert data in the table 
+  params:
+    product:
+      type: string
+      description: Name of the data product to test
+    database-name:
+      type: string
+      description: The name of the database
+    credentials:
+      type: string
+      description: The credentials exposed by the data-integrator
+  required: [product,database-name,credentials]
+
+check-inserted-data: 
+  description: check the data inside the table 
+  params:
+    product:
+      type: string
+      description: Name of the data product to test
+    database-name:
+      type: string
+      description: The name of the database
+    credentials:
+      type: string
+      description: The credentials exposed by the data-integrator.
+  required: [product,database-name,credentials]
