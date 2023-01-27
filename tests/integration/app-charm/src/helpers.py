@@ -7,7 +7,7 @@ from typing import Dict
 import psycopg2
 
 MYSQL = "mysql"
-POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}
+POSTGRESQL = "postgresql"
 MONGODB = "mongodb"
 DATABASE_NAME = "test_database"
 KAFKA = "kafka"

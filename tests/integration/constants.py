@@ -4,7 +4,8 @@
 
 DATA_INTEGRATOR = "data-integrator"
 MYSQL = "mysql"
-POSTGRESQL = "postgresql"
+# POSTGRESQL = "postgresql"
+POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}
 MONGODB = "mongodb"
 DATABASE_NAME = "test_database"
 KAFKA = "kafka"
