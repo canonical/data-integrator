@@ -12,9 +12,17 @@ import json
 import logging
 
 from helpers import (
+    MONGODB,
+    MYSQL,
     POSTGRESQL,
+    check_inserted_data_mongodb,
+    check_inserted_data_mysql,
     check_inserted_data_postgresql,
+    create_table_mongodb,
+    create_table_mysql,
     create_table_postgresql,
+    insert_data_mongodb,
+    insert_data_mysql,
     insert_data_postgresql,
 )
 from ops.charm import CharmBase
@@ -59,6 +67,10 @@ class ApplicationCharm(CharmBase):
 
         if product == POSTGRESQL:
             create_table_postgresql(credentials, database_name)
+        elif product == MYSQL:
+            create_table_mysql(credentials, database_name)
+        elif product == MONGODB:
+            create_table_mongodb(credentials, database_name)
         else:
             raise ValueError()
 
@@ -74,6 +86,10 @@ class ApplicationCharm(CharmBase):
 
         if product == POSTGRESQL:
             insert_data_postgresql(credentials, database_name)
+        elif product == MYSQL:
+            insert_data_mysql(credentials, database_name)
+        elif product == MONGODB:
+            insert_data_mongodb(credentials, database_name)
         else:
             raise ValueError()
 
@@ -89,6 +105,10 @@ class ApplicationCharm(CharmBase):
 
         if product == POSTGRESQL:
             check_inserted_data_postgresql(credentials, database_name)
+        elif product == MYSQL:
+            check_inserted_data_mysql(credentials, database_name)
+        elif product == MONGODB:
+            check_inserted_data_mongodb(credentials, database_name)
         else:
             raise ValueError()
 

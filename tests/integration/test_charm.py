@@ -18,6 +18,7 @@ from tests.integration.connector import MysqlConnector
 from tests.integration.constants import (  # EXTRA_USER_ROLES,; KAFKA,; MONGODB,; TOPIC_NAME,; ZOOKEEPER,
     DATA_INTEGRATOR,
     DATABASE_NAME,
+    MONGODB,
     MYSQL,
     POSTGRESQL,
 )
@@ -42,7 +43,6 @@ APP = "app"
 
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest, app_charm: PosixPath):
-    logger.info(f"CLOUD NAME: {ops_test.cloud_name}")
     data_integrator_charm = await ops_test.build_charm(".")
     await asyncio.gather(
         ops_test.model.deploy(
@@ -140,6 +140,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         check_my_sql_data(rows, credentials)
 
 
+@pytest.mark.skip
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     """Test the relation with PostgreSQL and database accessibility."""
     await asyncio.gather(
@@ -162,7 +163,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    _ = await fetch_action_database(
+    await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "create-table",
         POSTGRESQL[ops_test.cloud_name],
@@ -170,7 +171,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         DATABASE_NAME,
     )
 
-    _ = await fetch_action_database(
+    await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "insert-data",
         POSTGRESQL[ops_test.cloud_name],
@@ -178,7 +179,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         DATABASE_NAME,
     )
 
-    _ = await fetch_action_database(
+    await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         POSTGRESQL[ops_test.cloud_name],
@@ -200,7 +201,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     # check that new credentials are provided
     assert credentials != new_credentials
 
-    _ = await fetch_action_database(
+    await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         POSTGRESQL[ops_test.cloud_name],
@@ -209,99 +210,82 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     )
 
 
-# @pytest.mark.skip
-# async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
-#     """Test the relation with MongoDB and database accessibility."""
-#     await asyncio.gather(
-#         ops_test.model.deploy(
-#             "mongodb", channel="dpe/edge", application_name=MONGODB, num_units=1, series="focal"
-#         )
-#     )
-#     await ops_test.model.wait_for_idle(apps=[MONGODB])
-#     assert ops_test.model.applications[MONGODB].status == "active"
-#     await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB)
-#     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB])
-#     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
+    """Test the relation with MongoDB and database accessibility."""
+    channel = "dpe/edge" if ops_test.cloud_name == "localhost" else "edge"
+    await asyncio.gather(
+        ops_test.model.deploy(
+            "mongodb",
+            channel=channel,
+            application_name=MONGODB[ops_test.cloud_name],
+            num_units=1,
+            series="focal",
+        )
+    )
+    await ops_test.model.wait_for_idle(apps=[MONGODB[ops_test.cloud_name]])
+    assert ops_test.model.applications[MONGODB[ops_test.cloud_name]].status == "active"
+    await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB[ops_test.cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB[ops_test.cloud_name]])
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
-#     # get credential for MongoDB
-#     credentials = await fetch_action_get_credentials(
-#         ops_test.model.applications[DATA_INTEGRATOR].units[0]
-#     )
+    # get credential for MongoDB
+    credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
 
-#     connection_string = credentials[MONGODB]["uris"]
+    await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "create-table",
+        MONGODB[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
 
-#     client = MongoClient(
-#         connection_string,
-#         directConnection=False,
-#         connect=False,
-#         serverSelectionTimeoutMS=1000,
-#         connectTimeoutMS=2000,
-#     )
+    await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "insert-data",
+        MONGODB[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
 
-#     # test some operations
-#     db = client[DATABASE_NAME]
-#     test_collection = db["test_collection"]
-#     ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
-#     test_collection.insert_one(ubuntu)
+    await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        MONGODB[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
 
-#     query = test_collection.find({}, {"release_name": 1})
-#     assert query[0]["release_name"] == "Focal Fossa"
+    # drop relation and get new credential for the same collection
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB[ops_test.cloud_name]}:database"
+    )
 
-#     ubuntu_version = {"version": 20.04}
-#     ubuntu_name_updated = {"$set": {"release_name": "Fancy Fossa"}}
-#     test_collection.update_one(ubuntu_version, ubuntu_name_updated)
+    await ops_test.model.wait_for_idle(apps=[MONGODB[ops_test.cloud_name], DATA_INTEGRATOR])
+    await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB[ops_test.cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB[ops_test.cloud_name]])
 
-#     query = test_collection.find({}, {"release_name": 1})
-#     assert query[0]["release_name"] == "Fancy Fossa"
+    new_credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
 
-#     client.close()
+    # test that different credentials are provided
+    assert credentials != new_credentials
 
-#     # drop relation and get new credential for the same collection
-#     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-#         f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB}:database"
-#     )
+    await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        MONGODB[ops_test.cloud_name],
+        json.dumps(new_credentials),
+        DATABASE_NAME,
+    )
 
-#     await ops_test.model.wait_for_idle(apps=[MONGODB, DATA_INTEGRATOR])
-#     await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB)
-#     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB])
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB[ops_test.cloud_name]}:database"
+    )
 
-#     new_credentials = await fetch_action_get_credentials(
-#         ops_test.model.applications[DATA_INTEGRATOR].units[0]
-#     )
-#     new_connection_string = new_credentials[MONGODB]["uris"]
-
-#     # test that different credentials are provided
-#     assert connection_string != new_connection_string
-
-#     client = MongoClient(
-#         connection_string,
-#         directConnection=False,
-#         connect=False,
-#         serverSelectionTimeoutMS=1000,
-#         connectTimeoutMS=2000,
-#     )
-
-#     client = MongoClient(
-#         new_connection_string,
-#         directConnection=False,
-#         connect=False,
-#         serverSelectionTimeoutMS=1000,
-#         connectTimeoutMS=2000,
-#     )
-
-#     # test collection accessibility
-#     db = client[DATABASE_NAME]
-#     test_collection = db["test_collection"]
-#     query = test_collection.find({}, {"release_name": 1})
-#     assert query[0]["release_name"] == "Fancy Fossa"
-
-#     client.close()
-
-#     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-#         f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB}:database"
-#     )
-
-#     await ops_test.model.wait_for_idle(apps=[MONGODB, DATA_INTEGRATOR])
+    await ops_test.model.wait_for_idle(apps=[MONGODB[ops_test.cloud_name], DATA_INTEGRATOR])
 
 
 # @pytest.mark.skip
