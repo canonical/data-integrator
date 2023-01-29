@@ -140,7 +140,6 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         check_my_sql_data(rows, credentials)
 
 
-# @pytest.mark.skip
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     """Test the relation with PostgreSQL and database accessibility."""
     await asyncio.gather(

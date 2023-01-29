@@ -10,6 +10,11 @@ from pymongo import MongoClient
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"
 MONGODB = "mongodb"
+
+MYSQL_K8S = "mysql-k8s"
+POSTGRESQL_K8S = "postgresql-k8s"
+MONGODB_K8S = "mongodb-k8s"
+
 DATABASE_NAME = "test_database"
 KAFKA = "kafka"
 ZOOKEEPER = "zookeeper"

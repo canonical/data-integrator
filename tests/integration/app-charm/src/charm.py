@@ -13,8 +13,11 @@ import logging
 
 from helpers import (
     MONGODB,
+    MONGODB_K8S,
     MYSQL,
+    MYSQL_K8S,
     POSTGRESQL,
+    POSTGRESQL_K8S,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
@@ -65,11 +68,11 @@ class ApplicationCharm(CharmBase):
         database_name = event.params["database-name"]
         credentials = json.loads(event.params["credentials"])
 
-        if product == POSTGRESQL:
+        if product == POSTGRESQL or product == POSTGRESQL_K8S:
             create_table_postgresql(credentials, database_name)
-        elif product == MYSQL:
+        elif product == MYSQL or product == MYSQL_K8S:
             create_table_mysql(credentials, database_name)
-        elif product == MONGODB:
+        elif product == MONGODB or product == MONGODB_K8S:
             create_table_mongodb(credentials, database_name)
         else:
             raise ValueError()
@@ -84,11 +87,11 @@ class ApplicationCharm(CharmBase):
         database_name = event.params["database-name"]
         credentials = json.loads(event.params["credentials"])
 
-        if product == POSTGRESQL:
+        if product == POSTGRESQL or product == POSTGRESQL_K8S:
             insert_data_postgresql(credentials, database_name)
-        elif product == MYSQL:
+        elif product == MYSQL or product == MYSQL_K8S:
             insert_data_mysql(credentials, database_name)
-        elif product == MONGODB:
+        elif product == MONGODB or product == MONGODB_K8S:
             insert_data_mongodb(credentials, database_name)
         else:
             raise ValueError()
@@ -103,11 +106,11 @@ class ApplicationCharm(CharmBase):
         database_name = event.params["database-name"]
         credentials = json.loads(event.params["credentials"])
 
-        if product == POSTGRESQL:
+        if product == POSTGRESQL or product == POSTGRESQL_K8S:
             check_inserted_data_postgresql(credentials, database_name)
-        elif product == MYSQL:
+        elif product == MYSQL or product == MYSQL_K8S:
             check_inserted_data_mysql(credentials, database_name)
-        elif product == MONGODB:
+        elif product == MONGODB or product == MONGODB_K8S:
             check_inserted_data_mongodb(credentials, database_name)
         else:
             raise ValueError()
