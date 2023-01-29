@@ -140,12 +140,12 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         check_my_sql_data(rows, credentials)
 
 
-@pytest.mark.skip
+# @pytest.mark.skip
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     """Test the relation with PostgreSQL and database accessibility."""
     await asyncio.gather(
         ops_test.model.deploy(
-            "postgresql",
+            POSTGRESQL[ops_test.cloud_name],
             channel="edge",
             application_name=POSTGRESQL[ops_test.cloud_name],
             num_units=1,
@@ -215,7 +215,7 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     channel = "dpe/edge" if ops_test.cloud_name == "localhost" else "edge"
     await asyncio.gather(
         ops_test.model.deploy(
-            "mongodb",
+            MONGODB[ops_test.cloud_name],
             channel=channel,
             application_name=MONGODB[ops_test.cloud_name],
             num_units=1,
@@ -232,7 +232,7 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
-
+    logger.info(f"MongoDB[{ops_test.cloud_name}] -> Create table")
     await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "create-table",
@@ -240,7 +240,7 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
         json.dumps(credentials),
         DATABASE_NAME,
     )
-
+    logger.info(f"MongoDB[{ops_test.cloud_name}] -> Insert data")
     await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "insert-data",
@@ -248,7 +248,7 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
         json.dumps(credentials),
         DATABASE_NAME,
     )
-
+    logger.info(f"MongoDB[{ops_test.cloud_name}] -> Check data")
     await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
@@ -272,7 +272,7 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
 
     # test that different credentials are provided
     assert credentials != new_credentials
-
+    logger.info(f"MongoDB[{ops_test.cloud_name}] -> Check data with new credentials")
     await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
