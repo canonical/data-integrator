@@ -149,9 +149,15 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
             application_name=POSTGRESQL[ops_test.cloud_name],
             num_units=1,
             series="focal",
+            trust=True,
         )
     )
-    await ops_test.model.wait_for_idle(apps=[POSTGRESQL[ops_test.cloud_name]])
+    await ops_test.model.wait_for_idle(
+        apps=[POSTGRESQL[ops_test.cloud_name]],
+        # raise_on_blocked=True,
+        timeout=1000,
+        # wait_for_active=60,
+    )
     assert ops_test.model.applications[POSTGRESQL[ops_test.cloud_name]].status == "active"
     await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name])
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name]])
