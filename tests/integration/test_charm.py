@@ -5,9 +5,6 @@
 import asyncio
 import json
 import logging
-import time
-
-# import time
 from pathlib import PosixPath
 
 import pytest
@@ -155,11 +152,12 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     )
     await ops_test.model.wait_for_idle(
         apps=[POSTGRESQL[ops_test.cloud_name]],
+        wait_for_active=True,
         # raise_on_blocked=True,
         # timeout=1000,
         # wait_for_active=60,
     )
-    time.sleep(10)
+    # time.sleep(10)
     assert ops_test.model.applications[POSTGRESQL[ops_test.cloud_name]].status == "active"
     await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name])
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name]])
