@@ -7,6 +7,7 @@ parts:
   charm:
     charm-binary-python-packages:
       - psycopg2-binary
+      - mysql-connector-python == 8.0.31
 
 bases:
   - build-on:

@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 DATA_INTEGRATOR = "data-integrator"
-MYSQL = "mysql"
+MYSQL = {"localhost": "mysql", "microk8s": "mysql-k8s"}
 # POSTGRESQL = "postgresql"
 POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}
 # MONGODB = "mongodb"

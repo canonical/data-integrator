@@ -5,7 +5,6 @@
 import itertools
 from typing import Dict, List, Tuple
 
-from connector import MysqlConnector
 from juju.unit import Unit
 
 from tests.integration.constants import DATABASE_NAME, MYSQL, POSTGRESQL
