@@ -11,6 +11,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.constants import (
+    APP,
     DATA_INTEGRATOR,
     DATABASE_NAME,
     MONGODB,
@@ -23,8 +24,6 @@ from tests.integration.helpers import (
 )
 
 logger = logging.getLogger(__name__)
-
-APP = "app"
 
 
 @pytest.mark.abort_on_fail
@@ -49,7 +48,6 @@ async def test_build_and_deploy(ops_test: OpsTest, app_charm: PosixPath):
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-# @pytest.mark.skip
 async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     """Test the relation with MySQL and database accessibility."""
     await asyncio.gather(
@@ -58,7 +56,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
             channel="edge",
             application_name=MYSQL[ops_test.cloud_name],
             num_units=1,
-            series="focal",
+            series="jammy",
         )
     )
     await ops_test.model.wait_for_idle(apps=[MYSQL[ops_test.cloud_name]], wait_for_active=True)
@@ -68,12 +66,9 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     # get credential for MYSQL
-    credentials = fetch_action_get_credentials(
+    credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
-
-    # test connection for MYSQL with retrieved credentials
-    # connection configuration
 
     logger.info(f"Create table on {MYSQL[ops_test.cloud_name]}")
     await fetch_action_database(
@@ -115,8 +110,9 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     )
 
     assert credentials != new_credentials
-    logger.info("Check new credentials")
-    logger.info(f"Check assessibility of inserted data on {MYSQL[ops_test.cloud_name]}")
+    logger.info(
+        f"Check assessibility of inserted data on {MYSQL[ops_test.cloud_name]} with new credentials"
+    )
     await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
@@ -188,8 +184,9 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
     assert credentials != new_credentials
-    logger.info("Check new credentials")
-    logger.info(f"Check assessibility of inserted data on {POSTGRESQL[ops_test.cloud_name]}")
+    logger.info(
+        f"Check assessibility of inserted data on {POSTGRESQL[ops_test.cloud_name]} with new credentials"
+    )
     await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
@@ -261,8 +258,10 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
 
     # test that different credentials are provided
     assert credentials != new_credentials
-    logger.info("Check new credentials")
-    logger.info(f"Check assessibility of inserted data on {MONGODB[ops_test.cloud_name]}")
+
+    logger.info(
+        f"Check assessibility of inserted data on {MONGODB[ops_test.cloud_name]} with new credentials"
+    )
     await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
