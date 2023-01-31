@@ -49,5 +49,4 @@ async def fetch_action_database(
     parameters = {"product": product, "credentials": credentials, "database-name": database_name}
     action = await unit.run_action(action_name=action_name, **parameters)
     result = await action.wait()
-    print(type(result))
     return result

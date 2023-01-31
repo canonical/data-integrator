@@ -46,11 +46,9 @@ class ApplicationCharm(CharmBase):
         self.name = CHARM_KEY
 
         self.framework.observe(getattr(self.on, "start"), self._on_start)
-        # this action is needed because hostnames cannot be resolved outside K8s
+        # these action are needed because hostnames cannot be resolved outside K8s
         self.framework.observe(getattr(self.on, "create_table_action"), self._create_table)
-        # this action is needed because hostnames cannot be resolved outside K8s
         self.framework.observe(getattr(self.on, "insert_data_action"), self._insert_data)
-        # this action is needed because hostnames cannot be resolved outside K8s
         self.framework.observe(
             getattr(self.on, "check_inserted_data_action"), self._check_inserted_data
         )
@@ -59,7 +57,7 @@ class ApplicationCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _create_table(self, event) -> None:
-
+        """Handle the action that creates a table on different databases."""
         if not self.unit.is_leader():
             event.fail("The action can be run only on leader unit.")
             return
@@ -78,7 +76,7 @@ class ApplicationCharm(CharmBase):
             raise ValueError()
 
     def _insert_data(self, event) -> None:
-
+        """Handle the action that insert some data on different databases."""
         if not self.unit.is_leader():
             event.fail("The action can be run only on leader unit.")
             return
@@ -97,7 +95,7 @@ class ApplicationCharm(CharmBase):
             raise ValueError()
 
     def _check_inserted_data(self, event) -> None:
-
+        """Handle the action that checks if data are written on different databases."""
         if not self.unit.is_leader():
             event.fail("The action can be run only on leader unit.")
             return

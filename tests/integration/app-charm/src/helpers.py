@@ -35,6 +35,7 @@ def build_postgresql_connection_string(credentials: Dict[str, str], database_nam
 
 
 def check_inserted_data_postgresql(credentials: Dict[str, str], database_name: str):
+    """Check that data are inserted in a table for Postgresql."""
     connection_string = build_postgresql_connection_string(credentials, database_name)
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
         # Read data from previously created database.
@@ -44,7 +45,7 @@ def check_inserted_data_postgresql(credentials: Dict[str, str], database_name: s
 
 
 def create_table_postgresql(credentials: Dict[str, str], database_name: str):
-
+    """Create a table in a Postgresql database."""
     connection_string = build_postgresql_connection_string(credentials, database_name)
     # test connection for PostgreSQL with retrieved credentials
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
@@ -60,7 +61,7 @@ def create_table_postgresql(credentials: Dict[str, str], database_name: str):
 
 
 def insert_data_postgresql(credentials: Dict[str, str], database_name: str):
-
+    """Insert some testing data in a Postgresql database."""
     connection_string = build_postgresql_connection_string(credentials, database_name)
     # test connection for PostgreSQL with retrieved credentials
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
@@ -86,7 +87,7 @@ def get_mysql_config(credentials: Dict[str, str], database_name) -> Dict[str, st
 
 
 def check_inserted_data_mysql(credentials: Dict[str, str], database_name: str):
-
+    """Check that data are inserted in a table for MySQL."""
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
         cursor.execute(
@@ -103,7 +104,7 @@ def check_inserted_data_mysql(credentials: Dict[str, str], database_name: str):
 
 
 def create_table_mysql(credentials: Dict[str, str], database_name: str):
-
+    """Create a table in a MySQL database."""
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
         cursor.execute(
@@ -121,7 +122,7 @@ def create_table_mysql(credentials: Dict[str, str], database_name: str):
 
 
 def insert_data_mysql(credentials: Dict[str, str], database_name: str):
-
+    """Insert some testing data in a MySQL database."""
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
         cursor.execute(
@@ -146,6 +147,7 @@ def insert_data_mysql(credentials: Dict[str, str], database_name: str):
 
 
 def check_inserted_data_mongodb(credentials: Dict[str, str], database_name: str):
+    """Check that data are inserted in a table for MongoDB."""
     connection_string = credentials[MONGODB]["uris"]
 
     client = MongoClient(
@@ -165,7 +167,7 @@ def check_inserted_data_mongodb(credentials: Dict[str, str], database_name: str)
 
 
 def create_table_mongodb(credentials: Dict[str, str], database_name: str):
-
+    """Create a table in a MongoDB database."""
     connection_string = credentials[MONGODB]["uris"]
 
     client = MongoClient(
@@ -184,7 +186,7 @@ def create_table_mongodb(credentials: Dict[str, str], database_name: str):
 
 
 def insert_data_mongodb(credentials: Dict[str, str], database_name: str):
-
+    """Insert some testing data in a MongoDB collection."""
     connection_string = credentials[MONGODB]["uris"]
 
     client = MongoClient(
