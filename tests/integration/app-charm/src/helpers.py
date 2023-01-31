@@ -76,6 +76,7 @@ def insert_data_postgresql(credentials: Dict[str, str], database_name: str):
 
 
 def get_mysql_config(credentials: Dict[str, str], database_name) -> Dict[str, str]:
+    """Create the configuration params need to connect with MySQL."""
     config = {
         "user": credentials[MYSQL]["username"],
         "password": credentials[MYSQL]["password"],
@@ -91,7 +92,7 @@ def check_inserted_data_mysql(credentials: Dict[str, str], database_name: str):
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
         cursor.execute(
-            f"SELECT * FROM app_data where username = '{credentials[MYSQL]['username']}'"
+            f"SELECT * FROM {TABLE_NAME} where username = '{credentials[MYSQL]['username']}'"
         )
         rows = cursor.fetchall()
         first_row = rows[0]
