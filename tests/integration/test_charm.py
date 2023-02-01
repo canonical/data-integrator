@@ -295,7 +295,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
             channel="edge",
             application_name=ZOOKEEPER[ops_test.cloud_name],
             num_units=1,
-            series="jammy",
+            series="jammy" if ops_test.cloud_name == "localhost" else "focal",
         ),
         ops_test.model.deploy(
             KAFKA[ops_test.cloud_name],
