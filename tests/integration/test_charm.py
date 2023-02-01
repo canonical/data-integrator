@@ -5,6 +5,7 @@
 import asyncio
 import json
 import logging
+import time
 from pathlib import PosixPath
 
 import pytest
@@ -14,13 +15,19 @@ from tests.integration.constants import (
     APP,
     DATA_INTEGRATOR,
     DATABASE_NAME,
+    EXTRA_USER_ROLES,
+    KAFKA,
     MONGODB,
     MYSQL,
     POSTGRESQL,
+    TOPIC_NAME,
+    ZOOKEEPER,
 )
 from tests.integration.helpers import (
+    check_logs,
     fetch_action_database,
     fetch_action_get_credentials,
+    fetch_action_kafka,
 )
 
 logger = logging.getLogger(__name__)
@@ -279,84 +286,111 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[MONGODB[ops_test.cloud_name], DATA_INTEGRATOR])
 
 
-# @pytest.mark.skip
-# @pytest.mark.abort_on_fail
-# async def test_deploy_and_relate_kafka(ops_test: OpsTest):
-#     """Test the relation with Kafka and the correct production and consumption of messagges."""
-#     await asyncio.gather(
-#         ops_test.model.deploy(
-#             ZOOKEEPER, channel="edge", application_name=ZOOKEEPER, num_units=1, series="jammy"
-#         ),
-#         ops_test.model.deploy(
-#             KAFKA, channel="edge", application_name=KAFKA, num_units=1, series="jammy"
-#         ),
-#     )
+@pytest.mark.abort_on_fail
+async def test_deploy_and_relate_kafka(ops_test: OpsTest):
+    """Test the relation with Kafka and the correct production and consumption of messagges."""
+    await asyncio.gather(
+        ops_test.model.deploy(
+            ZOOKEEPER[ops_test.cloud_name],
+            channel="edge",
+            application_name=ZOOKEEPER[ops_test.cloud_name],
+            num_units=1,
+            series="jammy",
+        ),
+        ops_test.model.deploy(
+            KAFKA[ops_test.cloud_name],
+            channel="edge",
+            application_name=KAFKA[ops_test.cloud_name],
+            num_units=1,
+            series="jammy",
+        ),
+    )
 
-#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
-#     assert ops_test.model.applications[KAFKA].status == "waiting"
-#     assert ops_test.model.applications[ZOOKEEPER].status == "active"
+    await ops_test.model.wait_for_idle(
+        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]]
+    )
+    assert ops_test.model.applications[KAFKA[ops_test.cloud_name]].status == "waiting"
+    assert ops_test.model.applications[ZOOKEEPER[ops_test.cloud_name]].status == "active"
 
-#     await ops_test.model.add_relation(KAFKA, ZOOKEEPER)
-#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER])
-#     assert ops_test.model.applications[KAFKA].status == "active"
-#     assert ops_test.model.applications[ZOOKEEPER].status == "active"
+    await ops_test.model.add_relation(KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name])
+    await ops_test.model.wait_for_idle(
+        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]]
+    )
+    assert ops_test.model.applications[KAFKA[ops_test.cloud_name]].status == "active"
+    assert ops_test.model.applications[ZOOKEEPER[ops_test.cloud_name]].status == "active"
 
-#     #
-#     config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
-#     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+    # configure topic and extra-user-roles
+    config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
+    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
-#     # test the active/waiting status for relation
-#     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-#     await ops_test.model.wait_for_idle(apps=[KAFKA, DATA_INTEGRATOR])
-#     await ops_test.model.add_relation(KAFKA, DATA_INTEGRATOR)
-#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
-#     time.sleep(10)
-#     assert ops_test.model.applications[KAFKA].status == "active"
-#     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
-#     await ops_test.model.wait_for_idle(apps=[KAFKA, ZOOKEEPER, DATA_INTEGRATOR])
+    # test the active/waiting status for relation
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    await ops_test.model.wait_for_idle(apps=[KAFKA[ops_test.cloud_name], DATA_INTEGRATOR])
+    await ops_test.model.add_relation(KAFKA[ops_test.cloud_name], DATA_INTEGRATOR)
+    await ops_test.model.wait_for_idle(
+        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name], DATA_INTEGRATOR]
+    )
+    time.sleep(10)
+    assert ops_test.model.applications[KAFKA[ops_test.cloud_name]].status == "active"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+    await ops_test.model.wait_for_idle(
+        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name], DATA_INTEGRATOR]
+    )
 
-#     # get credential for MYSQL
-#     credentials = await fetch_action_get_credentials(
-#         ops_test.model.applications[DATA_INTEGRATOR].units[0]
-#     )
+    # get credential for Kafka
+    credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
 
-#     # test connection for MYSQL with retrieved credentials
-#     # connection configuration
+    logger.info("Create topic")
+    await fetch_action_kafka(
+        ops_test.model.applications[APP].units[0],
+        "create-topic",
+        KAFKA[ops_test.cloud_name],
+        json.dumps(credentials),
+        TOPIC_NAME,
+    )
 
-#     username = credentials[KAFKA]["username"]
-#     password = credentials[KAFKA]["password"]
-#     servers = credentials[KAFKA]["endpoints"].split(",")
-#     security_protocol = "SASL_PLAINTEXT"
+    logger.info("Produce messages")
+    await fetch_action_kafka(
+        ops_test.model.applications[APP].units[0],
+        "produce-messages",
+        KAFKA[ops_test.cloud_name],
+        json.dumps(credentials),
+        TOPIC_NAME,
+    )
+    logger.info("Check messages in logs")
+    check_logs(
+        model_full_name=ops_test.model_full_name,
+        kafka_unit_name=f"{KAFKA[ops_test.cloud_name]}/0",
+        topic=TOPIC_NAME,
+    )
 
-#     if not (username and password and servers):
-#         raise KeyError("missing relation data from app charm")
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:kafka", f"{KAFKA[ops_test.cloud_name]}:kafka-client"
+    )
+    await ops_test.model.wait_for_idle(apps=[KAFKA[ops_test.cloud_name], DATA_INTEGRATOR])
 
-#     client = KafkaClient(
-#         servers=servers,
-#         username=username,
-#         password=password,
-#         topic=TOPIC_NAME,
-#         consumer_group_prefix=None,
-#         security_protocol=security_protocol,
-#     )
+    await ops_test.model.add_relation(DATA_INTEGRATOR, KAFKA[ops_test.cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, KAFKA[ops_test.cloud_name]])
 
-#     client.create_topic()
-#     client.run_producer()
+    new_credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
 
-#     logs = check_output(
-#         f"JUJU_MODEL={ops_test.model_full_name} juju ssh
-# {KAFKA}/0 'find /var/snap/kafka/common/log-data'",
-#         stderr=PIPE,
-#         shell=True,
-#         universal_newlines=True,
-#     ).splitlines()
-
-#     logger.debug(f"{logs=}")
-
-#     passed = False
-#     for log in logs:
-#         if TOPIC_NAME and "index" in log:
-#             passed = True
-#             break
-
-#     assert passed, "logs not found"
+    # test that different credentials are provided
+    assert credentials != new_credentials
+    logger.info("Produce messages")
+    await fetch_action_kafka(
+        ops_test.model.applications[APP].units[0],
+        "produce-messages",
+        KAFKA[ops_test.cloud_name],
+        json.dumps(new_credentials),
+        TOPIC_NAME,
+    )
+    logger.info("Check messages in logs")
+    check_logs(
+        model_full_name=ops_test.model_full_name,
+        kafka_unit_name=f"{KAFKA[ops_test.cloud_name]}/0",
+        topic=TOPIC_NAME,
+    )

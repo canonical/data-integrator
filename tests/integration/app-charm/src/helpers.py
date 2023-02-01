@@ -6,6 +6,7 @@ from typing import Dict
 
 import psycopg2
 from connector import MysqlConnector
+from kafka_client import KafkaClient
 from pymongo import MongoClient
 
 MYSQL = "mysql"
@@ -20,6 +21,8 @@ DATABASE_NAME = "test_database"
 KAFKA = "kafka"
 ZOOKEEPER = "zookeeper"
 
+KAFKA_K8S = "kafka-k8s"
+ZOOKEEPER_K8S = "zookeeper-k8s"
 
 TABLE_NAME = "test_table"
 
@@ -204,3 +207,50 @@ def insert_data_mongodb(credentials: Dict[str, str], database_name: str):
     ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
     test_collection.insert_one(ubuntu)
     client.close()
+
+
+# KAFKA
+
+
+def produce_messages(credentials: Dict[str, str], topic_name: str):
+    """Produce message to a topic."""
+    username = credentials[KAFKA]["username"]
+    password = credentials[KAFKA]["password"]
+    servers = credentials[KAFKA]["endpoints"].split(",")
+    security_protocol = "SASL_PLAINTEXT"
+
+    if not (username and password and servers):
+        raise KeyError("missing relation data from app charm")
+
+    client = KafkaClient(
+        servers=servers,
+        username=username,
+        password=password,
+        topic=topic_name,
+        consumer_group_prefix=None,
+        security_protocol=security_protocol,
+    )
+
+    client.run_producer()
+
+
+def create_topic(credentials: Dict[str, str], topic_name: str):
+    """Produce message to a topic."""
+    username = credentials[KAFKA]["username"]
+    password = credentials[KAFKA]["password"]
+    servers = credentials[KAFKA]["endpoints"].split(",")
+    security_protocol = "SASL_PLAINTEXT"
+
+    if not (username and password and servers):
+        raise KeyError("missing relation data from app charm")
+
+    client = KafkaClient(
+        servers=servers,
+        username=username,
+        password=password,
+        topic=topic_name,
+        consumer_group_prefix=None,
+        security_protocol=security_protocol,
+    )
+
+    client.create_topic()

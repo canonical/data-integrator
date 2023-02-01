@@ -2,6 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+from subprocess import PIPE, check_output
 from typing import Dict
 
 from juju.unit import Unit
@@ -35,7 +36,7 @@ def build_postgresql_connection_string(credentials: Dict[str, str]) -> str:
 async def fetch_action_database(
     unit: Unit, action_name: str, product: str, credentials: str, database_name: str
 ) -> Dict:
-    """Helper to run an action to sync credentials.
+    """Helper to run an action to execute commands with databases.
 
     Args:
         unit: The juju unit on which to run the action
@@ -50,3 +51,55 @@ async def fetch_action_database(
     action = await unit.run_action(action_name=action_name, **parameters)
     result = await action.wait()
     return result
+
+
+async def fetch_action_kafka(
+    unit: Unit, action_name: str, product: str, credentials: str, topic_name: str
+) -> Dict:
+    """Helper to run an action to test Kafka.
+
+    Args:
+        unit: The juju unit on which to run the action
+        action_name: name of the action
+        product: the name of the product
+        credentials: credentials used to connect
+        topic_name: name of the database
+    Returns:
+        The result of the action
+    """
+    parameters = {"product": product, "credentials": credentials, "topic-name": topic_name}
+    action = await unit.run_action(action_name=action_name, **parameters)
+    result = await action.wait()
+    return result
+
+
+def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
+    """Check that logs are written for a topic Kafka topic.
+
+    Args:
+        model_full_name: the full name of the model
+        kafka_unit_name: the kafka unit to checks logs on
+        topic: the desired topic to produce to
+    Raises:
+        KeyError: if missing relation data
+        AssertionError: if logs aren't found for desired topic
+    """
+    log_directory = (
+        "/var/snap/kafka/common/log-data"
+        if "k8s" not in kafka_unit_name
+        else "/var/lib/juju/storage/log-data"
+    )
+    logs = check_output(
+        f"JUJU_MODEL={model_full_name} juju ssh {kafka_unit_name} 'find {log_directory}'",
+        stderr=PIPE,
+        shell=True,
+        universal_newlines=True,
+    ).splitlines()
+
+    passed = False
+    for log in logs:
+        if topic and "index" in log:
+            passed = True
+            break
+
+    assert passed, "logs not found"

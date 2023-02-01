@@ -12,6 +12,8 @@ import json
 import logging
 
 from helpers import (
+    KAFKA,
+    KAFKA_K8S,
     MONGODB,
     MONGODB_K8S,
     MYSQL,
@@ -24,9 +26,11 @@ from helpers import (
     create_table_mongodb,
     create_table_mysql,
     create_table_postgresql,
+    create_topic,
     insert_data_mongodb,
     insert_data_mysql,
     insert_data_postgresql,
+    produce_messages,
 )
 from ops.charm import CharmBase
 from ops.main import main
@@ -52,6 +56,9 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(
             getattr(self.on, "check_inserted_data_action"), self._check_inserted_data
         )
+
+        self.framework.observe(getattr(self.on, "produce_messages_action"), self._produce_messages)
+        self.framework.observe(getattr(self.on, "create_topic_action"), self._create_topic)
 
     def _on_start(self, _) -> None:
         self.unit.status = ActiveStatus()
@@ -110,6 +117,36 @@ class ApplicationCharm(CharmBase):
             check_inserted_data_mysql(credentials, database_name)
         elif product == MONGODB or product == MONGODB_K8S:
             check_inserted_data_mongodb(credentials, database_name)
+        else:
+            raise ValueError()
+
+    def _produce_messages(self, event) -> None:
+        """Handle the action that checks if data are written on different databases."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+        # read parameters from the event
+        product = event.params["product"]
+        topic_name = event.params["topic-name"]
+        credentials = json.loads(event.params["credentials"])
+
+        if product == KAFKA or product == KAFKA_K8S:
+            produce_messages(credentials, topic_name)
+        else:
+            raise ValueError()
+
+    def _create_topic(self, event) -> None:
+        """Handle the action that checks if data are written on different databases."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+        # read parameters from the event
+        product = event.params["product"]
+        topic_name = event.params["topic-name"]
+        credentials = json.loads(event.params["credentials"])
+
+        if product == KAFKA or product == KAFKA_K8S:
+            create_topic(credentials, topic_name)
         else:
             raise ValueError()
 
