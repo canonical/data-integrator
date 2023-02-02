@@ -86,7 +86,6 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         json.dumps(credentials),
         DATABASE_NAME,
     )
-    logger.info(f"result: {result}")
     assert result["ok"]
     logger.info(f"Insert data in the table on {MYSQL[ops_test.cloud_name]}")
     result = await fetch_action_database(
@@ -167,7 +166,6 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         json.dumps(credentials),
         DATABASE_NAME,
     )
-    logger.info(f"Result: {result}")
     assert result["ok"]
     logger.info(f"Insert data in the table on {POSTGRESQL[ops_test.cloud_name]}")
     result = await fetch_action_database(
@@ -319,7 +317,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]]
+        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]], timeout=100
     )
     time.sleep(10)
     assert ops_test.model.applications[KAFKA[ops_test.cloud_name]].status == "waiting"
