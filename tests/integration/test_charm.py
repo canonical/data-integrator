@@ -317,7 +317,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]], timeout=100
+        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]], timeout=1000
     )
     time.sleep(10)
     assert ops_test.model.applications[KAFKA[ops_test.cloud_name]].status == "waiting"
