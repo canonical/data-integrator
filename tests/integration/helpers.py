@@ -50,7 +50,7 @@ async def fetch_action_database(
     parameters = {"product": product, "credentials": credentials, "database-name": database_name}
     action = await unit.run_action(action_name=action_name, **parameters)
     result = await action.wait()
-    return result
+    return result.results
 
 
 async def fetch_action_kafka(
@@ -70,7 +70,7 @@ async def fetch_action_kafka(
     parameters = {"product": product, "credentials": credentials, "topic-name": topic_name}
     action = await unit.run_action(action_name=action_name, **parameters)
     result = await action.wait()
-    return result
+    return result.results
 
 
 def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:

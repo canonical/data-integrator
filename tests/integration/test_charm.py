@@ -79,30 +79,32 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     )
 
     logger.info(f"Create table on {MYSQL[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "create-table",
         MYSQL[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
     logger.info(f"Insert data in the table on {MYSQL[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "insert-data",
         MYSQL[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
     logger.info(f"Check assessibility of inserted data on {MYSQL[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         MYSQL[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
-
+    assert result["ok"]
     #  remove relation and test connection again
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mysql", f"{MYSQL[ops_test.cloud_name]}:database"
@@ -121,13 +123,14 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     logger.info(
         f"Check assessibility of inserted data on {MYSQL[ops_test.cloud_name]} with new credentials"
     )
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         MYSQL[ops_test.cloud_name],
         json.dumps(new_credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
 
 
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
@@ -156,30 +159,32 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
     logger.info(f"Create table on {POSTGRESQL[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "create-table",
         POSTGRESQL[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
     logger.info(f"Insert data in the table on {POSTGRESQL[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "insert-data",
         POSTGRESQL[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
     logger.info(f"Check assessibility of inserted data on {POSTGRESQL[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         POSTGRESQL[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
-
+    assert result["ok"]
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:postgresql", f"{POSTGRESQL[ops_test.cloud_name]}:database"
     )
@@ -195,13 +200,14 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     logger.info(
         f"Check assessibility of inserted data on {POSTGRESQL[ops_test.cloud_name]} with new credentials"
     )
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         POSTGRESQL[ops_test.cloud_name],
         json.dumps(new_credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
 
 
 @pytest.mark.skip
@@ -228,29 +234,32 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
     logger.info(f"Create table on {MONGODB[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "create-table",
         MONGODB[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
     logger.info(f"Insert data in the table on {MONGODB[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "insert-data",
         MONGODB[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
     logger.info(f"Check assessibility of inserted data on {MONGODB[ops_test.cloud_name]}")
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         MONGODB[ops_test.cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
 
     # drop relation and get new credential for the same collection
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
@@ -271,13 +280,14 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     logger.info(
         f"Check assessibility of inserted data on {MONGODB[ops_test.cloud_name]} with new credentials"
     )
-    await fetch_action_database(
+    result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         MONGODB[ops_test.cloud_name],
         json.dumps(new_credentials),
         DATABASE_NAME,
     )
+    assert result["ok"]
 
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB[ops_test.cloud_name]}:database"
@@ -309,6 +319,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]]
     )
+    time.sleep(10)
     assert ops_test.model.applications[KAFKA[ops_test.cloud_name]].status == "waiting"
     assert ops_test.model.applications[ZOOKEEPER[ops_test.cloud_name]].status == "active"
 

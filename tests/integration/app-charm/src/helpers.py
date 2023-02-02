@@ -37,42 +37,54 @@ def build_postgresql_connection_string(credentials: Dict[str, str], database_nam
     return f"dbname='{database_name}' user='{username}' host='{host}' password='{password}' connect_timeout=10"
 
 
-def check_inserted_data_postgresql(credentials: Dict[str, str], database_name: str):
+def check_inserted_data_postgresql(credentials: Dict[str, str], database_name: str) -> bool:
     """Check that data are inserted in a table for Postgresql."""
     connection_string = build_postgresql_connection_string(credentials, database_name)
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
         # Read data from previously created database.
-        cursor.execute(f"SELECT data FROM {TABLE_NAME};")
-        data = cursor.fetchone()
-        assert data[0] == "some data"
+        try:
+            cursor.execute(f"SELECT data FROM {TABLE_NAME};")
+            data = cursor.fetchone()
+            assert data[0] == "some data"
+        except Exception:
+            return False
+        return True
 
 
-def create_table_postgresql(credentials: Dict[str, str], database_name: str):
+def create_table_postgresql(credentials: Dict[str, str], database_name: str) -> bool:
     """Create a table in a Postgresql database."""
     connection_string = build_postgresql_connection_string(credentials, database_name)
     # test connection for PostgreSQL with retrieved credentials
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
         # Check that it's possible to write and read data from the database that
         # was created for the application.
-        connection.autocommit = True
-        cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME};")
-        cursor.execute(f"CREATE TABLE {TABLE_NAME}(data TEXT);")
-        cursor.execute(f"INSERT INTO {TABLE_NAME}(data) VALUES('some data');")
-        cursor.execute(f"SELECT data FROM {TABLE_NAME};")
-        data = cursor.fetchone()
-        assert data[0] == "some data"
+        try:
+            connection.autocommit = True
+            cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME};")
+            cursor.execute(f"CREATE TABLE {TABLE_NAME}(data TEXT);")
+            cursor.execute(f"INSERT INTO {TABLE_NAME}(data) VALUES('some data');")
+            cursor.execute(f"SELECT data FROM {TABLE_NAME};")
+            data = cursor.fetchone()
+            assert data[0] == "some data"
+        except Exception:
+            return False
+        return True
 
 
-def insert_data_postgresql(credentials: Dict[str, str], database_name: str):
+def insert_data_postgresql(credentials: Dict[str, str], database_name: str) -> bool:
     """Insert some testing data in a Postgresql database."""
     connection_string = build_postgresql_connection_string(credentials, database_name)
     # test connection for PostgreSQL with retrieved credentials
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
         # Check that it's possible to read data from the database that
         # was created for the application.
-        connection.autocommit = True
-        cursor.execute(f"INSERT INTO {TABLE_NAME}(data) VALUES('some data');")
-        cursor.execute(f"SELECT data FROM {TABLE_NAME};")
+        try:
+            connection.autocommit = True
+            cursor.execute(f"INSERT INTO {TABLE_NAME}(data) VALUES('some data');")
+            cursor.execute(f"SELECT data FROM {TABLE_NAME};")
+        except Exception:
+            return False
+        return True
 
 
 # MYSQL
@@ -90,123 +102,144 @@ def get_mysql_config(credentials: Dict[str, str], database_name) -> Dict[str, st
     return config
 
 
-def check_inserted_data_mysql(credentials: Dict[str, str], database_name: str):
+def check_inserted_data_mysql(credentials: Dict[str, str], database_name: str) -> bool:
     """Check that data are inserted in a table for MySQL."""
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
-        cursor.execute(
-            f"SELECT * FROM {TABLE_NAME} where username = '{credentials[MYSQL]['username']}'"
-        )
-        rows = cursor.fetchall()
-        first_row = rows[0]
-        # username, password, endpoints, version, ro-endpoints
-        assert first_row[1] == credentials[MYSQL]["username"]
-        assert first_row[2] == credentials[MYSQL]["password"]
-        assert first_row[3] == credentials[MYSQL]["endpoints"]
-        assert first_row[4] == credentials[MYSQL]["version"]
-        assert first_row[5] == credentials[MYSQL]["read-only-endpoints"]
+        try:
+            cursor.execute(
+                f"SELECT * FROM {TABLE_NAME} where username = '{credentials[MYSQL]['username']}'"
+            )
+            rows = cursor.fetchall()
+            first_row = rows[0]
+            # username, password, endpoints, version, ro-endpoints
+            assert first_row[1] == credentials[MYSQL]["username"]
+            assert first_row[2] == credentials[MYSQL]["password"]
+            assert first_row[3] == credentials[MYSQL]["endpoints"]
+            assert first_row[4] == credentials[MYSQL]["version"]
+            assert first_row[5] == credentials[MYSQL]["read-only-endpoints"]
+        except Exception:
+            return False
+        return True
 
 
-def create_table_mysql(credentials: Dict[str, str], database_name: str):
+def create_table_mysql(credentials: Dict[str, str], database_name: str) -> bool:
     """Create a table in a MySQL database."""
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
-        cursor.execute(
-            (
-                f"CREATE TABLE IF NOT EXISTS {TABLE_NAME} ("
-                "id SMALLINT not null auto_increment,"
-                "username VARCHAR(255),"
-                "password VARCHAR(255),"
-                "endpoints VARCHAR(255),"
-                "version VARCHAR(255),"
-                "read_only_endpoints VARCHAR(255),"
-                "PRIMARY KEY (id))"
+        try:
+            cursor.execute(
+                (
+                    f"CREATE TABLE IF NOT EXISTS {TABLE_NAME} ("
+                    "id SMALLINT not null auto_increment,"
+                    "username VARCHAR(255),"
+                    "password VARCHAR(255),"
+                    "endpoints VARCHAR(255),"
+                    "version VARCHAR(255),"
+                    "read_only_endpoints VARCHAR(255),"
+                    "PRIMARY KEY (id))"
+                )
             )
-        )
+        except Exception:
+            return False
+        return True
 
 
-def insert_data_mysql(credentials: Dict[str, str], database_name: str):
+def insert_data_mysql(credentials: Dict[str, str], database_name: str) -> bool:
     """Insert some testing data in a MySQL database."""
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
-        cursor.execute(
-            " ".join(
+        try:
+            cursor.execute(
+                " ".join(
+                    (
+                        f"INSERT INTO {TABLE_NAME} (",
+                        "username, password, endpoints, version, read_only_endpoints)",
+                        "VALUES (%s, %s, %s, %s, %s)",
+                    )
+                ),
                 (
-                    f"INSERT INTO {TABLE_NAME} (",
-                    "username, password, endpoints, version, read_only_endpoints)",
-                    "VALUES (%s, %s, %s, %s, %s)",
-                )
-            ),
-            (
-                credentials[MYSQL]["username"],
-                credentials[MYSQL]["password"],
-                credentials[MYSQL]["endpoints"],
-                credentials[MYSQL]["version"],
-                credentials[MYSQL]["read-only-endpoints"],
-            ),
-        )
+                    credentials[MYSQL]["username"],
+                    credentials[MYSQL]["password"],
+                    credentials[MYSQL]["endpoints"],
+                    credentials[MYSQL]["version"],
+                    credentials[MYSQL]["read-only-endpoints"],
+                ),
+            )
+        except Exception:
+            return False
+        return True
 
 
 # MONGODB
 
 
-def check_inserted_data_mongodb(credentials: Dict[str, str], database_name: str):
+def check_inserted_data_mongodb(credentials: Dict[str, str], database_name: str) -> bool:
     """Check that data are inserted in a table for MongoDB."""
     connection_string = credentials[MONGODB]["uris"]
+    try:
+        client = MongoClient(
+            connection_string,
+            directConnection=False,
+            connect=False,
+            serverSelectionTimeoutMS=1000,
+            connectTimeoutMS=2000,
+        )
 
-    client = MongoClient(
-        connection_string,
-        directConnection=False,
-        connect=False,
-        serverSelectionTimeoutMS=1000,
-        connectTimeoutMS=2000,
-    )
-
-    # test some operations
-    db = client[database_name]
-    test_collection = db[TABLE_NAME]
-    query = test_collection.find({}, {"release_name": 1})
-    assert query[0]["release_name"] == "Focal Fossa"
-    client.close()
+        # test some operations
+        db = client[database_name]
+        test_collection = db[TABLE_NAME]
+        query = test_collection.find({}, {"release_name": 1})
+        assert query[0]["release_name"] == "Focal Fossa"
+        client.close()
+    except Exception:
+        return False
+    return True
 
 
-def create_table_mongodb(credentials: Dict[str, str], database_name: str):
+def create_table_mongodb(credentials: Dict[str, str], database_name: str) -> bool:
     """Create a table in a MongoDB database."""
     connection_string = credentials[MONGODB]["uris"]
+    try:
+        client = MongoClient(
+            connection_string,
+            directConnection=False,
+            connect=False,
+            serverSelectionTimeoutMS=1000,
+            connectTimeoutMS=2000,
+        )
 
-    client = MongoClient(
-        connection_string,
-        directConnection=False,
-        connect=False,
-        serverSelectionTimeoutMS=1000,
-        connectTimeoutMS=2000,
-    )
-
-    # test some operations
-    db = client[database_name]
-    test_collection = db[TABLE_NAME]
-    test_collection.find_one()
-    client.close()
+        # test some operations
+        db = client[database_name]
+        test_collection = db[TABLE_NAME]
+        test_collection.find_one()
+        client.close()
+    except Exception:
+        return False
+    return True
 
 
-def insert_data_mongodb(credentials: Dict[str, str], database_name: str):
+def insert_data_mongodb(credentials: Dict[str, str], database_name: str) -> bool:
     """Insert some testing data in a MongoDB collection."""
     connection_string = credentials[MONGODB]["uris"]
+    try:
+        client = MongoClient(
+            connection_string,
+            directConnection=False,
+            connect=False,
+            serverSelectionTimeoutMS=1000,
+            connectTimeoutMS=2000,
+        )
 
-    client = MongoClient(
-        connection_string,
-        directConnection=False,
-        connect=False,
-        serverSelectionTimeoutMS=1000,
-        connectTimeoutMS=2000,
-    )
-
-    # test some operations
-    db = client[database_name]
-    test_collection = db[TABLE_NAME]
-    ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
-    test_collection.insert_one(ubuntu)
-    client.close()
+        # test some operations
+        db = client[database_name]
+        test_collection = db[TABLE_NAME]
+        ubuntu = {"release_name": "Focal Fossa", "version": 20.04, "LTS": True}
+        test_collection.insert_one(ubuntu)
+        client.close()
+    except Exception:
+        return False
+    return True
 
 
 # KAFKA

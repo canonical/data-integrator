@@ -74,11 +74,14 @@ class ApplicationCharm(CharmBase):
         credentials = json.loads(event.params["credentials"])
 
         if product == POSTGRESQL or product == POSTGRESQL_K8S:
-            create_table_postgresql(credentials, database_name)
+            executed = create_table_postgresql(credentials, database_name)
+            return {"ok": True if executed else False}
         elif product == MYSQL or product == MYSQL_K8S:
-            create_table_mysql(credentials, database_name)
+            executed = create_table_mysql(credentials, database_name)
+            return {"ok": True if executed else False}
         elif product == MONGODB or product == MONGODB_K8S:
-            create_table_mongodb(credentials, database_name)
+            executed = create_table_mongodb(credentials, database_name)
+            return {"ok": True if executed else False}
         else:
             raise ValueError()
 
@@ -93,11 +96,14 @@ class ApplicationCharm(CharmBase):
         credentials = json.loads(event.params["credentials"])
 
         if product == POSTGRESQL or product == POSTGRESQL_K8S:
-            insert_data_postgresql(credentials, database_name)
+            executed = insert_data_postgresql(credentials, database_name)
+            return {"ok": True if executed else False}
         elif product == MYSQL or product == MYSQL_K8S:
-            insert_data_mysql(credentials, database_name)
+            executed = insert_data_mysql(credentials, database_name)
+            return {"ok": True if executed else False}
         elif product == MONGODB or product == MONGODB_K8S:
-            insert_data_mongodb(credentials, database_name)
+            executed = insert_data_mongodb(credentials, database_name)
+            return {"ok": True if executed else False}
         else:
             raise ValueError()
 
@@ -112,11 +118,14 @@ class ApplicationCharm(CharmBase):
         credentials = json.loads(event.params["credentials"])
 
         if product == POSTGRESQL or product == POSTGRESQL_K8S:
-            check_inserted_data_postgresql(credentials, database_name)
+            executed = check_inserted_data_postgresql(credentials, database_name)
+            return {"ok": True if executed else False}
         elif product == MYSQL or product == MYSQL_K8S:
-            check_inserted_data_mysql(credentials, database_name)
+            executed = check_inserted_data_mysql(credentials, database_name)
+            return {"ok": True if executed else False}
         elif product == MONGODB or product == MONGODB_K8S:
-            check_inserted_data_mongodb(credentials, database_name)
+            executed = check_inserted_data_mongodb(credentials, database_name)
+            return {"ok": True if executed else False}
         else:
             raise ValueError()
 
