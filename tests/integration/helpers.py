@@ -2,12 +2,14 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
 from subprocess import PIPE, check_output
 from typing import Dict
 
 from juju.unit import Unit
 
 from tests.integration.constants import DATABASE_NAME, POSTGRESQL
+logger = logging.getLogger(__name__)
 
 
 async def fetch_action_get_credentials(unit: Unit) -> Dict:
