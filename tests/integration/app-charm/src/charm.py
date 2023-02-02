@@ -10,7 +10,6 @@ of the libraries in this repository.
 
 import json
 import logging
-from typing import Dict
 
 from helpers import (
     KAFKA,
@@ -104,7 +103,7 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == MONGODB or product == MONGODB_K8S:
             executed = insert_data_mongodb(credentials, database_name)
-            event.set_results( {"ok": True if executed else False})
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 
@@ -120,13 +119,13 @@ class ApplicationCharm(CharmBase):
 
         if product == POSTGRESQL or product == POSTGRESQL_K8S:
             executed = check_inserted_data_postgresql(credentials, database_name)
-            event.set_results( {"ok": True if executed else False})
+            event.set_results({"ok": True if executed else False})
         elif product == MYSQL or product == MYSQL_K8S:
             executed = check_inserted_data_mysql(credentials, database_name)
-            event.set_results( {"ok": True if executed else False})
+            event.set_results({"ok": True if executed else False})
         elif product == MONGODB or product == MONGODB_K8S:
             executed = check_inserted_data_mongodb(credentials, database_name)
-            event.set_results( {"ok": True if executed else False})
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 
