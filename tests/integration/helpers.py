@@ -92,13 +92,16 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
         if "k8s" not in kafka_unit_name
         else "/var/lib/juju/storage/log-data"
     )
+
+    container = "--container kafka " if "k8s" in kafka_unit_name else ""
     logs = check_output(
-        f"JUJU_MODEL={model_full_name} juju ssh {kafka_unit_name} 'find {log_directory}'",
+        f"JUJU_MODEL={model_full_name} juju ssh {container} {kafka_unit_name} 'find {log_directory}'",
         stderr=PIPE,
         shell=True,
         universal_newlines=True,
     ).splitlines()
 
+    logger.debug(f"{logs=}")
     passed = False
     for log in logs:
         if topic and "index" in log:
