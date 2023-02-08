@@ -6,7 +6,7 @@ from typing import Dict
 
 import psycopg2
 from connector import MysqlConnector
-from kafka_client import KafkaClient
+from lib.charms.kafka.v0.client import KafkaClient
 from pymongo import MongoClient
 
 MYSQL = "mysql"
