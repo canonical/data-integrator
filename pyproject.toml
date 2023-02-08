@@ -12,7 +12,7 @@ license = "Apache-2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 ops = "^1.2"
 
 [tool.poetry.group.dev.dependencies]
@@ -32,6 +32,7 @@ psycopg2-binary = "^2.9.5"
 pymongo = "^4.2.0"
 kazoo = "^2.8.0"
 kafka-python = "^2.0.2"
+juju="^2.9.38"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -47,6 +48,7 @@ show_missing = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
+asyncio_mode = "auto" 
 
 # Formatting tools configuration
 [tool.black]

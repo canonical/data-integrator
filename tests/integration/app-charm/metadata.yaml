@@ -1,0 +1,8 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: application
+description: |
+  Dummy charm used in integration tests for testing the data integrator charm.
+summary: |
+  Dummy charm application meant to be used only for testing in this repository.

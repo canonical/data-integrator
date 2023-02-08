@@ -2,13 +2,15 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import itertools
-from typing import Dict, List, Tuple
+import logging
+from subprocess import PIPE, check_output
+from typing import Dict
 
-from connector import MysqlConnector
 from juju.unit import Unit
 
-from tests.integration.constants import DATABASE_NAME, MYSQL, POSTGRESQL
+from tests.integration.constants import DATABASE_NAME, POSTGRESQL
+
+logger = logging.getLogger(__name__)
 
 
 async def fetch_action_get_credentials(unit: Unit) -> Dict:
@@ -24,39 +26,6 @@ async def fetch_action_get_credentials(unit: Unit) -> Dict:
     return result.results
 
 
-async def execute_commands_on_mysql_unit(
-    unit_address: str,
-    username: str,
-    password: str,
-    queries: List[str],
-    commit: bool = False,
-) -> List:
-    """Execute given MySQL queries on a unit.
-
-    Args:
-        unit_address: The public IP address of the unit to execute the queries on
-        username: The MySQL username
-        password: The MySQL password
-        queries: A list of queries to execute
-        commit: A keyword arg indicating whether there are any writes queries
-    Returns:
-        A list of rows that were potentially queried
-    """
-    config = {
-        "user": username,
-        "password": password,
-        "host": unit_address,
-        "raise_on_warnings": False,
-    }
-
-    with MysqlConnector(config, commit) as cursor:
-        for query in queries:
-            cursor.execute(query)
-        output = list(itertools.chain(*cursor.fetchall()))
-
-    return output
-
-
 def build_postgresql_connection_string(credentials: Dict[str, str]) -> str:
     """Generate the connection string for PostgreSQL from relation data."""
     username = credentials[POSTGRESQL]["username"]
@@ -67,56 +36,76 @@ def build_postgresql_connection_string(credentials: Dict[str, str]) -> str:
     return f"dbname='{DATABASE_NAME}' user='{username}' host='{host}' password='{password}' connect_timeout=10"
 
 
-def create_table_mysql(self, cursor, table_name: str) -> None:
-    """Create a table in the database."""
-    cursor.execute(
-        (
-            f"CREATE TABLE IF NOT EXISTS {table_name} ("
-            "id SMALLINT not null auto_increment,"
-            "username VARCHAR(255),"
-            "password VARCHAR(255),"
-            "endpoints VARCHAR(255),"
-            "version VARCHAR(255),"
-            "read_only_endpoints VARCHAR(255),"
-            "PRIMARY KEY (id))"
-        )
+async def fetch_action_database(
+    unit: Unit, action_name: str, product: str, credentials: str, database_name: str
+) -> Dict:
+    """Helper to run an action to execute commands with databases.
+
+    Args:
+        unit: The juju unit on which to run the action
+        action_name: name of the action
+        product: the name of the product
+        credentials: credentials used to connect
+        database_name: name of the database
+    Returns:
+        The result of the action
+    """
+    parameters = {"product": product, "credentials": credentials, "database-name": database_name}
+    action = await unit.run_action(action_name=action_name, **parameters)
+    result = await action.wait()
+    return result.results
+
+
+async def fetch_action_kafka(
+    unit: Unit, action_name: str, product: str, credentials: str, topic_name: str
+) -> Dict:
+    """Helper to run an action to test Kafka.
+
+    Args:
+        unit: The juju unit on which to run the action
+        action_name: name of the action
+        product: the name of the product
+        credentials: credentials used to connect
+        topic_name: name of the database
+    Returns:
+        The result of the action
+    """
+    parameters = {"product": product, "credentials": credentials, "topic-name": topic_name}
+    action = await unit.run_action(action_name=action_name, **parameters)
+    result = await action.wait()
+    return result.results
+
+
+def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
+    """Check that logs are written for a topic Kafka topic.
+
+    Args:
+        model_full_name: the full name of the model
+        kafka_unit_name: the kafka unit to checks logs on
+        topic: the desired topic to produce to
+    Raises:
+        KeyError: if missing relation data
+        AssertionError: if logs aren't found for desired topic
+    """
+    log_directory = (
+        "/var/snap/kafka/common/log-data"
+        if "k8s" not in kafka_unit_name
+        else "/var/lib/juju/storage/log-data"
     )
 
+    container = "--container kafka " if "k8s" in kafka_unit_name else ""
+    logs = check_output(
+        f"JUJU_MODEL={model_full_name} juju ssh {container} {kafka_unit_name} 'find {log_directory}'",
+        stderr=PIPE,
+        shell=True,
+        universal_newlines=True,
+    ).splitlines()
 
-def insert_data_mysql(
-    cursor,
-    database: str,
-    username: str,
-    password: str,
-    endpoints: str,
-    version: str,
-    read_only_endpoints: str,
-) -> None:
-    """Insert test data in the database."""
-    cursor.execute(
-        " ".join(
-            (
-                f"INSERT INTO {database} (",
-                "username, password, endpoints, version, read_only_endpoints)",
-                "VALUES (%s, %s, %s, %s, %s)",
-            )
-        ),
-        (username, password, endpoints, version, read_only_endpoints),
-    )
+    logger.debug(f"{logs=}")
+    passed = False
+    for log in logs:
+        if topic and "index" in log:
+            passed = True
+            break
 
-
-def read_data_mysql(cursor, user: str, database: str) -> List[Tuple]:
-    """Read data from the specified database."""
-    cursor.execute(f"SELECT * FROM app_data where username = '{user}'")
-    return cursor.fetchall()
-
-
-def check_my_sql_data(rows: List[Tuple], credentials: Dict):
-    """Check if the correspondace of mysql table values."""
-    first_row = rows[0]
-    # username, password, endpoints, version, ro-endpoints
-    assert first_row[1] == credentials[MYSQL]["username"]
-    assert first_row[2] == credentials[MYSQL]["password"]
-    assert first_row[3] == credentials[MYSQL]["endpoints"]
-    assert first_row[4] == credentials[MYSQL]["version"]
-    assert first_row[5] == credentials[MYSQL]["read-only-endpoints"]
+    assert passed, "logs not found"

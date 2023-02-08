@@ -84,6 +84,7 @@ juju relate data-integrator <application>
 After the relation has been created, the credentials and connection information can be retrieved with an action.
 
 > **IMPORTANT** In order to change the current credentials (username and password), remove the relation with the application and establish a new one. 
+
 When the relation is removed, the access with the previous credentials will be removed.
 
 ```shell
