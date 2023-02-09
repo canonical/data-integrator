@@ -7,6 +7,7 @@ from typing import Dict
 import psycopg2
 from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector
+from kafka.admin import NewTopic
 from pymongo import MongoClient
 
 MYSQL = "mysql"
@@ -259,12 +260,10 @@ def produce_messages(credentials: Dict[str, str], topic_name: str):
         servers=servers,
         username=username,
         password=password,
-        topic=topic_name,
-        consumer_group_prefix=None,
         security_protocol=security_protocol,
     )
-
-    client.run_producer()
+    for n in range(0, 5):
+        client.produce_message(topic_name=topic_name, message_content=f"Test message #{n}")
 
 
 def create_topic(credentials: Dict[str, str], topic_name: str):
@@ -281,9 +280,12 @@ def create_topic(credentials: Dict[str, str], topic_name: str):
         servers=servers,
         username=username,
         password=password,
-        topic=topic_name,
-        consumer_group_prefix=None,
         security_protocol=security_protocol,
     )
 
-    client.create_topic()
+    topic = NewTopic(
+        name=topic_name,
+        num_partitions=5,
+        replication_factor=1,
+    )
+    client.create_topic(topic)
