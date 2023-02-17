@@ -11,7 +11,7 @@ from pathlib import PosixPath
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.constants import (
+from .constants import (
     APP,
     DATA_INTEGRATOR,
     DATABASE_NAME,
@@ -23,7 +23,7 @@ from tests.integration.constants import (
     TOPIC_NAME,
     ZOOKEEPER,
 )
-from tests.integration.helpers import (
+from .helpers import (
     check_logs,
     fetch_action_database,
     fetch_action_get_credentials,

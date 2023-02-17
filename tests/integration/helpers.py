@@ -8,7 +8,7 @@ from typing import Dict
 
 from juju.unit import Unit
 
-from tests.integration.constants import DATABASE_NAME, POSTGRESQL
+from .constants import DATABASE_NAME, POSTGRESQL
 
 logger = logging.getLogger(__name__)
 
