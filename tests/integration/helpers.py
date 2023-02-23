@@ -77,7 +77,7 @@ async def fetch_action_kafka(
 
 
 def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
-    """Check that logs are written for a topic Kafka topic.
+    """Check that logs are written for a Kafka topic.
 
     Args:
         model_full_name: the full name of the model

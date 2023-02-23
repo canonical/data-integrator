@@ -296,7 +296,6 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[MONGODB[ops_test.cloud_name], DATA_INTEGRATOR])
 
 
-@pytest.mark.abort_on_fail
 async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     """Test the relation with Kafka and the correct production and consumption of messagges."""
     await asyncio.gather(
