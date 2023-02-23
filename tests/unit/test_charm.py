@@ -8,7 +8,7 @@ from ops.testing import Harness
 
 from charm import IntegratorCharm
 
-BLOCKED_STATUS_NO_CONFIG = BlockedStatus("Please specify either topic or database name")
+BLOCKED_STATUS_NO_CONFIG = BlockedStatus("Please specify either topic, index, or database name")
 BLOCKED_STATUS_RELATE = BlockedStatus("Please relate the data-integrator with the desired product")
 BLOCKED_STATUS_REMOVE_DB = BlockedStatus(
     "To change database name: foo, please remove relation and add it again"

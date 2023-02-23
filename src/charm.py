@@ -15,17 +15,17 @@ from typing import Dict, List, MutableMapping, Optional
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseRequires,
+    IndexCreatedEvent,
     KafkaRequires,
-    TopicCreatedEvent,
     OpenSearchRequires,
-    IndexCreatedEvent
+    TopicCreatedEvent,
 )
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent, RelationEvent
 from ops.framework import EventBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
 
-from literals import DATABASES, KAFKA, PEER, OPENSEARCH
+from literals import DATABASES, KAFKA, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
@@ -90,8 +90,7 @@ class IntegratorCharm(CharmBase):
     def get_status(self) -> StatusBase:
         """Return the current application status."""
         if not any([self.topic_name, self.database_name, self.index_name]):
-            return BlockedStatus("Please specify either topic, index or database name (depending on product)")
-
+            return BlockedStatus("Please specify either topic, index, or database name")
 
         if not any([self.is_database_related, self.is_kafka_related, self.is_opensearch_related]):
             return BlockedStatus("Please relate the data-integrator with the desired product")
@@ -180,7 +179,7 @@ class IntegratorCharm(CharmBase):
             event.set_results({"ok": False})
             return
 
-        if not any([self.is_database_related, self.is_kafka_related, self.is_index_related]):
+        if not any([self.is_database_related, self.is_kafka_related, self.is_opensearch_related]):
             event.fail("The action can be run only after relation is created.")
             event.set_results({"ok": False})
             return
@@ -262,7 +261,6 @@ class IntegratorCharm(CharmBase):
     def index_name(self) -> Optional[str]:
         """Return the configured database name."""
         return self.model.config.get("index-name", None)
-
 
     @property
     def extra_user_roles(self) -> Optional[str]:
