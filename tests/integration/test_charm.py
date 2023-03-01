@@ -5,6 +5,7 @@
 import asyncio
 import json
 import logging
+import re
 import time
 from pathlib import PosixPath
 
@@ -416,6 +417,20 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
 
 
 async def test_opensearch(ops_test: OpsTest):
+    def opensearch_request(credentials, method, endpoint, payload=None):
+        host = ops_test.model.applications[OPENSEARCH].units[0].public_address
+        with requests.Session() as s:
+            s.auth = (credentials.get("username"), credentials.get("password"))
+            resp = s.request(
+                verify=credentials.get("ca-chain"),
+                method=method,
+                url=f"https://{host}:9200/{endpoint}",
+                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                **{"payload": payload} if payload else {},
+            )
+            resp.raise_for_status()
+            return resp.json()
+
     config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     model_config = {
@@ -454,17 +469,53 @@ async def test_opensearch(ops_test: OpsTest):
     )
     logger.error(credentials)
 
-    host = ops_test.model.applications[OPENSEARCH].units[0].public_address
+    bulk_payload = """{ "index" : { "_index": "albums", "_id" : "1" } }
+{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
+{ "index" : { "_index": "albums", "_id" : "2" } }
+{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
+{ "index" : { "_index": "albums", "_id" : "3" } }
+{"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
+"""
+    opensearch_request(credentials, "GET", endpoint="")
+    opensearch_request(credentials, "POST", endpoint="/_bulk", payload=re.escape(bulk_payload))
+    get_jazz = opensearch_request(credentials, "GET", endpoint="/albums/_search?q=Jazz")
+    artists = [
+        hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective"}
 
-    # Try to connect to opensearch root endpoint
-    with requests.Session() as s:
-        s.auth = (credentials.get("username"), credentials.get("password"))
-        resp = s.request(
-            verify=credentials.get("ca-chain"),
-            method="GET",
-            url=f"https://{host}:9200/",
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
+    await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
+        OPENSEARCH[ops_test.cloud_name], DATA_INTEGRATOR
+    )
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+            status="active",
         )
-        resp.raise_for_status()
 
-    # TODO do we want more extensive testing?
+    await asyncio.gather(
+        ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME),
+        ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
+    )
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+            status="active",
+        )
+
+    # get new credentials for opensearch
+    new_credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
+    logger.error(new_credentials)
+
+    get_jazz_again = opensearch_request(new_credentials, "GET", endpoint="/albums/_search?q=Jazz")
+    artists = [
+        hit.get("_source", {}).get("artist")
+        for hit in get_jazz_again.get("hits", {}).get("hits", [{}])
+    ]
+    assert set(artists) == {"Herbie Hancock", "Lydian Collective"}
+
+    # Old credentials should have been revoked.
+    with pytest.raises(requests.HTTPError):
+        opensearch_request(credentials, "GET", endpoint="")
