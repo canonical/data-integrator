@@ -51,11 +51,11 @@ jobs:
       fail-fast: false
       matrix:
         tox-environments:
-          - integration-lxd:
-              provider: lxd
-          - integration-k8s:
-              provider: microk8s
-    name: ${{ matrix.tox-environments }}
+          - name: integration-lxd
+            provider: lxd
+          - name: integration-k8s
+            provider: microk8s
+    name: ${{ matrix.tox-environments.name }}
     needs:
       - lint
       - unit-test
@@ -91,6 +91,6 @@ jobs:
             echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
           fi
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+        run: tox run -e ${{ matrix.tox-environments.name }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
