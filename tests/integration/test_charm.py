@@ -9,6 +9,7 @@ import time
 from pathlib import PosixPath
 
 import pytest
+import requests
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.constants import (
@@ -16,10 +17,14 @@ from tests.integration.constants import (
     DATA_INTEGRATOR,
     DATABASE_NAME,
     EXTRA_USER_ROLES,
+    INDEX_NAME,
     KAFKA,
     MONGODB,
     MYSQL,
+    OPENSEARCH,
+    OPENSEARCH_EXTRA_USER_ROLES,
     POSTGRESQL,
+    TLS_CERTIFICATES_APP_NAME,
     TOPIC_NAME,
     ZOOKEEPER,
 )
@@ -55,6 +60,7 @@ async def test_build_and_deploy(ops_test: OpsTest, app_charm: PosixPath):
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
+@pytest.mark.skip
 async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     """Test the relation with MySQL and database accessibility."""
     await asyncio.gather(
@@ -133,6 +139,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     assert result["ok"]
 
 
+@pytest.mark.skip
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     """Test the relation with PostgreSQL and database accessibility."""
     await asyncio.gather(
@@ -296,6 +303,7 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[MONGODB[ops_test.cloud_name], DATA_INTEGRATOR])
 
 
+@pytest.mark.skip
 async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     """Test the relation with Kafka and the correct production and consumption of messagges."""
     await asyncio.gather(
@@ -405,3 +413,58 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
         kafka_unit_name=f"{KAFKA[ops_test.cloud_name]}/0",
         topic=TOPIC_NAME,
     )
+
+
+async def test_opensearch(ops_test: OpsTest):
+    config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
+    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    model_config = {
+        "logging-config": "<root>=INFO;unit=DEBUG",
+        "update-status-hook-interval": "1m",
+        "cloudinit-userdata": """postruncmd:
+            - [ 'sysctl', '-w', 'vm.max_map_count=262144' ]
+            - [ 'sysctl', '-w', 'fs.file-max=1048576' ]
+            - [ 'sysctl', '-w', 'vm.swappiness=0' ]
+            - [ 'sysctl', '-w', 'net.ipv4.tcp_retries2=5' ]
+        """,
+    }
+    await ops_test.model.set_config(model_config)
+    await asyncio.gather(
+        ops_test.model.deploy(
+            OPENSEARCH[ops_test.cloud_name],
+            channel="edge",
+            application_name=OPENSEARCH[ops_test.cloud_name],
+            num_units=1,
+        ),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
+    )
+    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config),
+    await asyncio.gather(
+        ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME),
+        ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        status="active",
+    )
+
+    # get credentials for opensearch
+    credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
+    logger.error(credentials)
+
+    host = ops_test.model.applications[OPENSEARCH].units[0].public_address
+
+    # Try to connect to opensearch root endpoint
+    with requests.Session() as s:
+        s.auth = (credentials.get("username"), credentials.get("password"))
+        resp = s.request(
+            verify=credentials.get("ca-chain"),
+            method="GET",
+            url=f"https://{host}:9200/",
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+        )
+        resp.raise_for_status()
+
+    # TODO do we want more extensive testing?

@@ -4,6 +4,8 @@
 
 DATA_INTEGRATOR = "data-integrator"
 
+TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+
 MYSQL = {"localhost": "mysql", "microk8s": "mysql-k8s"}
 POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}
 MONGODB = {"localhost": "mongodb", "microk8s": "mongodb-k8s"}

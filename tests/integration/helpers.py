@@ -4,9 +4,11 @@
 
 import logging
 from subprocess import PIPE, check_output
-from typing import Dict
+from typing import Dict, Optional
 
+import yaml
 from juju.unit import Unit
+from pytest_operator.plugin import OpsTest
 
 from tests.integration.constants import DATABASE_NAME, POSTGRESQL
 
@@ -88,7 +90,7 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
         AssertionError: if logs aren't found for desired topic
     """
     log_directory = (
-        "/var/snap/kafka/common/log-data"
+        "/var/snap/charmed-kafka/common/log-data"
         if "k8s" not in kafka_unit_name
         else "/var/lib/juju/storage/log-data"
     )
@@ -109,3 +111,44 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
             break
 
     assert passed, "logs not found"
+
+
+async def get_application_relation_data(
+    ops_test: OpsTest,
+    unit_name: str,
+    relation_name: str,
+    key: str,
+    relation_id: str = None,
+) -> Optional[str]:
+    """Get relation data for an application.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit
+        relation_name: name of the relation to get connection data from
+        key: key of data to be retrieved
+        relation_id: id of the relation to get connection data from
+
+    Returns:
+        the data that was requested or None
+            if no data in the relation
+
+    Raises:
+        ValueError if it's not possible to get application unit data
+            or if there is no data for the particular relation endpoint
+            and/or alias.
+    """
+    raw_data = (await ops_test.juju("show-unit", unit_name))[1]
+    if not raw_data:
+        raise ValueError(f"no unit info could be grabbed for {unit_name}")
+    data = yaml.safe_load(raw_data)
+    # Filter the data based on the relation name.
+    relation_data = [v for v in data[unit_name]["relation-info"] if v["endpoint"] == relation_name]
+    if relation_id:
+        # Filter the data based on the relation id.
+        relation_data = [v for v in relation_data if v["relation-id"] == relation_id]
+    if len(relation_data) == 0:
+        raise ValueError(
+            f"no relation data could be grabbed on relation with endpoint {relation_name}"
+        )
+    return relation_data[0]["application-data"].get(key)
