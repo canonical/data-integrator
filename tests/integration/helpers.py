@@ -88,7 +88,7 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
         AssertionError: if logs aren't found for desired topic
     """
     log_directory = (
-        "/var/snap/kafka/common/log-data"
+        "/var/snap/charmed-kafka/common/log-data"
         if "k8s" not in kafka_unit_name
         else "/var/lib/juju/storage/log-data"
     )

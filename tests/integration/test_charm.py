@@ -141,7 +141,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
             channel="edge",
             application_name=POSTGRESQL[ops_test.cloud_name],
             num_units=1,
-            series="focal",
+            series="jammy",
             trust=True,
         )
     )
