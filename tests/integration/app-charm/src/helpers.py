@@ -12,10 +12,12 @@ from pymongo import MongoClient
 
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"
+PGBOUNCER = "pgbouncer"
 MONGODB = "mongodb"
 
 MYSQL_K8S = "mysql-k8s"
 POSTGRESQL_K8S = "postgresql-k8s"
+PGBOUNCER_K8S = "pgbouncer-k8s"
 MONGODB_K8S = "mongodb-k8s"
 
 DATABASE_NAME = "test_database"
@@ -34,8 +36,9 @@ def build_postgresql_connection_string(credentials: Dict[str, str], database_nam
     password = credentials[POSTGRESQL]["password"]
     endpoints = credentials[POSTGRESQL]["endpoints"]
     host = endpoints.split(",")[0].split(":")[0]
+    port = endpoints.split(",")[0].split(":")[1]
     # Build the complete connection string to connect to the database.
-    return f"dbname='{database_name}' user='{username}' host='{host}' password='{password}' connect_timeout=10"
+    return f"dbname='{database_name}' user='{username}' host='{host}' port='{port}' password='{password}' connect_timeout=10"
 
 
 def check_inserted_data_postgresql(credentials: Dict[str, str], database_name: str) -> bool:

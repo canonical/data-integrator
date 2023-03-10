@@ -32,8 +32,9 @@ def build_postgresql_connection_string(credentials: Dict[str, str]) -> str:
     password = credentials[POSTGRESQL]["password"]
     endpoints = credentials[POSTGRESQL]["endpoints"]
     host = endpoints.split(",")[0].split(":")[0]
+    port = endpoints.split(",")[0].split(":")[1]
     # Build the complete connection string to connect to the database.
-    return f"dbname='{DATABASE_NAME}' user='{username}' host='{host}' password='{password}' connect_timeout=10"
+    return f"dbname='{DATABASE_NAME}' user='{username}' host='{host}' port='{port}' password='{password}' connect_timeout=10"
 
 
 async def fetch_action_database(
