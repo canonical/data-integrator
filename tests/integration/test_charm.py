@@ -305,7 +305,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
             channel="edge",
             application_name=ZOOKEEPER[ops_test.cloud_name],
             num_units=1,
-            series="jammy" if ops_test.cloud_name == "localhost" else "focal",
+            series="jammy",
         ),
         ops_test.model.deploy(
             KAFKA[ops_test.cloud_name],
@@ -326,7 +326,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
 
     await ops_test.model.add_relation(KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name])
     await ops_test.model.wait_for_idle(
-        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]]
+        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]], status="active"
     )
     assert ops_test.model.applications[KAFKA[ops_test.cloud_name]].status == "active"
     assert ops_test.model.applications[ZOOKEEPER[ops_test.cloud_name]].status == "active"
