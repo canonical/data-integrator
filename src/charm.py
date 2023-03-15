@@ -70,7 +70,7 @@ class IntegratorCharm(CharmBase):
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
         # update peer databag to trigger the charm status update
         self._update_relation_status(event, Statuses.BROKEN.name)
