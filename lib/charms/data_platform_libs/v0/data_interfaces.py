@@ -16,7 +16,7 @@
 
 This library contains the Requires and Provides classes for handling the relation
 between an application and multiple managed application supported by the data-team:
-MySQL, Postgresql, MongoDB, Redis,  and Kakfa.
+MySQL, Postgresql, MongoDB, Redis, and Kafka.
 
 ### Database (MySQL, Postgresql, MongoDB, and Redis)
 
@@ -280,7 +280,6 @@ exchanged in the relation databag.
 
 import json
 import logging
-import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
@@ -304,7 +303,9 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 9
+
+PYDEPS = ["ops>=2.0.0"]
 
 logger = logging.getLogger(__name__)
 
@@ -501,12 +502,6 @@ class DataRequires(Object, ABC):
             a dict of the values stored in the relation data bag
                 for all relation instances (indexed by the relation ID).
         """
-        if "-relation-broken" in os.environ.get("JUJU_HOOK_NAME", ""):
-            # read more in https://bugs.launchpad.net/juju/+bug/1960934
-            raise RuntimeError(
-                "`fetch_relation_data` cannot be used in `*-relation-broken` events"
-            )
-
         data = {}
         for relation in self.relations:
             data[relation.id] = {
@@ -544,7 +539,19 @@ class DataRequires(Object, ABC):
     @property
     def relations(self) -> List[Relation]:
         """The list of Relation instances associated with this relation_name."""
-        return list(self.charm.model.relations[self.relation_name])
+        return [
+            relation
+            for relation in self.charm.model.relations[self.relation_name]
+            if self._is_relation_active(relation)
+        ]
+
+    @staticmethod
+    def _is_relation_active(relation: Relation):
+        try:
+            _ = repr(relation.data)
+            return True
+        except RuntimeError:
+            return False
 
     @staticmethod
     def _is_resource_created_for_relation(relation: Relation):
@@ -564,12 +571,28 @@ class DataRequires(Object, ABC):
 
         Returns:
             True or False
+
+        Raises:
+            IndexError: If relation_id is provided but that relation does not exist
         """
-        if relation_id:
-            return self._is_resource_created_for_relation(self.relations[relation_id])
+        if relation_id is not None:
+            try:
+                relation = [relation for relation in self.relations if relation.id == relation_id][
+                    0
+                ]
+                return self._is_resource_created_for_relation(relation)
+            except IndexError:
+                raise IndexError(f"relation id {relation_id} cannot be accessed")
         else:
-            return all(
-                [self._is_resource_created_for_relation(relation) for relation in self.relations]
+            return (
+                all(
+                    [
+                        self._is_resource_created_for_relation(relation)
+                        for relation in self.relations
+                    ]
+                )
+                if self.relations
+                else False
             )
 
 
@@ -638,6 +661,11 @@ class DatabaseRequiresEvent(RelationEvent):
     """Base class for database events."""
 
     @property
+    def database(self) -> Optional[str]:
+        """Returns the database name."""
+        return self.relation.data[self.relation.app].get("database")
+
+    @property
     def endpoints(self) -> Optional[str]:
         """Returns a comma separated list of read/write endpoints."""
         return self.relation.data[self.relation.app].get("endpoints")
@@ -659,7 +687,7 @@ class DatabaseRequiresEvent(RelationEvent):
     def uris(self) -> Optional[str]:
         """Returns the connection URIs.
 
-        MongoDB, Redis.
+        MongoDB, Redis, OpenSearch.
         """
         return self.relation.data[self.relation.app].get("uris")
 
@@ -719,6 +747,18 @@ class DatabaseProvides(DataProvides):
         # extra user roles) was added to the relation databag by the application.
         if "database" in diff.added:
             self.on.database_requested.emit(event.relation, app=event.app, unit=event.unit)
+
+    def set_database(self, relation_id: int, database_name: str) -> None:
+        """Set database name.
+
+        This function writes in the application data bag, therefore,
+        only the leader unit can call it.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            database_name: database name.
+        """
+        self._update_relation_data(relation_id, {"database": database_name})
 
     def set_endpoints(self, relation_id: int, connection_strings: str) -> None:
         """Set database primary connections.
@@ -950,6 +990,11 @@ class KafkaProvidesEvent(RelationEvent):
         """Returns the topic that was requested."""
         return self.relation.data[self.relation.app].get("topic")
 
+    @property
+    def consumer_group_prefix(self) -> Optional[str]:
+        """Returns the consumer-group-prefix that was requested."""
+        return self.relation.data[self.relation.app].get("consumer-group-prefix")
+
 
 class TopicRequestedEvent(KafkaProvidesEvent, ExtraRoleEvent):
     """Event emitted when a new topic is requested for use on this relation."""
@@ -968,8 +1013,13 @@ class KafkaRequiresEvent(RelationEvent):
     """Base class for Kafka events."""
 
     @property
+    def topic(self) -> Optional[str]:
+        """Returns the topic."""
+        return self.relation.data[self.relation.app].get("topic")
+
+    @property
     def bootstrap_server(self) -> Optional[str]:
-        """Returns a a comma-separated list of broker uris."""
+        """Returns a comma-separated list of broker uris."""
         return self.relation.data[self.relation.app].get("endpoints")
 
     @property
@@ -1026,6 +1076,15 @@ class KafkaProvides(DataProvides):
         if "topic" in diff.added:
             self.on.topic_requested.emit(event.relation, app=event.app, unit=event.unit)
 
+    def set_topic(self, relation_id: int, topic: str) -> None:
+        """Set topic name in the application relation databag.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            topic: the topic name.
+        """
+        self._update_relation_data(relation_id, {"topic": topic})
+
     def set_bootstrap_server(self, relation_id: int, bootstrap_server: str) -> None:
         """Set the bootstrap server in the application relation databag.
 
@@ -1059,26 +1118,30 @@ class KafkaRequires(DataRequires):
 
     on = KafkaRequiresEvents()
 
-    def __init__(self, charm, relation_name: str, topic: str, extra_user_roles: str = None):
+    def __init__(
+        self,
+        charm,
+        relation_name: str,
+        topic: str,
+        extra_user_roles: Optional[str] = None,
+        consumer_group_prefix: Optional[str] = None,
+    ):
         """Manager of Kafka client relations."""
         # super().__init__(charm, relation_name)
         super().__init__(charm, relation_name, extra_user_roles)
         self.charm = charm
         self.topic = topic
+        self.consumer_group_prefix = consumer_group_prefix or ""
 
     def _on_relation_joined_event(self, event: RelationJoinedEvent) -> None:
         """Event emitted when the application joins the Kafka relation."""
-        # Sets both topic and extra user roles in the relation
-        # if the roles are provided. Otherwise, sets only the topic.
-        self._update_relation_data(
-            event.relation.id,
-            {
-                "topic": self.topic,
-                "extra-user-roles": self.extra_user_roles,
-            }
-            if self.extra_user_roles is not None
-            else {"topic": self.topic},
-        )
+        # Sets topic, extra user roles, and "consumer-group-prefix" in the relation
+        relation_data = {
+            f: getattr(self, f.replace("-", "_"), "")
+            for f in ["consumer-group-prefix", "extra-user-roles", "topic"]
+        }
+
+        self._update_relation_data(event.relation.id, relation_data)
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the Kafka relation has changed."""
@@ -1096,7 +1159,7 @@ class KafkaRequires(DataRequires):
             # “endpoints_changed“ event if “topic_created“ is triggered.
             return
 
-        # Emit an endpoints (bootstrap-server) changed event if the Kakfa endpoints
+        # Emit an endpoints (bootstrap-server) changed event if the Kafka endpoints
         # added or changed this info in the relation databag.
         if "endpoints" in diff.added or "endpoints" in diff.changed:
             # Emit the default event (the one without an alias).
@@ -1126,8 +1189,6 @@ class IndexRequestedEvent(OpenSearchProvidesEvent, ExtraRoleEvent):
 class OpenSearchProvidesEvents(CharmEvents):
     """OpenSearch events.
 
-    # TODO maybe rename this, it's hard to read
-
     This class defines the events that OpenSearch can emit.
     """
 
@@ -1144,8 +1205,6 @@ class IndexCreatedEvent(AuthenticationEvent, OpenSearchRequiresEvent):
 
 class OpenSearchRequiresEvents(CharmEvents):
     """OpenSearch events.
-
-    # TODO maybe rename this, it's hard to read
 
     This class defines the events that the opensearch requirer can emit.
     """
@@ -1180,6 +1239,17 @@ class OpenSearchProvides(DataProvides):
         if "index" in diff.added:
             self.on.index_requested.emit(event.relation, app=event.app, unit=event.unit)
 
+    def set_index(self, relation_id: int, index: str) -> None:
+        """Set the index in the application relation databag.
+
+        Args:
+            relation_id: the identifier for a particular relation.
+            index: the index as it is _created_ on the provider charm. This needn't match the
+                requested index, and can be used to present a different index name if, for example,
+                the requested index is invalid.
+        """
+        self._update_relation_data(relation_id, {"index": index})
+
     def set_endpoints(self, relation_id: int, endpoints: str) -> None:
         """Set the endpoints in the application relation databag.
 
@@ -1188,14 +1258,6 @@ class OpenSearchProvides(DataProvides):
             endpoints: the endpoint addresses for opensearch nodes.
         """
         self._update_relation_data(relation_id, {"endpoints": endpoints})
-
-    @property
-    def version(self) -> Optional[str]:
-        """Returns the version of the database.
-
-        Version as informed by the database daemon.
-        """
-        return self.relation.data[self.relation.app].get("version")
 
     def set_version(self, relation_id: int, version: str) -> None:
         """Set the database version in the application relation databag.
