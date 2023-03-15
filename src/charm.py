@@ -238,27 +238,18 @@ class IntegratorCharm(CharmBase):
     def databases_active(self) -> Dict[str, str]:
         """Return the configured database name."""
         return {
-            name: relation.data[self.app]["database"]
+            name: relation.data[relation.app]["database"]
             for name, relation in self.database_relations.items()
-            if "database" in relation.data[self.app]
+            if "database" in relation.data[relation.app]
         }
 
     @property
     def topic_active(self) -> Optional[str]:
         """Return the configured topic name."""
         if relation := self.kafka_relation:
-            if "topic" in relation.data[self.app]:
-                return relation.data[self.app]["topic"]
+            if "topic" in relation.data[relation.app]:
+                return relation.data[relation.app]["topic"]
         return None
-
-    @property
-    def extra_user_roles_active(self) -> Optional[str]:
-        """Return the configured user-extra-roles parameter."""
-        return (
-            relation.data[self.app]["extra-user-roles"]
-            if (relation := self.kafka_relation)
-            else None
-        )
 
     @property
     def is_database_related(self) -> bool:
@@ -292,7 +283,7 @@ class IntegratorCharm(CharmBase):
         if not relation:
             return {}
 
-        return relation.data[self.app]
+        return relation.data[relation.app]
 
     @property
     def unit_peer_data(self) -> MutableMapping[str, str]:
