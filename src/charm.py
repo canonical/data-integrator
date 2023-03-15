@@ -111,10 +111,10 @@ class IntegratorCharm(CharmBase):
     def _on_config_changed(self, _: EventBase) -> None:
         """Handle on config changed event."""
         # Only execute in the unit leader
+        self.unit.status = self.get_status()
+
         if not self.unit.is_leader():
             return
-
-        self.unit.status = self.get_status()
 
         # update relation databag
         # if a relation has been created before configuring the topic or database name
