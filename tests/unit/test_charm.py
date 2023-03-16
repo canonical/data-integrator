@@ -107,11 +107,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_relation_data(
             self.rel_id,
             "mysql",
-            {
-                "username": "test-username",
-                "password": "test-password",
-                "database": "foo"
-            },
+            {"username": "test-username", "password": "test-password", "database": "foo"},
         )
 
         self.assertEqual(
