@@ -55,7 +55,12 @@ jobs:
             provider: lxd
           - name: integration-k8s
             provider: microk8s
-    name: ${{ matrix.tox-environments.name }}
+        product:
+          - kafka
+          - mysql
+          - postgresql
+          - mongodb
+    name: ${{ matrix.tox-environments.name }}-${{matrix.product}}
     needs:
       - lint
       - unit-test
@@ -91,6 +96,6 @@ jobs:
             echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
           fi
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments.name }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+        run: tox run -e ${{ matrix.tox-environments.name }}-${{matrix.product}} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
