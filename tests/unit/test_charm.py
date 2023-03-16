@@ -110,6 +110,7 @@ class TestCharm(unittest.TestCase):
             {
                 "username": "test-username",
                 "password": "test-password",
+                "database": "foo"
             },
         )
 
