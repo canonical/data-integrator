@@ -42,6 +42,21 @@ jobs:
       - name: Run tests
         run: tox run -e unit
 
+  lib-check:
+    name: Check libraries
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check libs
+        uses: canonical/charming-actions/check-libraries@2.2.3
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
   build:
     name: Build charms
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
@@ -62,6 +77,7 @@ jobs:
           - mongodb
     name: ${{ matrix.tox-environments.name }}-${{matrix.product}}
     needs:
+      - lib-check
       - lint
       - unit-test
       - build
@@ -71,11 +87,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       - name: Setup operator environment
-        # TODO: Replace with custom image on self-hosted runner
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: ${{ matrix.tox-environments.provider }}
-          bootstrap-options: "--agent-version 2.9.38"
+          bootstrap-options: "--agent-version 2.9.42"
       - name: Install tox
         run: python3 -m pip install tox
       - name: Install poetry
