@@ -70,7 +70,7 @@ class IntegratorCharm(CharmBase):
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
         # update peer databag to trigger the charm status update
         self._update_relation_status(event, Statuses.BROKEN.name)
@@ -111,10 +111,10 @@ class IntegratorCharm(CharmBase):
     def _on_config_changed(self, _: EventBase) -> None:
         """Handle on config changed event."""
         # Only execute in the unit leader
+        self.unit.status = self.get_status()
+
         if not self.unit.is_leader():
             return
-
-        self.unit.status = self.get_status()
 
         # update relation databag
         # if a relation has been created before configuring the topic or database name
@@ -168,7 +168,7 @@ class IntegratorCharm(CharmBase):
         """Event triggered when a database was created for this application."""
         logger.debug(f"Database credentials are received: {event.username}")
         self._on_config_changed(event)
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
         # update values in the databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
@@ -177,7 +177,7 @@ class IntegratorCharm(CharmBase):
         """Event triggered when a topic was created for this application."""
         logger.debug(f"Kafka credentials are received: {event.username}")
         self._on_config_changed(event)
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
@@ -188,7 +188,7 @@ class IntegratorCharm(CharmBase):
 
     def _on_peer_relation_changed(self, _: RelationEvent) -> None:
         """Handle the peer relation changed event."""
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
         removed_relations = []
         # check for relation that has been removed
@@ -238,27 +238,18 @@ class IntegratorCharm(CharmBase):
     def databases_active(self) -> Dict[str, str]:
         """Return the configured database name."""
         return {
-            name: relation.data[self.app]["database"]
+            name: relation.data[relation.app]["database"]
             for name, relation in self.database_relations.items()
-            if "database" in relation.data[self.app]
+            if "database" in relation.data[relation.app]
         }
 
     @property
     def topic_active(self) -> Optional[str]:
         """Return the configured topic name."""
         if relation := self.kafka_relation:
-            if "topic" in relation.data[self.app]:
-                return relation.data[self.app]["topic"]
+            if "topic" in relation.data[relation.app]:
+                return relation.data[relation.app]["topic"]
         return None
-
-    @property
-    def extra_user_roles_active(self) -> Optional[str]:
-        """Return the configured user-extra-roles parameter."""
-        return (
-            relation.data[self.app]["extra-user-roles"]
-            if (relation := self.kafka_relation)
-            else None
-        )
 
     @property
     def is_database_related(self) -> bool:
@@ -292,7 +283,7 @@ class IntegratorCharm(CharmBase):
         if not relation:
             return {}
 
-        return relation.data[self.app]
+        return relation.data[relation.app]
 
     @property
     def unit_peer_data(self) -> MutableMapping[str, str]:
