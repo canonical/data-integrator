@@ -37,7 +37,6 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.skip
 async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     """Test the relation with MongoDB and database accessibility."""
     channel = "dpe/edge" if ops_test.cloud_name == "localhost" else "edge"
