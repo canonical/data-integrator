@@ -13,7 +13,7 @@ import pytest
 import requests
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.constants import (
+from tests.integration.constants import (  # OPENSEARCH_EXTRA_USER_ROLES,
     APP,
     DATA_INTEGRATOR,
     DATABASE_NAME,
@@ -23,7 +23,6 @@ from tests.integration.constants import (
     MONGODB,
     MYSQL,
     OPENSEARCH,
-    OPENSEARCH_EXTRA_USER_ROLES,
     POSTGRESQL,
     TLS_CERTIFICATES_APP_NAME,
     TOPIC_NAME,
@@ -47,9 +46,9 @@ async def test_build_and_deploy(ops_test: OpsTest, app_charm: PosixPath):
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
         # commented out while I'm not using it, reinstate before merge
-        #ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
+        # ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR]) #, APP])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])  # , APP])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # config database name
@@ -415,6 +414,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
         kafka_unit_name=f"{KAFKA[ops_test.cloud_name]}/0",
         topic=TOPIC_NAME,
     )
+
 
 async def test_opensearch(ops_test: OpsTest):
     if ops_test.cloud_name != "localhost":
