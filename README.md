@@ -77,6 +77,11 @@ Instead, for Kafka please configure the desired `topic-name`:
 juju config data-integrator topic-name=test-topic extra-user-roles=producer,consumer
 ```
 
+For OpenSearch, please configure the desired `index-name` and `extra-user-roles`:
+```shell
+juju config data-integrator index-name=test-topic extra-user-roles=admin
+```
+
 #### Relation with desired application
 
 In order to related to the desired data-platform application use the following command:

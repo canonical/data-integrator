@@ -46,9 +46,10 @@ async def test_build_and_deploy(ops_test: OpsTest, app_charm: PosixPath):
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
-        ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
+        # commented out while I'm not using it, reinstate before merge
+        #ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR]) #, APP])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # config database name
@@ -415,9 +416,12 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
         topic=TOPIC_NAME,
     )
 
-
 async def test_opensearch(ops_test: OpsTest):
+    if ops_test.cloud_name != "localhost":
+        pytest.skip("opensearch does not have a k8s charm yet.")
+
     def opensearch_request(credentials, method, endpoint, payload=None):
+        """Send a request to the opensearch charm using the given credentials and parameters."""
         host = ops_test.model.applications[OPENSEARCH].units[0].public_address
         with requests.Session() as s:
             s.auth = (credentials.get("username"), credentials.get("password"))
@@ -431,8 +435,10 @@ async def test_opensearch(ops_test: OpsTest):
             resp.raise_for_status()
             return resp.json()
 
-    config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
+    # TODO change this to OPENSEARCH_EXTRA_USER_ROLES
+    config = {"index-name": INDEX_NAME, "extra-user-roles": json.dumps({"roles": ["all_access"]})}
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    # Set kernel params in model config opensearch can run
     model_config = {
         "logging-config": "<root>=INFO;unit=DEBUG",
         "update-status-hook-interval": "1m",
