@@ -23,7 +23,7 @@ from .helpers import fetch_action_get_credentials
 logger = logging.getLogger(__name__)
 
 
-def opensearch_request(credentials, method, endpoint, payload=None):
+def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     """Send a request to the opensearch charm using the given credentials and parameters."""
     host = ops_test.model.applications[OPENSEARCH].units[0].public_address
     with requests.Session() as s:
@@ -71,7 +71,8 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # TODO change this to OPENSEARCH_EXTRA_USER_ROLES
@@ -109,8 +110,10 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
 { "index" : { "_index": "albums", "_id" : "3" } }
 {"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
 """
-    opensearch_request(credentials, "POST", endpoint="/_bulk", payload=re.escape(bulk_payload))
-    get_jazz = opensearch_request(credentials, "GET", endpoint="/albums/_search?q=Jazz")
+    opensearch_request(
+        ops_test, credentials, "POST", endpoint="/_bulk", payload=re.escape(bulk_payload)
+    )
+    get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
@@ -148,7 +151,9 @@ async def test_recycle_credentials(ops_test: OpsTest):
     )
     logger.error(new_credentials)
 
-    get_jazz_again = opensearch_request(new_credentials, "GET", endpoint="/albums/_search?q=Jazz")
+    get_jazz_again = opensearch_request(
+        ops_test, new_credentials, "GET", endpoint="/albums/_search?q=Jazz"
+    )
     artists = [
         hit.get("_source", {}).get("artist")
         for hit in get_jazz_again.get("hits", {}).get("hits", [{}])
@@ -157,4 +162,4 @@ async def test_recycle_credentials(ops_test: OpsTest):
 
     # Old credentials should have been revoked.
     with pytest.raises(requests.HTTPError):
-        opensearch_request(old_credentials, "GET", endpoint="")
+        opensearch_request(ops_test, old_credentials, "GET", endpoint="")
