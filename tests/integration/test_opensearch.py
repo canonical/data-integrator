@@ -64,6 +64,12 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 
 
 async def test_opensearch(ops_test: OpsTest):
+    """Verifies intended use case of data-integrator charm.
+
+    This test verifies that we can use the credentials provided to the data-integrator charm to
+    update and retrieve data from the opensearch charm, and that credentials are recycled as
+    expected.
+    """
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
 
@@ -95,7 +101,6 @@ async def test_opensearch(ops_test: OpsTest):
 { "index" : { "_index": "albums", "_id" : "3" } }
 {"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
 """
-    opensearch_request(credentials, "GET", endpoint="")
     opensearch_request(credentials, "POST", endpoint="/_bulk", payload=re.escape(bulk_payload))
     get_jazz = opensearch_request(credentials, "GET", endpoint="/albums/_search?q=Jazz")
     artists = [
