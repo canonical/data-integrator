@@ -40,7 +40,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
             OPENSEARCH[ops_test.cloud_name],
             channel="edge",
             application_name=OPENSEARCH[ops_test.cloud_name],
-            num_units=1,
+            num_units=3,
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
         await ops_test.model.deploy(
@@ -103,19 +103,20 @@ async def test_opensearch(ops_test: OpsTest):
     ]
     assert set(artists) == {"Herbie Hancock", "Lydian Collective"}
 
+    # Recreate relation to generate new credentials
     await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
         OPENSEARCH[ops_test.cloud_name], DATA_INTEGRATOR
     )
     async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
-            status="active",
+        await asyncio.gather(
+            ops_test.model.wait_for_idle(
+                apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+                status="active",
+            ),
+            ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR],status="blocked")
         )
 
-    await asyncio.gather(
-        ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME),
-        ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
-    )
+    await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
             apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
