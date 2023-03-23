@@ -10,7 +10,7 @@ from pathlib import PosixPath
 
 import pytest
 import requests
-from constants import DATA_INTEGRATOR, INDEX_NAME, OPENSEARCH, TLS_CERTIFICATES_APP_NAME
+from .constants import DATA_INTEGRATOR, INDEX_NAME, OPENSEARCH, TLS_CERTIFICATES_APP_NAME
 from pytest_operator.plugin import OpsTest
 
 from .helpers import fetch_action_get_credentials
