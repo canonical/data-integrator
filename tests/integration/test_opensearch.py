@@ -5,13 +5,15 @@
 import asyncio
 import json
 import logging
+import re
 from pathlib import PosixPath
 
 import pytest
-from constants import APP, DATA_INTEGRATOR, INDEX_NAME, OPENSEARCH
+import requests
+from constants import DATA_INTEGRATOR, INDEX_NAME, OPENSEARCH, TLS_CERTIFICATES_APP_NAME
 from pytest_operator.plugin import OpsTest
 
-from .helpers import check_logs, fetch_action_get_credentials, fetch_action_kafka
+from .helpers import fetch_action_get_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +120,7 @@ async def test_opensearch(ops_test: OpsTest):
                 apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
                 status="active",
             ),
-            ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR],status="blocked")
+            ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], status="blocked"),
         )
 
     await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
