@@ -41,7 +41,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
+async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
 
@@ -121,6 +121,8 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
 
 
 async def test_recycle_credentials(ops_test: OpsTest):
+    if ops_test.cloud_name != "localhost":
+        pytest.skip("opensearch does not have a k8s charm yet.")
     old_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
