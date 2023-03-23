@@ -75,6 +75,7 @@ jobs:
           - mysql
           - postgresql
           - mongodb
+          - opensearch
     name: ${{ matrix.tox-environments.name }}-${{matrix.product}}
     needs:
       - lib-check
