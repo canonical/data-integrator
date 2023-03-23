@@ -23,6 +23,23 @@ from .helpers import fetch_action_get_credentials
 logger = logging.getLogger(__name__)
 
 
+def opensearch_request(credentials, method, endpoint, payload=None):
+    """Send a request to the opensearch charm using the given credentials and parameters."""
+    host = ops_test.model.applications[OPENSEARCH].units[0].public_address
+    with requests.Session() as s:
+        s.auth = (credentials.get("username"), credentials.get("password"))
+        resp = s.request(
+            verify=credentials.get("ca-chain"),
+            method=method,
+            url=f"https://{host}:9200/{endpoint}",
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            **{"payload": payload} if payload else {},
+        )
+
+    resp.raise_for_status()
+    return resp.json()
+
+
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
     if ops_test.cloud_name != "localhost":
@@ -50,7 +67,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
             num_units=3,
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
-        await ops_test.model.deploy(
+        ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
     )
@@ -70,30 +87,14 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     )
 
 
-async def test_opensearch(ops_test: OpsTest):
+async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     """Verifies intended use case of data-integrator charm.
 
     This test verifies that we can use the credentials provided to the data-integrator charm to
-    update and retrieve data from the opensearch charm, and that credentials are recycled as
-    expected.
+    update and retrieve data from the opensearch charm.
     """
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
-
-    def opensearch_request(credentials, method, endpoint, payload=None):
-        """Send a request to the opensearch charm using the given credentials and parameters."""
-        host = ops_test.model.applications[OPENSEARCH].units[0].public_address
-        with requests.Session() as s:
-            s.auth = (credentials.get("username"), credentials.get("password"))
-            resp = s.request(
-                verify=credentials.get("ca-chain"),
-                method=method,
-                url=f"https://{host}:9200/{endpoint}",
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
-                **{"payload": payload} if payload else {},
-            )
-            resp.raise_for_status()
-            return resp.json()
 
     # get credentials for opensearch
     credentials = await fetch_action_get_credentials(
@@ -114,6 +115,12 @@ async def test_opensearch(ops_test: OpsTest):
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
     assert set(artists) == {"Herbie Hancock", "Lydian Collective"}
+
+
+async def test_recycle_credentials(ops_test: OpsTest):
+    old_credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
 
     # Recreate relation to generate new credentials
     await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
@@ -150,4 +157,4 @@ async def test_opensearch(ops_test: OpsTest):
 
     # Old credentials should have been revoked.
     with pytest.raises(requests.HTTPError):
-        opensearch_request(credentials, "GET", endpoint="")
+        opensearch_request(old_credentials, "GET", endpoint="")
