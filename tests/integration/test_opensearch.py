@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import re
+import tempfile
 from pathlib import PosixPath
 
 import pytest
