@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     """Send a request to the opensearch charm using the given credentials and parameters."""
-    host = ops_test.model.applications[OPENSEARCH].units[0].public_address
+    host = ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].units[0].public_address
     with requests.Session() as s:
         s.auth = (credentials.get("username"), credentials.get("password"))
         resp = s.request(
