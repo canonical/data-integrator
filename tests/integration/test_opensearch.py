@@ -28,7 +28,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     host = ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].units[0].public_address
 
     with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
-        chain.write(admin_secrets["ca-chain"])
+        chain.write(credentials.get("ca-chain"))
         chain.seek(0)
 
         s.auth = (credentials.get("username"), credentials.get("password"))
@@ -39,9 +39,8 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             **{"data": payload} if payload else {},
         )
-
-    resp.raise_for_status()
-    return resp.json()
+        resp.raise_for_status()
+        return resp.json()
 
 
 @pytest.mark.abort_on_fail
