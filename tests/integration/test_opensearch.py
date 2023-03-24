@@ -29,7 +29,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     host = ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].units[0].public_address
 
     with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
-        chain.write(credentials.get("ca-chain"))
+        chain.write(credentials.get("tls-ca"))
         chain.seek(0)
 
         s.auth = (credentials.get("username"), credentials.get("password"))
