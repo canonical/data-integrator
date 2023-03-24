@@ -33,7 +33,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
             method=method,
             url=f"https://{host}:9200/{endpoint}",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
-            **{"payload": payload} if payload else {},
+            **{"data": payload} if payload else {},
         )
 
     resp.raise_for_status()
@@ -42,6 +42,15 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
 
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
+    """Deploys charms for testing.
+
+    Note for developers, if deploying opensearch fails with some kernel parameter not set, run the
+    following command:
+
+    ```
+    sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
+    ```
+    """
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
 
@@ -121,6 +130,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
 
 
 async def test_recycle_credentials(ops_test: OpsTest):
+    """Tests that we can recreate credentials by removing and creating a new relation."""
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
     old_credentials = await fetch_action_get_credentials(
@@ -129,7 +139,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
 
     # Recreate relation to generate new credentials
     await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
-        OPENSEARCH[ops_test.cloud_name], DATA_INTEGRATOR
+        f"{OPENSEARCH[ops_test.cloud_name]}:opensearch-client", DATA_INTEGRATOR
     )
     async with ops_test.fast_forward():
         await asyncio.gather(
