@@ -26,10 +26,14 @@ logger = logging.getLogger(__name__)
 def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     """Send a request to the opensearch charm using the given credentials and parameters."""
     host = ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].units[0].public_address
-    with requests.Session() as s:
+
+    with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
+        chain.write(admin_secrets["ca-chain"])
+        chain.seek(0)
+
         s.auth = (credentials.get("username"), credentials.get("password"))
         resp = s.request(
-            verify=credentials.get("ca-chain"),
+            verify=chain.name,
             method=method,
             url=f"https://{host}:9200/{endpoint}",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
@@ -123,6 +127,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ops_test, credentials, "POST", endpoint="/_bulk", payload=re.escape(bulk_payload)
     )
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
+    logger.info(get_jazz)
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
@@ -133,6 +138,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
     """Tests that we can recreate credentials by removing and creating a new relation."""
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
+
     old_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )

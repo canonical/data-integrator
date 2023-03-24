@@ -17,7 +17,7 @@ TOPIC_NAME = "test_topic"
 EXTRA_USER_ROLES = "producer,consumer,admin"
 
 OPENSEARCH = {"localhost": "opensearch"}
-INDEX_NAME = "test_index"
+INDEX_NAME = "albums"
 OPENSEARCH_EXTRA_USER_ROLES = "admin"
 
 APP = "app"
