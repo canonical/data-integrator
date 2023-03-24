@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     """Send a request to the opensearch charm using the given credentials and parameters."""
     host = ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].units[0].public_address
-
+    credentials = credentials.get(OPENSEARCH[ops_test.cloud_name])
+    logger.error(credentials)
     with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
         chain.write(credentials.get("tls-ca"))
         chain.seek(0)
