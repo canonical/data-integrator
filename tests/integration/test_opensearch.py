@@ -37,7 +37,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
         resp = s.request(
             verify=chain.name,
             method=method,
-            url=f"https://{host}:9200/{endpoint}",
+            url=f"https://{host}:9200{endpoint}",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             **{"data": payload} if payload else {},
         )
