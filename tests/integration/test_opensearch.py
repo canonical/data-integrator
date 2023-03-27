@@ -37,7 +37,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
         s.auth = (credentials.get("username"), credentials.get("password"))
         logger.error(f"{method}, https://{host}:9200{endpoint}, {payload}")
         resp = s.request(
-            verify=False,
+            verify=chain.name,
             method=method,
             url=f"https://{host}:9200{endpoint}",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
@@ -114,11 +114,31 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    album_payload = (
+    album_payload = re.escape(
         '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     )
+    # Cant be a permissions issue, because it's admin.
+    # returns:
+    # {
+    #     "error": {
+    #         "root_cause": [
+    #             {
+    #                 "type": "not_x_content_exception",
+    #                 "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes",
+    #             }
+    #         ],
+    #         "type": "mapper_parsing_exception",
+    #         "reason": "failed to parse",
+    #         "caused_by": {
+    #             "type": "not_x_content_exception",
+    #             "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes",
+    #         },
+    #     },
+    #     "status": 400,
+    # }
+
     album_post = opensearch_request(
-        ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=re.escape(album_payload)
+        ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
     )
     logger.error(album_post)
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
