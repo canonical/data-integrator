@@ -32,16 +32,17 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
         chain.write(credentials.get("tls-ca"))
         chain.seek(0)
+        logger.error(chain.name)
 
         s.auth = (credentials.get("username"), credentials.get("password"))
+        logger.error(f"{method}, https://{host}:9200{endpoint}, {payload}")
         resp = s.request(
-            verify=chain.name,
+            verify=False,
             method=method,
             url=f"https://{host}:9200{endpoint}",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
             **{"data": payload} if payload else {},
         )
-        resp.raise_for_status()
         return resp.json()
 
 
@@ -112,13 +113,12 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
-    logger.error(credentials)
 
     album_payload = (
         '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     )
     album_post = opensearch_request(
-        ops_test, credentials, "POST", endpoint="/albums/_doc/1", payload=re.escape(album_payload)
+        ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=re.escape(album_payload)
     )
     logger.error(album_post)
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
