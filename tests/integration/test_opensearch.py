@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import json
 import logging
 import re
 import tempfile
