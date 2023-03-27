@@ -17,6 +17,7 @@ from .constants import (
     DATA_INTEGRATOR,
     INDEX_NAME,
     OPENSEARCH,
+    OPENSEARCH_EXTRA_USER_ROLES,
     TLS_CERTIFICATES_APP_NAME,
 )
 from .helpers import fetch_action_get_credentials
@@ -85,12 +86,7 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
     )
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
-
-    # TODO change this to OPENSEARCH_EXTRA_USER_ROLES
-    config = {"index-name": INDEX_NAME, "extra-user-roles": json.dumps({"roles": ["all_access"]})}
+    config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config),
     await asyncio.gather(
         ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME),
