@@ -124,14 +124,14 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     #         "root_cause": [
     #             {
     #                 "type": "not_x_content_exception",
-    #                 "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes",
+    #                 "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes",  # noqa
     #             }
     #         ],
     #         "type": "mapper_parsing_exception",
     #         "reason": "failed to parse",
     #         "caused_by": {
     #             "type": "not_x_content_exception",
-    #             "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes",
+    #             "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes", # noqa
     #         },
     #     },
     #     "status": 400,
