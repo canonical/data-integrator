@@ -117,7 +117,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     album_payload = re.escape(
         '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     )
-    # Cant be a permissions issue, because it's admin.
+    # Can't be a permissions issue, because it's admin.
     # returns:
     # {
     #     "error": {
