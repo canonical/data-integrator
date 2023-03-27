@@ -99,6 +99,7 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
         status="active",
+        idle_period=10,
     )
 
 
@@ -153,6 +154,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
             ops_test.model.wait_for_idle(
                 apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
                 status="active",
+                idle_period=10,
             ),
             ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], status="blocked"),
         )
@@ -162,6 +164,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(
             apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
             status="active",
+            idle_period=10,
         )
 
     # get new credentials for opensearch
