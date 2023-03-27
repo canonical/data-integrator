@@ -35,7 +35,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
 
         s.auth = (credentials.get("username"), credentials.get("password"))
         resp = s.request(
-            verify=False,
+            verify=chain.name,
             method=method,
             url=f"https://{host}:9200{endpoint}",
             headers={"Content-Type": "application/json", "Accept": "application/json"},
@@ -114,15 +114,9 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     )
     logger.error(credentials)
 
-    bulk_payload = """{ "index" : { "_index": "albums", "_id" : "1" } }
-{"artist": "Herbie Hancock", "genre": ["Jazz"],  "title": "Head Hunters"}
-{ "index" : { "_index": "albums", "_id" : "2" } }
-{"artist": "Lydian Collective", "genre": ["Jazz"],  "title": "Adventure"}
-{ "index" : { "_index": "albums", "_id" : "3" } }
-{"artist": "Liquid Tension Experiment", "genre": ["Prog", "Metal"],  "title": "Liquid Tension Experiment 2"}
-"""
-    bulk_post = opensearch_request(
-        ops_test, credentials, "POST", endpoint="/_bulk", payload=re.escape(bulk_payload)
+    album_payload = '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
+    album_post = opensearch_request(
+        ops_test, credentials, "POST", endpoint="/albums/_doc/1", payload=re.escape(bulk_payload)
     )
     logger.error(bulk_post)
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
@@ -130,7 +124,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
-    assert set(artists) == {"Herbie Hancock", "Lydian Collective"}
+    assert set(artists) == {"Vulfpeck"}
 
 
 async def test_recycle_credentials(ops_test: OpsTest):
@@ -176,7 +170,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
         hit.get("_source", {}).get("artist")
         for hit in get_jazz_again.get("hits", {}).get("hits", [{}])
     ]
-    assert set(artists) == {"Herbie Hancock", "Lydian Collective"}
+    assert set(artists) == {"Vulfpeck"}
 
     # Old credentials should have been revoked.
     with pytest.raises(requests.HTTPError):
