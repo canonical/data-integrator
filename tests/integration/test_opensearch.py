@@ -95,6 +95,7 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
         status="active",
         idle_period=10,
+        timeout=1400,
     )
 
 
