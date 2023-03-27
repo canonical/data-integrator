@@ -114,11 +114,13 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     )
     logger.error(credentials)
 
-    album_payload = '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
-    album_post = opensearch_request(
-        ops_test, credentials, "POST", endpoint="/albums/_doc/1", payload=re.escape(bulk_payload)
+    album_payload = (
+        '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     )
-    logger.error(bulk_post)
+    album_post = opensearch_request(
+        ops_test, credentials, "POST", endpoint="/albums/_doc/1", payload=re.escape(album_payload)
+    )
+    logger.error(album_post)
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
     logger.error(get_jazz)
     artists = [
