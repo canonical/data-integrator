@@ -149,23 +149,21 @@ async def test_recycle_credentials(ops_test: OpsTest):
     await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
         f"{OPENSEARCH[ops_test.cloud_name]}:opensearch-client", DATA_INTEGRATOR
     )
-    async with ops_test.fast_forward():
-        await asyncio.gather(
-            ops_test.model.wait_for_idle(
-                apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
-                status="active",
-                idle_period=10,
-            ),
-            ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], status="blocked"),
-        )
-
-    await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
-    async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(
+            apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
             status="active",
             idle_period=10,
-        )
+        ),
+        ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], status="blocked"),
+    )
+
+    await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        status="active",
+        idle_period=10,
+    )
 
     # get new credentials for opensearch
     new_credentials = await fetch_action_get_credentials(
