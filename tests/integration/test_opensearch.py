@@ -52,7 +52,12 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
         logger.error(request_kwargs)
         s.auth = (credentials.get("username"), credentials.get("password"))
         resp = s.request(**request_kwargs)
-        return resp.json()
+        logger.error(resp)
+        try:
+            return resp.json()
+        except JSONDecodeError as e:
+            logger.error(e)
+            reps.raise_for_status()
 
 
 @pytest.mark.abort_on_fail
@@ -129,13 +134,9 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     album_post = opensearch_request(
         ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
     )
-    logger.error(album_post)
 
     get_albums = opensearch_request(ops_test, credentials, "GET", endpoint="/albums")
-    logger.error(get_albums)
-
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
-    logger.error(get_jazz)
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
@@ -180,7 +181,6 @@ async def test_recycle_credentials(ops_test: OpsTest):
     get_jazz_again = opensearch_request(
         ops_test, new_credentials, "GET", endpoint="/albums/_search?q=Jazz"
     )
-    logger.error(get_jazz_again)
     artists = [
         hit.get("_source", {}).get("artist")
         for hit in get_jazz_again.get("hits", {}).get("hits", [{}])
@@ -189,4 +189,4 @@ async def test_recycle_credentials(ops_test: OpsTest):
 
     # Old credentials should have been revoked.
     with pytest.raises(requests.HTTPError):
-        opensearch_request(ops_test, old_credentials, "GET", endpoint="")
+        opensearch_request(ops_test, old_credentials, "GET", endpoint="/albums/_search?q=Jazz")
