@@ -5,7 +5,6 @@
 import asyncio
 import json
 import logging
-import re
 import tempfile
 from pathlib import PosixPath
 
@@ -123,7 +122,9 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    album_payload = '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
+    album_payload = (
+        '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
+    )
     # Can't be a permissions issue, because it's admin.
     # returns:
     # {
