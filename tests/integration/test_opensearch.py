@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 import logging
 import re
 import tempfile
@@ -26,23 +27,31 @@ logger = logging.getLogger(__name__)
 
 def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
     """Send a request to the opensearch charm using the given credentials and parameters."""
-    host = ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].units[0].public_address
     credentials = credentials.get(OPENSEARCH[ops_test.cloud_name])
     logger.error(credentials)
+    host = credentials.get("endpoints").split(",")[0]
+    if endpoint.startswith("/"):
+        endpoint = endpoint[1:]
+
+    full_url = f"https://{host}/{endpoint}"
+
     with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
         chain.write(credentials.get("tls-ca"))
         chain.seek(0)
-        logger.error(chain.name)
+        request_kwargs = {
+            "verify": chain.name,
+            "method": method.upper(),
+            "url": full_url,
+            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
+        }
+
+        if isinstance(payload, str):
+            request_kwargs["data"] = payload
+        elif isinstance(payload, dict):
+            request_kwargs["data"] = json.dumps(payload)
 
         s.auth = (credentials.get("username"), credentials.get("password"))
-        logger.error(f"{method}, https://{host}:9200{endpoint}, {payload}")
-        resp = s.request(
-            verify=chain.name,
-            method=method,
-            url=f"https://{host}:9200{endpoint}",
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-            **{"data": payload} if payload else {},
-        )
+        resp = s.request(**request_kwargs)
         return resp.json()
 
 
@@ -114,9 +123,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    album_payload = re.escape(
-        '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
-    )
+    album_payload = '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     # Can't be a permissions issue, because it's admin.
     # returns:
     # {
