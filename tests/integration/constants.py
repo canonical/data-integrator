@@ -18,6 +18,6 @@ EXTRA_USER_ROLES = "producer,consumer,admin"
 
 OPENSEARCH = {"localhost": "opensearch"}
 INDEX_NAME = "albums"
-OPENSEARCH_EXTRA_USER_ROLES = "default"
+OPENSEARCH_EXTRA_USER_ROLES = "default,admin"
 
 APP = "app"

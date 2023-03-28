@@ -49,6 +49,7 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
         elif isinstance(payload, dict):
             request_kwargs["data"] = json.dumps(payload)
 
+        logger.error(request_kwargs)
         s.auth = (credentials.get("username"), credentials.get("password"))
         resp = s.request(**request_kwargs)
         return resp.json()
@@ -125,26 +126,6 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     album_payload = (
         '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     )
-    # Can't be a permissions issue, because it's admin.
-    # returns:
-    # {
-    #     "error": {
-    #         "root_cause": [
-    #             {
-    #                 "type": "not_x_content_exception",
-    #                 "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes",  # noqa
-    #             }
-    #         ],
-    #         "type": "mapper_parsing_exception",
-    #         "reason": "failed to parse",
-    #         "caused_by": {
-    #             "type": "not_x_content_exception",
-    #             "reason": "not_x_content_exception: Compressor detection can only be called on some xcontent bytes or compressed xcontent bytes", # noqa
-    #         },
-    #     },
-    #     "status": 400,
-    # }
-
     album_post = opensearch_request(
         ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
     )
