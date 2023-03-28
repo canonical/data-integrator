@@ -52,7 +52,10 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
         logger.error(request_kwargs)
         s.auth = (credentials.get("username"), credentials.get("password"))
         resp = s.request(**request_kwargs)
-        logger.error(resp.json())
+        try:
+            logger.error(resp.json())
+        except requests.exceptions.JSONDecodeError:
+            logger.error(resp)
         return resp
 
 
@@ -105,7 +108,7 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
         status="active",
-        idle_period=15,
+        idle_period=10,
         timeout=1600,
     )
 
