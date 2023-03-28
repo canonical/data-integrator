@@ -204,4 +204,4 @@ async def test_recycle_credentials(ops_test: OpsTest):
     bad_request_resp = opensearch_request(
         ops_test, old_credentials, "GET", endpoint="/albums/_search?q=Jazz"
     )
-    assert bad_request_resp.status == 401, bad_request_resp.json()
+    assert bad_request_resp.status_code == 401, bad_request_resp.json()
