@@ -142,11 +142,11 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     album_payload = (
         '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     )
+    # This request can be temperamental, because opensearch can appear active without having 
+    # available databases. 
     opensearch_request(
         ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
     )
-
-    opensearch_request(ops_test, credentials, "GET", endpoint="/albums")
     get_jazz = opensearch_request(
         ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz"
     ).json()
