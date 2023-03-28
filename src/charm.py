@@ -64,7 +64,7 @@ class IntegratorCharm(CharmBase):
             relation_name=KAFKA,
             topic=self.topic_name or "",
             extra_user_roles=self.extra_user_roles or "",
-            consumer_group_prefix= self.consumer_group_prefix or ""
+            consumer_group_prefix=self.consumer_group_prefix or "",
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
@@ -134,7 +134,7 @@ class IntegratorCharm(CharmBase):
                     {
                         "topic": self.topic_name or "",
                         "extra-user-roles": self.extra_user_roles or "",
-                        "consumer-group-prefix": self.consumer_group_prefix or ""
+                        "consumer-group-prefix": self.consumer_group_prefix or "",
                     },
                 )
 
@@ -221,7 +221,7 @@ class IntegratorCharm(CharmBase):
     def extra_user_roles(self) -> Optional[str]:
         """Return the configured extra user roles."""
         return self.model.config.get("extra-user-roles", None)
-    
+
     @property
     def consumer_group_prefix(self) -> Optional[str]:
         """Return the configured consumer group prefix."""
