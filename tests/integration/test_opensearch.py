@@ -52,12 +52,8 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
         logger.error(request_kwargs)
         s.auth = (credentials.get("username"), credentials.get("password"))
         resp = s.request(**request_kwargs)
-        logger.error(resp)
-        try:
-            return resp.json()
-        except json.JSONDecodeError as e:
-            logger.error(e)
-            resp.raise_for_status()
+        logger.error(resp.json())
+        return resp
 
 
 @pytest.mark.abort_on_fail
@@ -109,8 +105,8 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
         status="active",
-        idle_period=10,
-        timeout=1400,
+        idle_period=15,
+        timeout=1600,
     )
 
 
@@ -122,6 +118,13 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     """
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
+
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        status="active",
+        idle_period=30,
+        timeout=1000,
+    )
 
     # get credentials for opensearch
     credentials = await fetch_action_get_credentials(
@@ -136,7 +139,9 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     )
 
     opensearch_request(ops_test, credentials, "GET", endpoint="/albums")
-    get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
+    get_jazz = opensearch_request(
+        ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz"
+    ).json()
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
@@ -180,7 +185,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
 
     get_jazz_again = opensearch_request(
         ops_test, new_credentials, "GET", endpoint="/albums/_search?q=Jazz"
-    )
+    ).json()
     artists = [
         hit.get("_source", {}).get("artist")
         for hit in get_jazz_again.get("hits", {}).get("hits", [{}])
@@ -188,5 +193,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
     assert set(artists) == {"Vulfpeck"}
 
     # Old credentials should have been revoked.
-    with pytest.raises(requests.HTTPError):
-        opensearch_request(ops_test, old_credentials, "GET", endpoint="/albums/_search?q=Jazz")
+    bad_request_resp = opensearch_request(
+        ops_test, old_credentials, "GET", endpoint="/albums/_search?q=Jazz"
+    )
+    assert bad_request_resp.status == 401, bad_request_resp.json()
