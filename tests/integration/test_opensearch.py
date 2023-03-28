@@ -55,9 +55,9 @@ def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
         logger.error(resp)
         try:
             return resp.json()
-        except JSONDecodeError as e:
+        except json.JSONDecodeError as e:
             logger.error(e)
-            reps.raise_for_status()
+            resp.raise_for_status()
 
 
 @pytest.mark.abort_on_fail
@@ -131,11 +131,11 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     album_payload = (
         '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
     )
-    album_post = opensearch_request(
+    opensearch_request(
         ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
     )
 
-    get_albums = opensearch_request(ops_test, credentials, "GET", endpoint="/albums")
+    opensearch_request(ops_test, credentials, "GET", endpoint="/albums")
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
