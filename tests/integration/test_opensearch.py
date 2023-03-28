@@ -99,6 +99,11 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
     )
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        idle_period=10,
+        timeout=1600,
+    )
     config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config),
     await asyncio.gather(
