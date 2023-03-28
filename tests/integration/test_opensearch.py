@@ -149,6 +149,10 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
     )
     logger.error(album_post)
+
+    get_albums = opensearch_request(ops_test, credentials, "GET", endpoint="/albums")
+    logger.error(get_albums)
+
     get_jazz = opensearch_request(ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz")
     logger.error(get_jazz)
     artists = [
