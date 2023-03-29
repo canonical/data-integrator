@@ -129,7 +129,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
             application_name=PGBOUNCER[ops_test.cloud_name],
             channel="edge",
             num_units=num_units,
-            trust=True,
+            series="jammy",
         ),
     )
     await ops_test.model.add_relation(
