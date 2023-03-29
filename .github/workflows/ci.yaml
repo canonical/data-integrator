@@ -74,10 +74,10 @@ jobs:
           - name: integration-k8s
             provider: microk8s
         product:
-          # - kafka
-          # - mysql
-          # - postgresql
-          # - mongodb
+          - kafka
+          - mysql
+          - postgresql
+          - mongodb
           - opensearch
     name: ${{ matrix.tox-environments.name }}-${{matrix.product}}
     needs:
