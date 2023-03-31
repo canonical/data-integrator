@@ -4,11 +4,9 @@
 
 import logging
 from subprocess import PIPE, check_output
-from typing import Dict, Optional
+from typing import Dict
 
-import yaml
 from juju.unit import Unit
-from pytest_operator.plugin import OpsTest
 
 from .constants import DATABASE_NAME, POSTGRESQL
 
