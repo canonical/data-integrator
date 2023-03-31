@@ -269,6 +269,7 @@ class IntegratorCharm(CharmBase):
         """Return the configured extra user roles."""
         return self.model.config.get("extra-user-roles", None)
 
+    @property
     def consumer_group_prefix(self) -> Optional[str]:
         """Return the configured consumer group prefix."""
         return self.model.config.get("consumer-group-prefix", None)

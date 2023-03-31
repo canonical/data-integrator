@@ -1140,6 +1140,7 @@ class KafkaRequires(DataRequires):
             f: getattr(self, f.replace("-", "_"), "")
             for f in ["consumer-group-prefix", "extra-user-roles", "topic"]
         }
+        logger.error(relation_data)
 
         self._update_relation_data(event.relation.id, relation_data)
 
