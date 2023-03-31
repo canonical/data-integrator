@@ -18,3 +18,7 @@ options:
     type: string
     default:
     description: a comma-separated list of values that contains the required extra roles, e.g. `admin` in case of a database or `producer`, `consumer` in case of Kafka.
+  consumer-group-prefix:
+    type: string
+    default:
+    description: the required consumer group prefix for Kafka. (This is an optional parameter that could be specified in case of `consumer` role is set).
