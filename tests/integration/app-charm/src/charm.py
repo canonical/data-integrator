@@ -168,6 +168,8 @@ class ApplicationCharm(CharmBase):
             event.fail("The action can be run only on leader unit.")
             return
 
+        logger.error(event.params)
+
         # read parameters from the event
         credentials = json.loads(event.params["credentials"])
         endpoint = event.params["endpoint"]
@@ -175,6 +177,11 @@ class ApplicationCharm(CharmBase):
         payload = event.params.get("payload")
         if payload:
             payload = payload.replace("\\", "")
+
+        logger.error(credentials)
+        logger.error(endpoint)
+        logger.error(method)
+        logger.error(payload)
 
         response = http_request(credentials, endpoint, method, payload)
         event.set_results({"results": json.dumps(response)})

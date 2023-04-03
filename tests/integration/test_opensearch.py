@@ -82,7 +82,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
             OPENSEARCH[ops_test.cloud_name],
             channel="edge",
             application_name=OPENSEARCH[ops_test.cloud_name],
-            num_units=1,
+            num_units=3,
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
         ops_test.model.deploy(
@@ -128,7 +128,8 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     # get credentials for opensearch
     credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    )
+    ).get(OPENSEARCH)
+    logger.error(credentials)
 
     # This request can be temperamental, because opensearch can appear active without having
     # available databases.
@@ -171,7 +172,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
 
     old_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    )
+    ).get(OPENSEARCH)
 
     # Recreate relation to generate new credentials
     await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
@@ -196,7 +197,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
     # get new credentials for opensearch
     new_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    )
+    ).get(OPENSEARCH)
     logger.error(new_credentials)
 
     get_jazz_again = await run_request(
