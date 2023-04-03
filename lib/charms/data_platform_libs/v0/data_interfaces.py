@@ -303,7 +303,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 11
 
 PYDEPS = ["ops>=2.0.0"]
 
@@ -667,12 +667,20 @@ class DatabaseRequiresEvent(RelationEvent):
 
     @property
     def endpoints(self) -> Optional[str]:
-        """Returns a comma separated list of read/write endpoints."""
+        """Returns a comma separated list of read/write endpoints.
+
+        In VM charms, this is the primary's address.
+        In kubernetes charms, this is the service to the primary pod.
+        """
         return self.relation.data[self.relation.app].get("endpoints")
 
     @property
     def read_only_endpoints(self) -> Optional[str]:
-        """Returns a comma separated list of read only endpoints."""
+        """Returns a comma separated list of read only endpoints.
+
+        In VM charms, this is the address of all the secondary instances.
+        In kubernetes charms, this is the service to all replica pod instances.
+        """
         return self.relation.data[self.relation.app].get("read-only-endpoints")
 
     @property
@@ -765,6 +773,10 @@ class DatabaseProvides(DataProvides):
 
         This function writes in the application data bag, therefore,
         only the leader unit can call it.
+
+        In VM charms, only the primary's address should be passed as an endpoint.
+        In kubernetes charms, the service endpoint to the primary pod should be
+        passed as an endpoint.
 
         Args:
             relation_id: the identifier for a particular relation.
@@ -1140,6 +1152,7 @@ class KafkaRequires(DataRequires):
             f: getattr(self, f.replace("-", "_"), "")
             for f in ["consumer-group-prefix", "extra-user-roles", "topic"]
         }
+
         self._update_relation_data(event.relation.id, relation_data)
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
@@ -1259,7 +1272,7 @@ class OpenSearchProvides(DataProvides):
         self._update_relation_data(relation_id, {"endpoints": endpoints})
 
     def set_version(self, relation_id: int, version: str) -> None:
-        """Set the database version in the application relation databag.
+        """Set the opensearch version in the application relation databag.
 
         Args:
             relation_id: the identifier for a particular relation.
@@ -1300,7 +1313,7 @@ class OpenSearchRequires(DataRequires):
         diff = self._diff(event)
 
         # Check if authentication has updated, emit event if so
-        updates = {"password", "tls", "tls-ca"}
+        updates = {"username", "password", "tls", "tls-ca"}
         if len(set(diff._asdict().keys()) - updates) < len(diff):
             logger.info("authentication updated at: %s", datetime.now())
             self.on.authentication_updated.emit(event.relation, app=event.app, unit=event.unit)
