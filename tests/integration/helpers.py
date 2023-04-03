@@ -94,8 +94,9 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
     )
 
     container = "--container kafka " if "k8s" in kafka_unit_name else ""
+    sudo = "sudo -i " if "k8s" not in kafka_unit_name else ""
     logs = check_output(
-        f"JUJU_MODEL={model_full_name} juju ssh {container} {kafka_unit_name} sudo -i 'find {log_directory}'",
+        f"JUJU_MODEL={model_full_name} juju ssh {container} {kafka_unit_name} {sudo} 'find {log_directory}'",
         stderr=PIPE,
         shell=True,
         universal_newlines=True,
