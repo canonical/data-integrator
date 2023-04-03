@@ -2,9 +2,11 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import tempfile
 from typing import Dict
 
 import psycopg2
+import requests
 from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector
 from kafka.admin import NewTopic
@@ -295,7 +297,9 @@ def create_topic(credentials: Dict[str, str], topic_name: str):
 # OPENSEARCH
 
 
-def http_request(credentials: Dict[str, str]):
+def http_request(
+    credentials: Dict[str, str], endpoint: str, method: str, payload: str
+) -> Dict[str, any]:
     """Produce message to a topic."""
     username = credentials[OPENSEARCH]["username"]
     password = credentials[OPENSEARCH]["password"]
@@ -304,3 +308,24 @@ def http_request(credentials: Dict[str, str]):
     if not (username and password and servers):
         raise KeyError("missing relation data from app charm")
 
+    if endpoint.startswith("/"):
+        endpoint = endpoint[1:]
+
+    full_url = f"https://{servers[0]}/{endpoint}"
+
+    with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
+        chain.write(credentials.get("tls-ca"))
+        chain.seek(0)
+        request_kwargs = {
+            "verify": chain.name,
+            "method": method.upper(),
+            "url": full_url,
+            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
+        }
+        if payload:
+            request_kwargs["data"] = payload
+
+        s.auth = (username, password)
+        resp = s.request(**request_kwargs)
+
+    return resp.json()

@@ -20,7 +20,6 @@ from helpers import (
     MYSQL_K8S,
     POSTGRESQL,
     POSTGRESQL_K8S,
-    OPENSEARCH,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
@@ -28,6 +27,7 @@ from helpers import (
     create_table_mysql,
     create_table_postgresql,
     create_topic,
+    http_request,
     insert_data_mongodb,
     insert_data_mysql,
     insert_data_postgresql,
@@ -167,15 +167,17 @@ class ApplicationCharm(CharmBase):
         if not self.unit.is_leader():
             event.fail("The action can be run only on leader unit.")
             return
-        # read parameters from the event
-        product = event.params["product"]
-        topic_name = event.params["topic-name"]
-        credentials = json.loads(event.params["credentials"])
 
-        if product == KAFKA or product == KAFKA_K8S:
-            create_topic(credentials, topic_name)
-        else:
-            raise ValueError()
+        # read parameters from the event
+        credentials = json.loads(event.params["credentials"])
+        endpoint = event.params["endpoint"]
+        method = event.params["method"]
+        payload = event.params.get("payload")
+        if payload:
+            payload = payload.replace("\\", "")
+
+        response = http_request(credentials, endpoint, method, payload)
+        event.set_results({"results": json.dumps(response)})
 
 
 if __name__ == "__main__":

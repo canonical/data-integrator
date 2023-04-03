@@ -83,5 +83,7 @@ http-request:
     payload:
       description: fully escaped payload to be sent in bulk
       type: string
-  required:
-    - method
+    credentials:
+      description: The credentials exposed by the data-integrator.
+      type: string
+  required: [method, endpoint, credentials]

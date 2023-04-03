@@ -5,14 +5,14 @@
 import asyncio
 import json
 import logging
-import tempfile
+import re
 from pathlib import PosixPath
 
 import pytest
-import requests
 from pytest_operator.plugin import OpsTest
 
 from .constants import (
+    APP,
     DATA_INTEGRATOR,
     INDEX_NAME,
     OPENSEARCH,
@@ -24,43 +24,33 @@ from .helpers import fetch_action_get_credentials
 logger = logging.getLogger(__name__)
 
 
-def opensearch_request(ops_test, credentials, method, endpoint, payload=None):
-    """Send a request to the opensearch charm using the given credentials and parameters."""
-    credentials = credentials.get(OPENSEARCH[ops_test.cloud_name])
-    logger.error(credentials)
-    host = credentials.get("endpoints").split(",")[0]
-    if endpoint.startswith("/"):
-        endpoint = endpoint[1:]
+async def run_request(
+    ops_test,
+    unit_name: str,
+    method: str,
+    endpoint: str,
+    credentials: str,
+    payload: str = None,
+    timeout: int = 30,
+):
+    kwargs = {"payload": payload} if payload else {}
 
-    full_url = f"https://{host}/{endpoint}"
-
-    with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
-        chain.write(credentials.get("tls-ca"))
-        chain.seek(0)
-        request_kwargs = {
-            "verify": chain.name,
-            "method": method.upper(),
-            "url": full_url,
-            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
-        }
-
-        if isinstance(payload, str):
-            request_kwargs["data"] = payload
-        elif isinstance(payload, dict):
-            request_kwargs["data"] = json.dumps(payload)
-
-        logger.error(request_kwargs)
-        s.auth = (credentials.get("username"), credentials.get("password"))
-        resp = s.request(**request_kwargs)
-        try:
-            logger.error(resp.json())
-        except requests.exceptions.JSONDecodeError:
-            logger.error(resp)
-        return resp
+    client_unit = ops_test.model.units.get(unit_name)
+    action = await client_unit.run_action(
+        action_name="http-request",
+        unit_name=unit_name,
+        method=method,
+        endpoint=endpoint,
+        credentials=credentials,
+        **kwargs,
+    )
+    result = await asyncio.wait_for(action.wait(), timeout)
+    logging.info(f"request results: {result.results}")
+    return result.results
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
+async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
     """Deploys charms for testing.
 
     Note for developers, if deploying opensearch fails with some kernel parameter not set, run the
@@ -92,12 +82,13 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
             OPENSEARCH[ops_test.cloud_name],
             channel="edge",
             application_name=OPENSEARCH[ops_test.cloud_name],
-            num_units=3,
+            num_units=1,
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
+        ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
@@ -111,7 +102,7 @@ async def test_deploy(ops_test: OpsTest, data_integrator_charm: PosixPath):
         ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
     )
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=10,
         timeout=1600,
@@ -128,7 +119,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         pytest.skip("opensearch does not have a k8s charm yet.")
 
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=30,
         timeout=1000,
@@ -139,26 +130,34 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    album_payload = (
-        '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
-    )
     # This request can be temperamental, because opensearch can appear active without having
     # available databases.
-    opensearch_request(
-        ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
+    await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[APP].units[0].name,
+        method="PUT",
+        endpoint="/albums/_doc/1",
+        payload=re.escape(
+            '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
+        ),
+        credentials=json.dumps(credentials),
     )
     # Refresh opensearch to make index searchable
-    opensearch_request(ops_test, credentials, "POST", endpoint="/albums/_refresh")
-    # # Try waiting for data replication between nodes
-    # await ops_test.model.wait_for_idle(
-    #     apps=[OPENSEARCH[ops_test.cloud_name]],
-    #     status="active",
-    #     idle_period=30,
-    #     timeout=1000,
-    # )
-    get_jazz = opensearch_request(
-        ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz"
-    ).json()
+    await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[APP].units[0].name,
+        method="POST",
+        endpoint="/albums/_refresh",
+        credentials=json.dumps(credentials),
+    )
+
+    get_jazz = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[APP].units[0].name,
+        method="GET",
+        endpoint="/albums/_search?q=Jazz",
+        credentials=json.dumps(credentials),
+    )
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
@@ -180,7 +179,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
     )
     await asyncio.gather(
         ops_test.model.wait_for_idle(
-            apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+            apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
             status="active",
             idle_period=10,
         ),
@@ -189,7 +188,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
 
     await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=10,
     )
@@ -200,9 +199,13 @@ async def test_recycle_credentials(ops_test: OpsTest):
     )
     logger.error(new_credentials)
 
-    get_jazz_again = opensearch_request(
-        ops_test, new_credentials, "GET", endpoint="/albums/_search?q=Jazz"
-    ).json()
+    get_jazz_again = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[APP].units[0].name,
+        method="GET",
+        endpoint="/albums/_search?q=Jazz",
+        credentials=json.dumps(new_credentials),
+    )
     artists = [
         hit.get("_source", {}).get("artist")
         for hit in get_jazz_again.get("hits", {}).get("hits", [{}])
@@ -210,7 +213,11 @@ async def test_recycle_credentials(ops_test: OpsTest):
     assert set(artists) == {"Vulfpeck"}
 
     # Old credentials should have been revoked.
-    bad_request_resp = opensearch_request(
-        ops_test, old_credentials, "GET", endpoint="/albums/_search?q=Jazz"
+    bad_request_resp = await run_request(
+        ops_test,
+        unit_name=ops_test.model.applications[APP].units[0].name,
+        method="GET",
+        endpoint="/albums/_search?q=Jazz",
+        credentials=json.dumps(old_credentials),
     )
     assert bad_request_resp.status_code == 401, bad_request_resp.json()
