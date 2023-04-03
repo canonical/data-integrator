@@ -147,13 +147,15 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     opensearch_request(
         ops_test, credentials, "PUT", endpoint="/albums/_doc/1", payload=album_payload
     )
-    # Try waiting for data replication between nodes
-    await ops_test.model.wait_for_idle(
-        apps=[OPENSEARCH[ops_test.cloud_name]],
-        status="active",
-        idle_period=30,
-        timeout=1000,
-    )
+    # Refresh opensearch to make index searchable
+    opensearch_request(ops_test, credentials, "POST", endpoint="/albums/_refresh")
+    # # Try waiting for data replication between nodes
+    # await ops_test.model.wait_for_idle(
+    #     apps=[OPENSEARCH[ops_test.cloud_name]],
+    #     status="active",
+    #     idle_period=30,
+    #     timeout=1000,
+    # )
     get_jazz = opensearch_request(
         ops_test, credentials, "GET", endpoint="/albums/_search?q=Jazz"
     ).json()

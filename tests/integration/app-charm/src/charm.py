@@ -20,6 +20,7 @@ from helpers import (
     MYSQL_K8S,
     POSTGRESQL,
     POSTGRESQL_K8S,
+    OPENSEARCH,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
@@ -59,6 +60,8 @@ class ApplicationCharm(CharmBase):
 
         self.framework.observe(getattr(self.on, "produce_messages_action"), self._produce_messages)
         self.framework.observe(getattr(self.on, "create_topic_action"), self._create_topic)
+
+        self.framework.observe(getattr(self.on, "http_request_action"), self._http_request)
 
     def _on_start(self, _) -> None:
         self.unit.status = ActiveStatus()
@@ -146,6 +149,21 @@ class ApplicationCharm(CharmBase):
 
     def _create_topic(self, event) -> None:
         """Handle the action that checks if data are written on different databases."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+        # read parameters from the event
+        product = event.params["product"]
+        topic_name = event.params["topic-name"]
+        credentials = json.loads(event.params["credentials"])
+
+        if product == KAFKA or product == KAFKA_K8S:
+            create_topic(credentials, topic_name)
+        else:
+            raise ValueError()
+
+    def _http_request(self, event) -> None:
+        """Handle the action that runs a HTTP request on the database charm."""
         if not self.unit.is_leader():
             event.fail("The action can be run only on leader unit.")
             return

@@ -13,6 +13,7 @@ from pymongo import MongoClient
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"
 MONGODB = "mongodb"
+OPENSEARCH = "opensearch"
 
 MYSQL_K8S = "mysql-k8s"
 POSTGRESQL_K8S = "postgresql-k8s"
@@ -289,3 +290,17 @@ def create_topic(credentials: Dict[str, str], topic_name: str):
         replication_factor=1,
     )
     client.create_topic(topic)
+
+
+# OPENSEARCH
+
+
+def http_request(credentials: Dict[str, str]):
+    """Produce message to a topic."""
+    username = credentials[OPENSEARCH]["username"]
+    password = credentials[OPENSEARCH]["password"]
+    servers = credentials[OPENSEARCH]["endpoints"].split(",")
+
+    if not (username and password and servers):
+        raise KeyError("missing relation data from app charm")
+
