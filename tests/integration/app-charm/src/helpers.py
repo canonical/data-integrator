@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import tempfile
+from json import JSONDecodeError
 from typing import Dict
 
 import psycopg2
@@ -11,7 +12,6 @@ from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector
 from kafka.admin import NewTopic
 from pymongo import MongoClient
-from json import JSONDecodeError
 
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"
@@ -330,5 +330,5 @@ def http_request(
         resp = s.request(**request_kwargs)
     try:
         return resp.json()
-    except JSONDecodeError as e:
+    except JSONDecodeError:
         return {"status_code": resp.status_code, "text": resp.text}

@@ -148,15 +148,17 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     # Wait for `albums` index to refresh so the data is searchable
     time.sleep(30)
 
-    get_jazz = json.loads((
-        await run_request(
-            ops_test,
-            unit_name=ops_test.model.applications[APP].units[0].name,
-            method="GET",
-            endpoint="/albums/_search?q=Jazz",
-            credentials=json.dumps(credentials),
-        )
-    ).get("results"))
+    get_jazz = json.loads(
+        (
+            await run_request(
+                ops_test,
+                unit_name=ops_test.model.applications[APP].units[0].name,
+                method="GET",
+                endpoint="/albums/_search?q=Jazz",
+                credentials=json.dumps(credentials),
+            )
+        ).get("results")
+    )
     logger.error(get_jazz)
     logger.error(get_jazz.get("hits"))
     logger.error(get_jazz.get("hits", {}).get("hits"))
@@ -203,15 +205,17 @@ async def test_recycle_credentials(ops_test: OpsTest):
     ).get(OPENSEARCH[ops_test.cloud_name])
     logger.error(new_credentials)
 
-    get_jazz_again = json.loads((
-        await run_request(
-            ops_test,
-            unit_name=ops_test.model.applications[APP].units[0].name,
-            method="GET",
-            endpoint="/albums/_search?q=Jazz",
-            credentials=json.dumps(new_credentials),
-        )
-    ).get("results"))
+    get_jazz_again = json.loads(
+        (
+            await run_request(
+                ops_test,
+                unit_name=ops_test.model.applications[APP].units[0].name,
+                method="GET",
+                endpoint="/albums/_search?q=Jazz",
+                credentials=json.dumps(new_credentials),
+            )
+        ).get("results")
+    )
     logger.error(get_jazz_again)
     artists = [
         hit.get("_source", {}).get("artist")
@@ -220,13 +224,15 @@ async def test_recycle_credentials(ops_test: OpsTest):
     assert set(artists) == {"Vulfpeck"}
 
     # Old credentials should have been revoked.
-    bad_request_resp = json.loads((
-        await run_request(
-            ops_test,
-            unit_name=ops_test.model.applications[APP].units[0].name,
-            method="GET",
-            endpoint="/albums/_search?q=Jazz",
-            credentials=json.dumps(old_credentials),
-        )
-    ).get("results"))
+    bad_request_resp = json.loads(
+        (
+            await run_request(
+                ops_test,
+                unit_name=ops_test.model.applications[APP].units[0].name,
+                method="GET",
+                endpoint="/albums/_search?q=Jazz",
+                credentials=json.dumps(old_credentials),
+            )
+        ).get("results")
+    )
     assert bad_request_resp.get("status_code") == 403, bad_request_resp
