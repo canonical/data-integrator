@@ -159,11 +159,6 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
             )
         ).get("results")
     )
-    logger.error(get_jazz)
-    logger.error(get_jazz.get("hits"))
-    logger.error(get_jazz.get("hits", {}).get("hits"))
-    logger.error(get_jazz.get("hits", {}).get("hits", [{}])[0].get("_source"))
-    logger.error(get_jazz.get("hits", {}).get("hits", [{}])[0].get("_source", {}).get("artist"))
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
@@ -235,4 +230,4 @@ async def test_recycle_credentials(ops_test: OpsTest):
             )
         ).get("results")
     )
-    assert bad_request_resp.get("status_code") == 403, bad_request_resp
+    assert bad_request_resp.get("status_code") == 401, bad_request_resp

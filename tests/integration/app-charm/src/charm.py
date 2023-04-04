@@ -178,11 +178,6 @@ class ApplicationCharm(CharmBase):
         if payload:
             payload = payload.replace("\\", "")
 
-        logger.error(credentials)
-        logger.error(endpoint)
-        logger.error(method)
-        logger.error(payload)
-
         response = http_request(credentials, endpoint, method, payload)
         event.set_results({"results": json.dumps(response)})
 
