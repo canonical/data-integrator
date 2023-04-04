@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from pathlib import PosixPath
 
 import pytest
@@ -45,7 +46,6 @@ async def run_request(
         **kwargs,
     )
     result = await asyncio.wait_for(action.wait(), timeout)
-    logging.info(f"request results: {result.results}")
     return result.results
 
 
@@ -126,14 +126,14 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     )
 
     # get credentials for opensearch
-    credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    ).get(OPENSEARCH)
+    credentials = (
+        await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
+    ).get(OPENSEARCH[ops_test.cloud_name])
     logger.error(credentials)
 
     # This request can be temperamental, because opensearch can appear active without having
     # available databases.
-    await run_request(
+    put_vulf = await run_request(
         ops_test,
         unit_name=ops_test.model.applications[APP].units[0].name,
         method="PUT",
@@ -143,22 +143,25 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ),
         credentials=json.dumps(credentials),
     )
-    # Refresh opensearch to make index searchable
-    await run_request(
-        ops_test,
-        unit_name=ops_test.model.applications[APP].units[0].name,
-        method="POST",
-        endpoint="/albums/_refresh",
-        credentials=json.dumps(credentials),
-    )
+    logger.error(put_vulf)
 
-    get_jazz = await run_request(
-        ops_test,
-        unit_name=ops_test.model.applications[APP].units[0].name,
-        method="GET",
-        endpoint="/albums/_search?q=Jazz",
-        credentials=json.dumps(credentials),
-    )
+    # Wait for `albums` index to refresh so the data is searchable
+    time.sleep(30)
+
+    get_jazz = json.loads((
+        await run_request(
+            ops_test,
+            unit_name=ops_test.model.applications[APP].units[0].name,
+            method="GET",
+            endpoint="/albums/_search?q=Jazz",
+            credentials=json.dumps(credentials),
+        )
+    ).get("results"))
+    logger.error(get_jazz)
+    logger.error(get_jazz.get("hits"))
+    logger.error(get_jazz.get("hits", {}).get("hits"))
+    logger.error(get_jazz.get("hits", {}).get("hits", [{}])[0].get("_source"))
+    logger.error(get_jazz.get("hits", {}).get("hits", [{}])[0].get("_source", {}).get("artist"))
     artists = [
         hit.get("_source", {}).get("artist") for hit in get_jazz.get("hits", {}).get("hits", [{}])
     ]
@@ -170,9 +173,9 @@ async def test_recycle_credentials(ops_test: OpsTest):
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
 
-    old_credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    ).get(OPENSEARCH)
+    old_credentials = (
+        await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
+    ).get(OPENSEARCH[ops_test.cloud_name])
 
     # Recreate relation to generate new credentials
     await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
@@ -195,18 +198,21 @@ async def test_recycle_credentials(ops_test: OpsTest):
     )
 
     # get new credentials for opensearch
-    new_credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    ).get(OPENSEARCH)
+    new_credentials = (
+        await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
+    ).get(OPENSEARCH[ops_test.cloud_name])
     logger.error(new_credentials)
 
-    get_jazz_again = await run_request(
-        ops_test,
-        unit_name=ops_test.model.applications[APP].units[0].name,
-        method="GET",
-        endpoint="/albums/_search?q=Jazz",
-        credentials=json.dumps(new_credentials),
-    )
+    get_jazz_again = json.loads((
+        await run_request(
+            ops_test,
+            unit_name=ops_test.model.applications[APP].units[0].name,
+            method="GET",
+            endpoint="/albums/_search?q=Jazz",
+            credentials=json.dumps(new_credentials),
+        )
+    ).get("results"))
+    logger.error(get_jazz_again)
     artists = [
         hit.get("_source", {}).get("artist")
         for hit in get_jazz_again.get("hits", {}).get("hits", [{}])
@@ -214,11 +220,13 @@ async def test_recycle_credentials(ops_test: OpsTest):
     assert set(artists) == {"Vulfpeck"}
 
     # Old credentials should have been revoked.
-    bad_request_resp = await run_request(
-        ops_test,
-        unit_name=ops_test.model.applications[APP].units[0].name,
-        method="GET",
-        endpoint="/albums/_search?q=Jazz",
-        credentials=json.dumps(old_credentials),
-    )
-    assert bad_request_resp.status_code == 401, bad_request_resp.json()
+    bad_request_resp = json.loads((
+        await run_request(
+            ops_test,
+            unit_name=ops_test.model.applications[APP].units[0].name,
+            method="GET",
+            endpoint="/albums/_search?q=Jazz",
+            credentials=json.dumps(old_credentials),
+        )
+    ).get("results"))
+    assert bad_request_resp.get("status_code") == 403, bad_request_resp

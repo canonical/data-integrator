@@ -11,6 +11,7 @@ from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector
 from kafka.admin import NewTopic
 from pymongo import MongoClient
+from json import JSONDecodeError
 
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"
@@ -301,9 +302,9 @@ def http_request(
     credentials: Dict[str, str], endpoint: str, method: str, payload: str
 ) -> Dict[str, any]:
     """Produce message to a topic."""
-    username = credentials[OPENSEARCH]["username"]
-    password = credentials[OPENSEARCH]["password"]
-    servers = credentials[OPENSEARCH]["endpoints"].split(",")
+    username = credentials["username"]
+    password = credentials["password"]
+    servers = credentials["endpoints"].split(",")
 
     if not (username and password and servers):
         raise KeyError("missing relation data from app charm")
@@ -327,5 +328,7 @@ def http_request(
 
         s.auth = (username, password)
         resp = s.request(**request_kwargs)
-
-    return resp.json()
+    try:
+        return resp.json()
+    except JSONDecodeError as e:
+        return {"status_code": resp.status_code, "text": resp.text}
