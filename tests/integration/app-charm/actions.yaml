@@ -1,8 +1,8 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-create-table: 
-  description: creates a table 
+create-table:
+  description: creates a table
   params:
     product:
       type: string
@@ -15,8 +15,8 @@ create-table:
       description: The credentials exposed by the data-integrator.
   required: [product,database-name,credentials]
 
-insert-data: 
-  description: insert data in the table 
+insert-data:
+  description: insert data in the table
   params:
     product:
       type: string
@@ -29,8 +29,8 @@ insert-data:
       description: The credentials exposed by the data-integrator
   required: [product,database-name,credentials]
 
-check-inserted-data: 
-  description: check the data inside the table 
+check-inserted-data:
+  description: check the data inside the table
   params:
     product:
       type: string
@@ -44,7 +44,7 @@ check-inserted-data:
   required: [product,database-name,credentials]
 
 produce-messages:
-  description: produce messages on a given topic  
+  description: produce messages on a given topic
   params:
     product:
       type: string
@@ -58,7 +58,7 @@ produce-messages:
   required: [product,topic-name,credentials]
 
 create-topic:
-  description: create a topic  
+  description: create a topic
   params:
     product:
       type: string
@@ -70,3 +70,20 @@ create-topic:
       type: string
       description: The credentials exposed by the data-integrator.
   required: [product,topic-name,credentials]
+
+http-request:
+  description: run an HTTP request
+  params:
+    method:
+      description: HTTP method to run
+      type: string
+    endpoint:
+      description: endpoint on which to run the http method
+      type: string
+    payload:
+      description: fully escaped payload to be sent in bulk
+      type: string
+    credentials:
+      description: The credentials exposed by the data-integrator.
+      type: string
+  required: [method, endpoint, credentials]

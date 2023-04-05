@@ -132,3 +132,4 @@ dmypy.json
 
 # Charm specific
 *.charm
+*.tar.xz

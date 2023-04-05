@@ -10,6 +10,10 @@ options:
     type: string
     default:
     description: The topic name for which the access is granted (this parameter is needed for Kafka).
+  index-name:
+    type: string
+    default:
+    description: The index name for which the access is granted (this parameter is needed for OpenSearch).
   extra-user-roles:
     type: string
     default:

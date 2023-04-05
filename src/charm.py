@@ -15,7 +15,9 @@ from typing import Dict, List, MutableMapping, Optional
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseRequires,
+    IndexCreatedEvent,
     KafkaRequires,
+    OpenSearchRequires,
     TopicCreatedEvent,
 )
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent, RelationEvent
@@ -23,7 +25,7 @@ from ops.framework import EventBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
 
-from literals import DATABASES, KAFKA, PEER
+from literals import DATABASES, KAFKA, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
@@ -69,6 +71,16 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
 
+        # OpenSearch
+        self.opensearch = OpenSearchRequires(
+            self,
+            relation_name=OPENSEARCH,
+            index=self.index_name or "",
+            extra_user_roles=self.extra_user_roles or "",
+        )
+        self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
+        self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
+
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
         if not self.unit.is_leader():
@@ -78,10 +90,10 @@ class IntegratorCharm(CharmBase):
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
-        if not self.topic_name and not self.database_name:
-            return BlockedStatus("Please specify either topic or database name")
+        if not any([self.topic_name, self.database_name, self.index_name]):
+            return BlockedStatus("Please specify either topic, index, or database name")
 
-        if not self.is_database_related and not self.is_kafka_related:
+        if not any([self.is_database_related, self.is_kafka_related, self.is_opensearch_related]):
             return BlockedStatus("Please relate the data-integrator with the desired product")
 
         if self.is_kafka_related and self.topic_active != self.topic_name:
@@ -90,6 +102,14 @@ class IntegratorCharm(CharmBase):
             )
             return BlockedStatus(
                 f"To change topic: {self.topic_active}, please remove relation and add it again"
+            )
+
+        if self.is_opensearch_related and self.index_active != self.index_name:
+            logger.error(
+                f"Trying to change OpenSearch configuration for existing relation : To change index name: {self.index_active}, please remove relation and add it again"
+            )
+            return BlockedStatus(
+                f"To change index name: {self.index_active}, please remove relation and add it again"
             )
 
         if self.is_database_related and any(
@@ -138,6 +158,16 @@ class IntegratorCharm(CharmBase):
                     },
                 )
 
+        if not self.index_active and self.index_name:
+            for rel in self.opensearch.relations:
+                self.opensearch._update_relation_data(
+                    rel.id,
+                    {
+                        "index": self.index_name or "",
+                        "extra-user-roles": self.extra_user_roles or "",
+                    },
+                )
+
     def _update_database_relations(self, database_relation_data: Dict[str, str]):
         """Update the relation data of the related databases."""
         for db_name, relation in self.database_relations.items():
@@ -146,12 +176,12 @@ class IntegratorCharm(CharmBase):
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
-        if not self.database_name and not self.topic_name:
+        if not any([self.database_name, self.topic_name, self.index_name]):
             event.fail("The database name or topic name is not specified in the config.")
             event.set_results({"ok": False})
             return
 
-        if not self.is_database_related and not self.is_kafka_related:
+        if not any([self.is_database_related, self.is_kafka_related, self.is_opensearch_related]):
             event.fail("The action can be run only after relation is created.")
             event.set_results({"ok": False})
             return
@@ -163,6 +193,9 @@ class IntegratorCharm(CharmBase):
 
         if self.is_kafka_related:
             result[KAFKA] = list(self.kafka.fetch_relation_data().values())[0]
+
+        if self.is_opensearch_related:
+            result[OPENSEARCH] = list(self.opensearch.fetch_relation_data().values())[0]
 
         event.set_results(result)
 
@@ -180,6 +213,15 @@ class IntegratorCharm(CharmBase):
         logger.debug(f"Kafka credentials are received: {event.username}")
         self._on_config_changed(event)
         if not self.unit.is_leader():
+            return
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event, Statuses.ACTIVE.name)
+
+    def _on_index_created(self, event: IndexCreatedEvent) -> None:
+        """Event triggered when an index is created for this application."""
+        logger.debug(f"OpenSearch credentials are received: {event.username}")
+        self._on_config_changed(event)
+        if not self.unit.is_leader:
             return
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
@@ -208,14 +250,19 @@ class IntegratorCharm(CharmBase):
                 self.set_secret("app", relation_name, Statuses.REMOVED.name)
 
     @property
+    def database_name(self) -> Optional[str]:
+        """Return the configured database name."""
+        return self.model.config.get("database-name", None)
+
+    @property
     def topic_name(self) -> Optional[str]:
         """Return the configured topic name."""
         return self.model.config.get("topic-name", None)
 
     @property
-    def database_name(self) -> Optional[str]:
+    def index_name(self) -> Optional[str]:
         """Return the configured database name."""
-        return self.model.config.get("database-name", None)
+        return self.model.config.get("index-name", None)
 
     @property
     def extra_user_roles(self) -> Optional[str]:
@@ -228,11 +275,6 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("consumer-group-prefix", None)
 
     @property
-    def kafka_relation(self) -> Optional[Relation]:
-        """Return the kafka relation if present."""
-        return self.kafka.relations[0] if len(self.kafka.relations) else None
-
-    @property
     def database_relations(self) -> Dict[str, Relation]:
         """Return the active database relations."""
         return {
@@ -240,6 +282,16 @@ class IntegratorCharm(CharmBase):
             for name, requirer in self.databases.items()
             if len(requirer.relations)
         }
+
+    @property
+    def opensearch_relation(self) -> Optional[Relation]:
+        """Return the opensearch relation if present."""
+        return self.opensearch.relations[0] if len(self.opensearch.relations) else None
+
+    @property
+    def kafka_relation(self) -> Optional[Relation]:
+        """Return the kafka relation if present."""
+        return self.kafka.relations[0] if len(self.kafka.relations) else None
 
     @property
     def databases_active(self) -> Dict[str, str]:
@@ -257,6 +309,22 @@ class IntegratorCharm(CharmBase):
             if "topic" in relation.data[relation.app]:
                 return relation.data[relation.app]["topic"]
         return None
+
+    @property
+    def index_active(self) -> Optional[str]:
+        """Return the configured index name."""
+        if relation := self.opensearch_relation:
+            return relation.data[self.app].get("index", None)
+        return None
+
+    @property
+    def extra_user_roles_active(self) -> Optional[str]:
+        """Return the configured user-extra-roles parameter."""
+        return (
+            relation.data[self.app]["extra-user-roles"]
+            if (relation := self.kafka_relation)
+            else None
+        )
 
     @property
     def is_database_related(self) -> bool:
@@ -282,6 +350,11 @@ class IntegratorCharm(CharmBase):
     def is_kafka_related(self) -> bool:
         """Return if a relation with kafka is present."""
         return self._check_for_credentials(self.kafka.relations)
+
+    @property
+    def is_opensearch_related(self) -> bool:
+        """Return if a relation with opensearch is present."""
+        return self._check_for_credentials(self.opensearch.relations)
 
     @property
     def app_peer_data(self) -> MutableMapping[str, str]:
