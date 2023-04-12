@@ -135,7 +135,6 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
     await ops_test.model.add_relation(
         PGBOUNCER[ops_test.cloud_name], POSTGRESQL[ops_test.cloud_name]
     )
-    await ops_test.model.wait_for_idle(apps=[PGBOUNCER[ops_test.cloud_name]], status="active")
     await ops_test.model.add_relation(PGBOUNCER[ops_test.cloud_name], DATA_INTEGRATOR)
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]], status="active"
