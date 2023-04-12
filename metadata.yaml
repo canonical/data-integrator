@@ -27,3 +27,6 @@ requires:
   kafka:
     interface: kafka_client
     limit: 1
+  opensearch:
+    interface: opensearch_client
+    limit: 1

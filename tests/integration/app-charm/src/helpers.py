@@ -2,9 +2,12 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import tempfile
+from json import JSONDecodeError
 from typing import Dict
 
 import psycopg2
+import requests
 from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector
 from kafka.admin import NewTopic
@@ -14,6 +17,7 @@ MYSQL = "mysql"
 POSTGRESQL = "postgresql"
 PGBOUNCER = "pgbouncer"
 MONGODB = "mongodb"
+OPENSEARCH = "opensearch"
 
 MYSQL_K8S = "mysql-k8s"
 POSTGRESQL_K8S = "postgresql-k8s"
@@ -292,3 +296,42 @@ def create_topic(credentials: Dict[str, str], topic_name: str):
         replication_factor=1,
     )
     client.create_topic(topic)
+
+
+# OPENSEARCH
+
+
+def http_request(
+    credentials: Dict[str, str], endpoint: str, method: str, payload: str
+) -> Dict[str, any]:
+    """Produce message to a topic."""
+    username = credentials["username"]
+    password = credentials["password"]
+    servers = credentials["endpoints"].split(",")
+
+    if not (username and password and servers):
+        raise KeyError("missing relation data from app charm")
+
+    if endpoint.startswith("/"):
+        endpoint = endpoint[1:]
+
+    full_url = f"https://{servers[0]}/{endpoint}"
+
+    with requests.Session() as s, tempfile.NamedTemporaryFile(mode="w+") as chain:
+        chain.write(credentials.get("tls-ca"))
+        chain.seek(0)
+        request_kwargs = {
+            "verify": chain.name,
+            "method": method.upper(),
+            "url": full_url,
+            "headers": {"Content-Type": "application/json", "Accept": "application/json"},
+        }
+        if payload:
+            request_kwargs["data"] = payload
+
+        s.auth = (username, password)
+        resp = s.request(**request_kwargs)
+    try:
+        return resp.json()
+    except JSONDecodeError:
+        return {"status_code": resp.status_code, "text": resp.text}

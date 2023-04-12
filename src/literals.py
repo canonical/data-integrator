@@ -10,5 +10,6 @@ MYSQL = "mysql"
 POSTGRESQL = "postgresql"
 MONGODB = "mongodb"
 KAFKA = "kafka"
+OPENSEARCH = "opensearch"
 
 DATABASES = [MYSQL, MONGODB, POSTGRESQL]

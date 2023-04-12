@@ -37,17 +37,16 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.skip
 async def test_deploy_and_relate_mongodb(ops_test: OpsTest):
     """Test the relation with MongoDB and database accessibility."""
-    channel = "dpe/edge" if ops_test.cloud_name == "localhost" else "edge"
+    channel = "5/edge" if ops_test.cloud_name == "localhost" else "edge"
     await asyncio.gather(
         ops_test.model.deploy(
             MONGODB[ops_test.cloud_name],
             channel=channel,
             application_name=MONGODB[ops_test.cloud_name],
             num_units=1,
-            series="focal",
+            series="jammy",
         )
     )
     await ops_test.model.wait_for_idle(apps=[MONGODB[ops_test.cloud_name]], wait_for_active=True)
