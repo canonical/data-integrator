@@ -151,7 +151,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
         "create-table",
         PGBOUNCER[ops_test.cloud_name],
         json.dumps(credentials),
-        DATABASE_NAME,
+        f"{DATABASE_NAME}_PGB",
     )
     assert result["ok"]
     logger.info(f"Insert data in the table on {PGBOUNCER[ops_test.cloud_name]}")
@@ -160,7 +160,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
         "insert-data",
         PGBOUNCER[ops_test.cloud_name],
         json.dumps(credentials),
-        DATABASE_NAME,
+        f"{DATABASE_NAME}_PGB",
     )
     assert result["ok"]
     logger.info(f"Check assessibility of inserted data on {PGBOUNCER[ops_test.cloud_name]}")
@@ -169,7 +169,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
         "check-inserted-data",
         PGBOUNCER[ops_test.cloud_name],
         json.dumps(credentials),
-        DATABASE_NAME,
+        f"{DATABASE_NAME}_PGB",
     )
     assert result["ok"]
 
@@ -196,6 +196,6 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
         "check-inserted-data",
         PGBOUNCER[ops_test.cloud_name],
         json.dumps(new_credentials),
-        DATABASE_NAME,
+        f"{DATABASE_NAME}_PGB",
     )
     assert result["ok"]
