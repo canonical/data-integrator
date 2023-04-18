@@ -42,7 +42,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     await asyncio.gather(
         ops_test.model.deploy(
             POSTGRESQL[ops_test.cloud_name],
-            channel="edge",
+            channel="14/edge",
             application_name=POSTGRESQL[ops_test.cloud_name],
             num_units=1,
             series="jammy",
@@ -127,7 +127,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
         ops_test.model.deploy(
             PGBOUNCER[ops_test.cloud_name],
             application_name=PGBOUNCER[ops_test.cloud_name],
-            channel="edge",
+            channel="1/edge",
             num_units=num_units,
             series="jammy",
         ),
