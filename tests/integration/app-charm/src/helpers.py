@@ -39,8 +39,7 @@ def build_postgresql_connection_string(credentials: Dict[str, str], database_nam
     username = credentials[POSTGRESQL]["username"]
     password = credentials[POSTGRESQL]["password"]
     endpoints = credentials[POSTGRESQL]["endpoints"]
-    host = endpoints.split(",")[0].split(":")[0]
-    port = endpoints.split(",")[0].split(":")[1]
+    host, port = endpoints.split(",")[0].split(":")
     # Build the complete connection string to connect to the database.
     return f"dbname='{database_name}' user='{username}' host='{host}' port='{port}' password='{password}' connect_timeout=10"
 
