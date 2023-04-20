@@ -29,6 +29,7 @@ from helpers import (
     create_table_mysql,
     create_table_postgresql,
     create_topic,
+    http_request,
     insert_data_mongodb,
     insert_data_mysql,
     insert_data_postgresql,
@@ -61,6 +62,8 @@ class ApplicationCharm(CharmBase):
 
         self.framework.observe(getattr(self.on, "produce_messages_action"), self._produce_messages)
         self.framework.observe(getattr(self.on, "create_topic_action"), self._create_topic)
+
+        self.framework.observe(getattr(self.on, "http_request_action"), self._http_request)
 
     def _on_start(self, _) -> None:
         self.unit.status = ActiveStatus()
@@ -175,6 +178,25 @@ class ApplicationCharm(CharmBase):
             create_topic(credentials, topic_name)
         else:
             raise ValueError()
+
+    def _http_request(self, event) -> None:
+        """Handle the action that runs a HTTP request on the database charm."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+
+        logger.error(event.params)
+
+        # read parameters from the event
+        credentials = json.loads(event.params["credentials"])
+        endpoint = event.params["endpoint"]
+        method = event.params["method"]
+        payload = event.params.get("payload")
+        if payload:
+            payload = payload.replace("\\", "")
+
+        response = http_request(credentials, endpoint, method, payload)
+        event.set_results({"results": json.dumps(response)})
 
 
 if __name__ == "__main__":
