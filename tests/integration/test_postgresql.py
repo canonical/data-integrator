@@ -121,6 +121,8 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
 
 async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
     """Test the relation with PgBouncer and database accessibility."""
+    if ops_test.cloud_name == "localhost":
+        pytest.skip("Subordinate PgBouncer cannot be exposed yet")
     logger.info(f"Test the relation with {PGBOUNCER[ops_test.cloud_name]}.")
     num_units = 0 if ops_test.cloud_name == "localhost" else 1
     await asyncio.gather(

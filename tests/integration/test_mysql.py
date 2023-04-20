@@ -42,7 +42,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     await asyncio.gather(
         ops_test.model.deploy(
             MYSQL[ops_test.cloud_name],
-            channel="edge",
+            channel="8.0/edge",
             application_name=MYSQL[ops_test.cloud_name],
             num_units=1,
             series="jammy",
