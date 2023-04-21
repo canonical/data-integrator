@@ -10,7 +10,7 @@ from pathlib import PosixPath
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME, POSTGRESQL
+from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME, PGBOUNCER, POSTGRESQL
 from .helpers import fetch_action_database, fetch_action_get_credentials
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     await asyncio.gather(
         ops_test.model.deploy(
             POSTGRESQL[ops_test.cloud_name],
-            channel="edge",
+            channel="14/edge",
             application_name=POSTGRESQL[ops_test.cloud_name],
             num_units=1,
             series="jammy",
@@ -51,7 +51,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     )
     await ops_test.model.wait_for_idle(
         apps=[POSTGRESQL[ops_test.cloud_name]],
-        wait_for_active=True,
+        status="active",
     )
     assert ops_test.model.applications[POSTGRESQL[ops_test.cloud_name]].status == "active"
     await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name])
@@ -108,6 +108,95 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         POSTGRESQL[ops_test.cloud_name],
+        json.dumps(new_credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]
+
+    logger.info(f"Unlock (unreleate) {DATA_INTEGRATOR} for the PgBouncer tests")
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:postgresql", f"{POSTGRESQL[ops_test.cloud_name]}:database"
+    )
+
+
+async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
+    """Test the relation with PgBouncer and database accessibility."""
+    if ops_test.cloud_name == "localhost":
+        pytest.skip("Subordinate PgBouncer cannot be exposed yet")
+    logger.info(f"Test the relation with {PGBOUNCER[ops_test.cloud_name]}.")
+    num_units = 0 if ops_test.cloud_name == "localhost" else 1
+    await asyncio.gather(
+        ops_test.model.deploy(
+            PGBOUNCER[ops_test.cloud_name],
+            application_name=PGBOUNCER[ops_test.cloud_name],
+            channel="1/edge",
+            num_units=num_units,
+            series="jammy",
+        ),
+    )
+    await ops_test.model.add_relation(
+        PGBOUNCER[ops_test.cloud_name], POSTGRESQL[ops_test.cloud_name]
+    )
+    await ops_test.model.add_relation(PGBOUNCER[ops_test.cloud_name], DATA_INTEGRATOR)
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]], status="active"
+    )
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+
+    logger.info(f"Get credential for {PGBOUNCER[ops_test.cloud_name]}")
+    credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
+    logger.info(f"Create table on {PGBOUNCER[ops_test.cloud_name]}")
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "create-table",
+        PGBOUNCER[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]
+    logger.info(f"Insert data in the table on {PGBOUNCER[ops_test.cloud_name]}")
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "insert-data",
+        PGBOUNCER[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]
+    logger.info(f"Check assessibility of inserted data on {PGBOUNCER[ops_test.cloud_name]}")
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        PGBOUNCER[ops_test.cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]
+
+    logger.info("Remove relation and test connection again")
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:postgresql", f"{PGBOUNCER[ops_test.cloud_name]}:database"
+    )
+
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]])
+    await ops_test.model.add_relation(DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]])
+
+    logger.info("Relate and check the accessibility of the previously created database")
+    new_credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
+
+    assert credentials != new_credentials
+    logger.info(
+        f"Check assessibility of inserted data on {PGBOUNCER[ops_test.cloud_name]} with new credentials"
+    )
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        PGBOUNCER[ops_test.cloud_name],
         json.dumps(new_credentials),
         DATABASE_NAME,
     )

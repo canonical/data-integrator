@@ -18,6 +18,8 @@ from helpers import (
     MONGODB_K8S,
     MYSQL,
     MYSQL_K8S,
+    PGBOUNCER,
+    PGBOUNCER_K8S,
     POSTGRESQL,
     POSTGRESQL_K8S,
     check_inserted_data_mongodb,
@@ -76,7 +78,12 @@ class ApplicationCharm(CharmBase):
         database_name = event.params["database-name"]
         credentials = json.loads(event.params["credentials"])
 
-        if product == POSTGRESQL or product == POSTGRESQL_K8S:
+        if (
+            product == POSTGRESQL
+            or product == POSTGRESQL_K8S
+            or product == PGBOUNCER
+            or product == PGBOUNCER_K8S
+        ):
             executed = create_table_postgresql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         elif product == MYSQL or product == MYSQL_K8S:
@@ -98,7 +105,12 @@ class ApplicationCharm(CharmBase):
         database_name = event.params["database-name"]
         credentials = json.loads(event.params["credentials"])
 
-        if product == POSTGRESQL or product == POSTGRESQL_K8S:
+        if (
+            product == POSTGRESQL
+            or product == POSTGRESQL_K8S
+            or product == PGBOUNCER
+            or product == PGBOUNCER_K8S
+        ):
             executed = insert_data_postgresql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         elif product == MYSQL or product == MYSQL_K8S:
@@ -120,7 +132,12 @@ class ApplicationCharm(CharmBase):
         database_name = event.params["database-name"]
         credentials = json.loads(event.params["credentials"])
 
-        if product == POSTGRESQL or product == POSTGRESQL_K8S:
+        if (
+            product == POSTGRESQL
+            or product == POSTGRESQL_K8S
+            or product == PGBOUNCER
+            or product == PGBOUNCER_K8S
+        ):
             executed = check_inserted_data_postgresql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         elif product == MYSQL or product == MYSQL_K8S:

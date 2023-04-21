@@ -8,6 +8,7 @@ TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 
 MYSQL = {"localhost": "mysql", "microk8s": "mysql-k8s"}
 POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}
+PGBOUNCER = {"localhost": "pgbouncer", "microk8s": "pgbouncer-k8s"}
 MONGODB = {"localhost": "mongodb", "microk8s": "mongodb-k8s"}
 DATABASE_NAME = "test_database"
 
