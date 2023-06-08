@@ -6,7 +6,6 @@ import asyncio
 import json
 import logging
 import re
-import time
 from pathlib import PosixPath
 
 import pytest
@@ -92,7 +91,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     )
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
-        idle_period=10,
+        idle_period=70,
         timeout=1600,
     )
     config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
@@ -104,7 +103,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
-        idle_period=10,
+        idle_period=70,
         timeout=1600,
     )
 
@@ -121,7 +120,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
-        idle_period=30,
+        idle_period=70,
         timeout=1000,
     )
 
@@ -137,16 +136,13 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         ops_test,
         unit_name=ops_test.model.applications[APP].units[0].name,
         method="PUT",
-        endpoint="/albums/_doc/1",
+        endpoint="/albums/_doc/1?refresh=true",
         payload=re.escape(
             '{"artist": "Vulfpeck", "genre": ["Funk", "Jazz"], "title": "Thrill of the Arts"}'
         ),
         credentials=json.dumps(credentials),
     )
     logger.error(put_vulf)
-
-    # Wait for `albums` index to refresh so the data is searchable
-    time.sleep(30)
 
     get_jazz = json.loads(
         (
@@ -182,7 +178,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
         ops_test.model.wait_for_idle(
             apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
             status="active",
-            idle_period=10,
+            idle_period=70,
         ),
         ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], status="blocked"),
     )
@@ -191,7 +187,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
-        idle_period=10,
+        idle_period=70,
     )
 
     # get new credentials for opensearch
