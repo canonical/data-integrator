@@ -90,11 +90,11 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
     log_directory = (
         "/var/snap/charmed-kafka/common/var/lib/kafka/data"
         if "k8s" not in kafka_unit_name
-        else "/var/lib/juju/storage/log-data"
+        else "/var/lib/kafka/data"
     )
 
-    container = "--container kafka " if "k8s" in kafka_unit_name else ""
-    sudo = "sudo -i " if "k8s" not in kafka_unit_name else ""
+    container = "--container kafka" if "k8s" in kafka_unit_name else ""
+    sudo = "sudo -i" if "k8s" not in kafka_unit_name else ""
     logs = check_output(
         f"JUJU_MODEL={model_full_name} juju ssh {container} {kafka_unit_name} {sudo} 'find {log_directory}'",
         stderr=PIPE,
