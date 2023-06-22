@@ -62,19 +62,20 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
         ),
     )
 
-    status = "blocked" if ops_test.cloud_name == "localhost" else "waiting"
-
     await ops_test.model.wait_for_idle(
         apps=[ZOOKEEPER[ops_test.cloud_name]], timeout=1000, status="active"
     )
     await ops_test.model.wait_for_idle(
-        apps=[KAFKA[ops_test.cloud_name]], timeout=1000, status=status
+        apps=[KAFKA[ops_test.cloud_name]], timeout=1000, status="blocked"
     )
 
     await ops_test.model.add_relation(KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name])
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]], status="active"
+            apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]],
+            timeout=2000,
+            idle_period=60,
+            status="active",
         )
 
     await ops_test.model.add_relation(KAFKA[ops_test.cloud_name], DATA_INTEGRATOR)
