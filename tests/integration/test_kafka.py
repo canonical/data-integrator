@@ -34,11 +34,22 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
+
+@pytest.mark.abort_on_fail
+async def test_topic_setting(ops_test: OpsTest):
+    """Tests that requesting a wildcard topic will generate an error."""
+    config = {"topic-name": "*"}
+    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], raise_on_error=False)
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "error"
+
+    # reset topic to a correct one
     config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
-    # test the active/waiting status for relation
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    # test the active/blocked status for relation
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], raise_on_error=False)
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
