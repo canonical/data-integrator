@@ -31,7 +31,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
         ),
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP], idle_period=30)
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
@@ -44,7 +44,7 @@ async def test_topic_setting(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR],
         raise_on_error=False,
-        idle_period=80,
+        idle_period=40,
     )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "error"
 
@@ -56,7 +56,7 @@ async def test_topic_setting(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR],
         raise_on_error=False,
-        idle_period=80,
+        idle_period=40,
     )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
