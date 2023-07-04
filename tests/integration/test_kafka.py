@@ -41,7 +41,11 @@ async def test_topic_setting(ops_test: OpsTest):
     config = {"topic-name": "*"}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], raise_on_error=False)
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR],
+        raise_on_error=False,
+        idle_period=40,
+    )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "error"
 
     # reset topic to a correct one
@@ -52,7 +56,7 @@ async def test_topic_setting(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR],
         raise_on_error=False,
-        idle_period=30,
+        idle_period=40,
     )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
