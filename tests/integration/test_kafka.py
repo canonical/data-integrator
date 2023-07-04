@@ -49,7 +49,11 @@ async def test_topic_setting(ops_test: OpsTest):
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # test the active/blocked status for relation
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], raise_on_error=False)
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR],
+        raise_on_error=False,
+        idle_period=30,
+    )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
