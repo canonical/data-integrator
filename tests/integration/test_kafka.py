@@ -5,6 +5,7 @@
 import asyncio
 import json
 import logging
+import time
 from pathlib import PosixPath
 
 import pytest
@@ -51,6 +52,9 @@ async def test_topic_setting(ops_test: OpsTest):
     # reset topic to a correct one
     config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+
+    # Give time for new config
+    time.sleep(30)
 
     # test the active/blocked status for relation
     await ops_test.model.wait_for_idle(
