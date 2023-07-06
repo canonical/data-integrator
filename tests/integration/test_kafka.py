@@ -56,6 +56,7 @@ async def test_topic_setting(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR],
         raise_on_error=False,
+        status="blocked",
         idle_period=120,
     )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
