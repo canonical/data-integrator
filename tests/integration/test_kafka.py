@@ -31,14 +31,19 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
         ),
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP], idle_period=30)
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
-    # test the active/waiting status for relation
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    # test the active/blocked status for relation
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR],
+        raise_on_error=False,
+        status="blocked",
+        idle_period=120,
+    )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
@@ -143,3 +148,18 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
         kafka_unit_name=f"{KAFKA[ops_test.cloud_name]}/0",
         topic=TOPIC_NAME,
     )
+
+
+@pytest.mark.abort_on_fail
+async def test_topic_setting(ops_test: OpsTest):
+    """Tests that requesting a wildcard topic will generate an error."""
+    # TODO Fix timing issues with recovery from error
+    config = {"topic-name": "*"}
+    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR],
+        raise_on_error=False,
+        idle_period=40,
+    )
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "error"
