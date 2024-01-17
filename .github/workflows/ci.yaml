@@ -9,7 +9,7 @@ concurrency:
 on:
   pull_request:
   schedule:
-    - cron: '53 0 * * *' # Daily at 00:53 UTC
+    - cron: "53 0 * * *" # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
 
@@ -20,27 +20,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install tox
-        run: python3 -m pip install tox
-      - name: Install poetry
-        run: curl -sSL https://install.python-poetry.org | python3 -
+        uses: actions/checkout@v4
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
       - name: Run linters
         run: tox run -e lint
-
-  unit-test:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install tox
-        run: python3 -m pip install tox
-      - name: Install poetry
-        run: curl -sSL https://install.python-poetry.org | python3 -
-      - name: Run tests
-        run: tox run -e unit
 
   lib-check:
     name: Check libraries
@@ -52,17 +38,30 @@ jobs:
         with:
           fetch-depth: 0
       - name: Check libs
-        uses: canonical/charming-actions/check-libraries@2.2.3
+        uses: canonical/charming-actions/check-libraries@2.4.0
         with:
-          credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          credentials: ${{ secrets.CHARMHUB_TOKEN }} # FIXME: current token will expire in 2023-07-04
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  unit-test:
+    name: Unit test charm
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
+      - name: Run tests
+        run: tox run -e unit
 
   build:
     name: Build charms
-    needs:
-      - lint
-      - unit-test
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v8.0.0
+    permissions:
+      actions: write # Needed to manage GitHub Actions cache
 
   integration-test:
     strategy:
@@ -81,45 +80,52 @@ jobs:
           - opensearch
     name: ${{ matrix.tox-environments.name }}-${{matrix.product}}
     needs:
-      - lib-check
       - lint
       - unit-test
       - build
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: ${{ matrix.tox-environments.provider }}
-          bootstrap-options: "--agent-version 2.9.42"
-      - name: Install tox
-        run: python3 -m pip install tox
-      - name: Install poetry
-        run: curl -sSL https://install.python-poetry.org | python3 -
-      - name: Download packed charm(s)
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ needs.build.outputs.artifact-name }}
-      - name: Select tests
-        id: select-tests
-        run: |
-          if [ "${{ matrix.product }}" == "opensearch" ]
-          then
-            # Set opensearch kernel parameters
-            sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
-          fi
-          if [ "${{ github.event_name }}" == "schedule" ]
-          then
-            echo Running unstable and stable tests
-            echo "mark_expression=" >> $GITHUB_OUTPUT
-          else
-            echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
-          fi
-      - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments.name }}-${{matrix.product}} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
-        env:
-          CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v8.0.0
+    with:
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      cloud: ${{ matrix.tox-environments.provider }}
+      juju-agent-version: 3.1.6
+
+  # integration-test:
+
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 120
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
+  #     - name: Setup operator environment
+  #       uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v8.0.0
+  #       with:
+  #         cloud: ${{ matrix.tox-environments.provider }}
+  #         juju-agent-version: 3.1.6
+  #     - name: Install tox
+  #       run: python3 -m pip install tox
+  #     - name: Install poetry
+  #       run: curl -sSL https://install.python-poetry.org | python3 -
+  #     - name: Download packed charm(s)
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         name: ${{ needs.build.outputs.artifact-name }}
+  #     - name: Select tests
+  #       id: select-tests
+  #       run: |
+  #         if [ "${{ matrix.product }}" == "opensearch" ]
+  #         then
+  #           # Set opensearch kernel parameters
+  #           sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
+  #         fi
+  #         if [ "${{ github.event_name }}" == "schedule" ]
+  #         then
+  #           echo Running unstable and stable tests
+  #           echo "mark_expression=" >> $GITHUB_OUTPUT
+  #         else
+  #           echo Skipping unstable tests
+  #           echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
+  #         fi
+  #     - name: Run integration tests
+  #       run: tox run -e ${{ matrix.tox-environments.name }}-${{matrix.product}} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+  #       env:
+  #         CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
