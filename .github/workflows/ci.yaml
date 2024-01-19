@@ -90,11 +90,9 @@ jobs:
             libjuju-version: "3.2.2"
         exclude:
           - product: opensearch
-            juju-version:
-             - juju-snap-channel: "2.9/stable"
+            {juju-version: {juju-snap-channel: "2.9/stable"}}
           - product: mongodb
-            juju-version:
-             - juju-snap-channel: "2.9/stable"
+            {juju-version: {juju-snap-channel: "2.9/stable"}}
     name: ${{ matrix.juju-version.juju-snap-channel }}-${{ matrix.tox-environments.name }}-${{matrix.product}}
     needs:
       - lib-check
