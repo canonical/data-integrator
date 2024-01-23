@@ -8,6 +8,7 @@ This charm is meant to be used only for testing
 of the libraries in this repository.
 """
 
+import json
 import logging
 from enum import Enum
 from typing import Dict, List, MutableMapping, Optional
@@ -25,7 +26,7 @@ from ops.framework import EventBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
 
-from literals import DATABASES, KAFKA, OPENSEARCH, PEER
+from literals import DATABASES, KAFKA, MONGOS, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
@@ -81,6 +82,9 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
         self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
 
+        # Mongos
+        self.framework.observe(self.on[MONGOS].relation_joined, self._on_relation_joined)
+
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
         if not self.unit.is_leader():
@@ -93,7 +97,14 @@ class IntegratorCharm(CharmBase):
         if not any([self.topic_name, self.database_name, self.index_name]):
             return BlockedStatus("Please specify either topic, index, or database name")
 
-        if not any([self.is_database_related, self.is_kafka_related, self.is_opensearch_related]):
+        if not any(
+            [
+                self.is_database_related,
+                self.is_kafka_related,
+                self.is_opensearch_related,
+                self.is_mongos_related,
+            ]
+        ):
             return BlockedStatus("Please relate the data-integrator with the desired product")
 
         if self.is_kafka_related and self.topic_active != self.topic_name:
@@ -128,6 +139,15 @@ class IntegratorCharm(CharmBase):
     def _on_update_status(self, _: EventBase) -> None:
         """Handle the status update."""
         self.unit.status = self.get_status()
+
+    def _on_relation_joined(self, _: EventBase) -> None:
+        """Handle relation joined event."""
+        for rel in self.model.relations[MONGOS]:
+            if rel.name == MONGOS:
+                self.databases[MONGOS]._update_relation_data(
+                    rel.id,
+                    {"unix_socket": json.dumps(False)},
+                )
 
     def _on_config_changed(self, _: EventBase) -> None:
         """Handle on config changed event."""
@@ -345,6 +365,16 @@ class IntegratorCharm(CharmBase):
             ):
                 return True
         return False
+
+    @property
+    def is_mongos_related(self) -> bool:
+        """Return if a relation with mongos is present.
+
+        Note: mongos does not directly create a username/password, so it is not sufficient to
+        check for credentials. In order to receive a username/password it is necessary to integrate
+        mongos with a config server.
+        """
+        return len(self.model.relations[MONGOS]) > 0
 
     @property
     def is_kafka_related(self) -> bool:

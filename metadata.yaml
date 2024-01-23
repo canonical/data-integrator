@@ -30,3 +30,9 @@ requires:
   opensearch:
     interface: opensearch_client
     limit: 1
+
+# host-application for subordinate charms use 'provies'
+provides:
+  mongos:
+    interface: mongos_client
+    limit: 1

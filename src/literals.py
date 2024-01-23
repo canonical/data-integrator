@@ -9,7 +9,8 @@ PEER = "data-integrator-peers"
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"
 MONGODB = "mongodb"
+MONGOS = "mongos"
 KAFKA = "kafka"
 OPENSEARCH = "opensearch"
 
-DATABASES = [MYSQL, MONGODB, POSTGRESQL]
+DATABASES = [MYSQL, MONGODB, POSTGRESQL, MONGOS]
