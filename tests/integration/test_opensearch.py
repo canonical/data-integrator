@@ -82,9 +82,9 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
             OPENSEARCH[ops_test.cloud_name],
             channel="edge",
             application_name=OPENSEARCH[ops_test.cloud_name],
-            num_units=3,
+            num_units=2,
         ),
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=tls_config),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),

@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from pathlib import PosixPath
+from time import sleep
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -117,6 +118,8 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:postgresql", f"{POSTGRESQL[ops_test.cloud_name]}:database"
     )
+    # Ensuring full cleanup of relation traces, avodiing faluire on re-creating it soon
+    sleep(3)
 
 
 async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):

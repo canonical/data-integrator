@@ -71,15 +71,27 @@ jobs:
         tox-environments:
           - name: integration-lxd
             provider: lxd
+            channel: "latest/stable"
           - name: integration-k8s
             provider: microk8s
+            channel: "1.27-strict/stable"
         product:
           - kafka
           - mysql
           - postgresql
           - mongodb
           - opensearch
-    name: ${{ matrix.tox-environments.name }}-${{matrix.product}}
+        juju-version:
+          - juju-bootstrap-option: "2.9.44"
+            juju-snap-channel: "2.9/stable"
+            libjuju-version: "2.9.44.1"
+          - juju-bootstrap-option: "3.1.6"
+            juju-snap-channel: "3.1/stable"
+            libjuju-version: "3.2.2"
+        exclude:
+          - {product: opensearch, juju-version: {juju-snap-channel: "2.9/stable"}}
+          - {product: mongodb, juju-version: {juju-snap-channel: "2.9/stable"}}
+    name: ${{ matrix.juju-version.juju-snap-channel }}-${{ matrix.tox-environments.name }}-${{matrix.product}}
     needs:
       - lib-check
       - lint
@@ -94,7 +106,9 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: ${{ matrix.tox-environments.provider }}
-          bootstrap-options: "--agent-version 2.9.42"
+          channel: ${{ matrix.tox-environments.channel }}
+          bootstrap-options: "--agent-version ${{ matrix.juju-version.juju-bootstrap-option }}"
+          juju-channel: ${{ matrix.juju-version.juju-snap-channel }}
       - name: Install tox
         run: python3 -m pip install tox
       - name: Install poetry
@@ -123,3 +137,4 @@ jobs:
         run: tox run -e ${{ matrix.tox-environments.name }}-${{matrix.product}} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
         env:
           CI_PACKED_CHARMS: ${{ needs.build.outputs.charms }}
+          LIBJUJU_VERSION_SPECIFIER: "${{ matrix.juju-version.libjuju-version }}"
