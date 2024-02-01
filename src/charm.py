@@ -10,11 +10,12 @@ of the libraries in this repository.
 
 import logging
 from enum import Enum
-from typing import Dict, List, MutableMapping, Optional
+from typing import Dict, MutableMapping, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseRequires,
+    DataRequires,
     IndexCreatedEvent,
     KafkaRequires,
     OpenSearchRequires,
@@ -149,7 +150,7 @@ class IntegratorCharm(CharmBase):
 
         if not self.topic_active and self.topic_name:
             for rel in self.kafka.relations:
-                self.kafka._update_relation_data(
+                self.kafka.update_relation_data(
                     rel.id,
                     {
                         "topic": self.topic_name or "",
@@ -160,7 +161,7 @@ class IntegratorCharm(CharmBase):
 
         if not self.index_active and self.index_name:
             for rel in self.opensearch.relations:
-                self.opensearch._update_relation_data(
+                self.opensearch.update_relation_data(
                     rel.id,
                     {
                         "index": self.index_name or "",
@@ -172,7 +173,7 @@ class IntegratorCharm(CharmBase):
         """Update the relation data of the related databases."""
         for db_name, relation in self.database_relations.items():
             logger.debug(f"Updating databag for database: {db_name}")
-            self.databases[db_name]._update_relation_data(relation.id, database_relation_data)
+            self.databases[db_name].update_relation_data(relation.id, database_relation_data)
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
@@ -297,31 +298,29 @@ class IntegratorCharm(CharmBase):
     def databases_active(self) -> Dict[str, str]:
         """Return the configured database name."""
         return {
-            name: relation.data[relation.app]["database"]
-            for name, relation in self.database_relations.items()
-            if "database" in relation.data[relation.app]
+            name: requirer.fetch_relation_field(requirer.relations[0].id, "database")
+            for name, requirer in self.databases.items()
+            if requirer.relations
+            and requirer.fetch_relation_field(requirer.relations[0].id, "database")
         }
 
     @property
     def topic_active(self) -> Optional[str]:
         """Return the configured topic name."""
         if relation := self.kafka_relation:
-            if "topic" in relation.data[relation.app]:
-                return relation.data[relation.app]["topic"]
-        return None
+            return self.kafka.fetch_relation_field(relation.id, "topic")
 
     @property
     def index_active(self) -> Optional[str]:
         """Return the configured index name."""
         if relation := self.opensearch_relation:
-            return relation.data[self.app].get("index", None)
-        return None
+            return self.opensearch.fetch_relation_field(relation.id, "index")
 
     @property
     def extra_user_roles_active(self) -> Optional[str]:
         """Return the configured user-extra-roles parameter."""
         return (
-            relation.data[self.app]["extra-user-roles"]
+            self.kafka.fetch_relation_field(relation.id, "extra-user-roles")
             if (relation := self.kafka_relation)
             else None
         )
@@ -330,31 +329,30 @@ class IntegratorCharm(CharmBase):
     def is_database_related(self) -> bool:
         """Return if a relation with database is present."""
         possible_relations = [
-            self._check_for_credentials(database_requirer.relations)
+            self._check_for_credentials(database_requirer)
             for _, database_requirer in self.databases.items()
         ]
         return any(possible_relations)
 
     @staticmethod
-    def _check_for_credentials(relations: List[Relation]) -> bool:
+    def _check_for_credentials(requirer: DataRequires) -> bool:
         """Check if credentials are present in the relation databag."""
-        for relation in relations:
-            if (
-                "username" in relation.data[relation.app]
-                and "password" in relation.data[relation.app]
-            ):
+        for relation in requirer.relations:
+            if requirer.fetch_relation_field(
+                relation.id, "username"
+            ) and requirer.fetch_relation_field(relation.id, "password"):
                 return True
         return False
 
     @property
     def is_kafka_related(self) -> bool:
         """Return if a relation with kafka is present."""
-        return self._check_for_credentials(self.kafka.relations)
+        return self._check_for_credentials(self.kafka)
 
     @property
     def is_opensearch_related(self) -> bool:
         """Return if a relation with opensearch is present."""
-        return self._check_for_credentials(self.opensearch.relations)
+        return self._check_for_credentials(self.opensearch)
 
     @property
     def app_peer_data(self) -> MutableMapping[str, str]:
