@@ -11,7 +11,11 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME, MYSQL
-from .helpers import fetch_action_database, fetch_action_get_credentials
+from .helpers import (
+    check_secrets_usage_matching_juju_version,
+    fetch_action_database,
+    fetch_action_get_credentials,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +55,18 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     )
     await ops_test.model.wait_for_idle(apps=[MYSQL[ops_test.cloud_name]], wait_for_active=True)
     assert ops_test.model.applications[MYSQL[ops_test.cloud_name]].status == "active"
-    await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL[ops_test.cloud_name])
+    integrator_relation = await ops_test.model.add_relation(
+        DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]
+    )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+
+    # check if secrets are used on Juju3
+    assert await check_secrets_usage_matching_juju_version(
+        ops_test,
+        ops_test.model.applications[DATA_INTEGRATOR].units[0].name,
+        integrator_relation.id,
+    )
 
     # get credential for MYSQL
     credentials = await fetch_action_get_credentials(

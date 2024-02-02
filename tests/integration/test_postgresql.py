@@ -12,7 +12,11 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME, PGBOUNCER, POSTGRESQL
-from .helpers import fetch_action_database, fetch_action_get_credentials
+from .helpers import (
+    check_secrets_usage_matching_juju_version,
+    fetch_action_database,
+    fetch_action_get_credentials,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +99,17 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
     )
 
     await ops_test.model.wait_for_idle(apps=[POSTGRESQL[ops_test.cloud_name], DATA_INTEGRATOR])
-    await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name])
+    integrator_relation = await ops_test.model.add_relation(
+        DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name]
+    )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL[ops_test.cloud_name]])
+
+    # check if secrets are used on Juju3
+    assert await check_secrets_usage_matching_juju_version(
+        ops_test,
+        ops_test.model.applications[DATA_INTEGRATOR].units[0].name,
+        integrator_relation.id,
+    )
 
     new_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]

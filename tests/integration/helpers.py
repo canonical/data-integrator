@@ -2,11 +2,14 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 import logging
+from importlib.metadata import version
 from subprocess import PIPE, check_output
-from typing import Dict
+from typing import Dict, Optional
 
 from juju.unit import Unit
+from pytest_operator.plugin import OpsTest
 
 from .constants import DATABASE_NAME, POSTGRESQL
 
@@ -33,7 +36,10 @@ def build_postgresql_connection_string(credentials: Dict[str, str]) -> str:
     endpoints = credentials[POSTGRESQL]["endpoints"]
     host, port = endpoints.split(",")[0].split(":")
     # Build the complete connection string to connect to the database.
-    return f"dbname='{DATABASE_NAME}' user='{username}' host='{host}' port='{port}' password='{password}' connect_timeout=10"
+    return (
+        f"dbname='{DATABASE_NAME}' user='{username}' host='{host}' "
+        f"port='{port}' password='{password}' connect_timeout=10"
+    )
 
 
 async def fetch_action_database(
@@ -110,3 +116,28 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
             break
 
     assert passed, "logs not found"
+
+
+async def get_relation_data(ops_test: OpsTest, unit: str) -> Dict[str, str]:
+    args = ["show-unit", unit, "--format", "json"]
+    relation_data_raw = await ops_test.juju(*args)
+    return json.loads(relation_data_raw[1])
+
+
+async def get_databag_field(
+    ops_test: OpsTest, unit: str, relation_id, field: str
+) -> Optional[str]:
+    relation_data = await get_relation_data(ops_test, unit)
+    for relation_info in relation_data[unit]["relation-info"]:
+        if relation_info["relation-id"] == relation_id:
+            return relation_info["application-data"].get(field)
+
+
+async def check_secrets_usage_matching_juju_version(
+    ops_test: OpsTest, unit: str, relation_id: str
+) -> bool:
+    juju_version = version("juju")
+
+    if juju_version > "3":
+        return bool(await get_databag_field(ops_test, unit, relation_id, "secret-user"))
+    return True
