@@ -20,7 +20,10 @@ from .constants import (
     OPENSEARCH_EXTRA_USER_ROLES,
     TLS_CERTIFICATES_APP_NAME,
 )
-from .helpers import fetch_action_get_credentials
+from .helpers import (
+    check_secrets_usage_matching_juju_version,
+    fetch_action_get_credentials,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,16 +99,24 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
         timeout=1600,
     )
     config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
-    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config),
-    await asyncio.gather(
-        ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME),
-        ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
+    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+    await ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME)
+    integrator_relation = await ops_test.model.relate(
+        DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]
     )
+
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=10,
         timeout=1600,
+    )
+
+    # check if secrets are used on Juju3
+    assert await check_secrets_usage_matching_juju_version(
+        ops_test,
+        ops_test.model.applications[DATA_INTEGRATOR].units[0].name,
+        integrator_relation.id,
     )
 
 
