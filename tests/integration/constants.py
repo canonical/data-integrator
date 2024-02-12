@@ -5,7 +5,6 @@
 DATA_INTEGRATOR = "data-integrator"
 
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
-SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 MYSQL = {"localhost": "mysql", "microk8s": "mysql-k8s"}
 POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}

@@ -18,7 +18,7 @@ from .constants import (
     INDEX_NAME,
     OPENSEARCH,
     OPENSEARCH_EXTRA_USER_ROLES,
-    SELF_SIGNED_CERTIFICATES_APP_NAME,
+    TLS_CERTIFICATES_APP_NAME,
 )
 from .helpers import (
     check_secrets_usage_matching_juju_version,
@@ -66,7 +66,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     if ops_test.cloud_name != "localhost":
         pytest.skip("opensearch does not have a k8s charm yet.")
 
-    tls_config = {"ca-common-name": "CN_CA"}
+    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     # Set kernel params in model config opensearch can run
     model_config = {
         "logging-config": "<root>=INFO;unit=DEBUG",
@@ -85,35 +85,28 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
             OPENSEARCH[ops_test.cloud_name],
             channel="edge",
             application_name=OPENSEARCH[ops_test.cloud_name],
-            num_units=3,
+            num_units=2,
         ),
-        ops_test.model.deploy(
-            SELF_SIGNED_CERTIFICATES_APP_NAME, channel="stable", config=tls_config
-        ),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], SELF_SIGNED_CERTIFICATES_APP_NAME],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
         idle_period=10,
         timeout=1600,
     )
     config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
-    await ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], SELF_SIGNED_CERTIFICATES_APP_NAME)
+    await ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME)
     integrator_relation = await ops_test.model.relate(
         DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[
-            DATA_INTEGRATOR,
-            OPENSEARCH[ops_test.cloud_name],
-            SELF_SIGNED_CERTIFICATES_APP_NAME,
-            APP,
-        ],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=10,
         timeout=1600,
@@ -137,12 +130,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
         pytest.skip("opensearch does not have a k8s charm yet.")
 
     await ops_test.model.wait_for_idle(
-        apps=[
-            DATA_INTEGRATOR,
-            OPENSEARCH[ops_test.cloud_name],
-            SELF_SIGNED_CERTIFICATES_APP_NAME,
-            APP,
-        ],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=30,
         timeout=1000,
@@ -203,7 +191,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
     )
     await asyncio.gather(
         ops_test.model.wait_for_idle(
-            apps=[OPENSEARCH[ops_test.cloud_name], SELF_SIGNED_CERTIFICATES_APP_NAME, APP],
+            apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
             status="active",
             idle_period=10,
         ),
@@ -212,12 +200,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
 
     await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
     await ops_test.model.wait_for_idle(
-        apps=[
-            DATA_INTEGRATOR,
-            OPENSEARCH[ops_test.cloud_name],
-            SELF_SIGNED_CERTIFICATES_APP_NAME,
-            APP,
-        ],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=10,
     )
