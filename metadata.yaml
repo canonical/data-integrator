@@ -30,3 +30,9 @@ requires:
   opensearch:
     interface: opensearch_client
     limit: 1
+
+# suborindate charm integrations
+provides:
+  mongos:
+    interface: mongos_client
+    limit: 1
