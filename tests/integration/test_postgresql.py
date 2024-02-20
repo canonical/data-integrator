@@ -194,7 +194,13 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
         f"{DATA_INTEGRATOR}:postgresql", f"{PGBOUNCER[ops_test.cloud_name]}:database"
     )
 
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]])
+    # Subordinate charm will be removed and wait_for_idle expects the app to have units
+    if ops_test.cloud_name == "localhost":
+        idle_apps = [DATA_INTEGRATOR]
+    else:
+        idle_apps = [DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]]
+
+    await ops_test.model.wait_for_idle(apps=idle_apps)
     await ops_test.model.add_relation(DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name])
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]])
 
