@@ -137,8 +137,6 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest):
 
 async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
     """Test the relation with PgBouncer and database accessibility."""
-    if ops_test.cloud_name == "localhost":
-        pytest.skip("Subordinate PgBouncer cannot be exposed yet")
     logger.info(f"Test the relation with {PGBOUNCER[ops_test.cloud_name]}.")
     num_units = 0 if ops_test.cloud_name == "localhost" else 1
     await asyncio.gather(
@@ -196,7 +194,13 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest):
         f"{DATA_INTEGRATOR}:postgresql", f"{PGBOUNCER[ops_test.cloud_name]}:database"
     )
 
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]])
+    # Subordinate charm will be removed and wait_for_idle expects the app to have units
+    if ops_test.cloud_name == "localhost":
+        idle_apps = [DATA_INTEGRATOR]
+    else:
+        idle_apps = [DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]]
+
+    await ops_test.model.wait_for_idle(apps=idle_apps)
     await ops_test.model.add_relation(DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name])
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, PGBOUNCER[ops_test.cloud_name]])
 
