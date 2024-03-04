@@ -51,6 +51,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
             num_units=1,
             series="jammy",
             trust=True,
+            config={"profile": "testing"},
         )
     )
     await ops_test.model.wait_for_idle(apps=[MYSQL[ops_test.cloud_name]], status="active")
