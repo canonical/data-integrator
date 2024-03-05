@@ -130,6 +130,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mysql", f"{MYSQL[ops_test.cloud_name]}:database"
     )
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]])
 
 
 async def test_deploy_and_relate_mysql_router(ops_test: OpsTest):
