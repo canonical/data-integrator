@@ -148,12 +148,6 @@ async def test_deploy_and_relate_mysql_router(ops_test: OpsTest):
             trust=True,
         ),
     )
-
-    DATABASE_NAME = f"{DATABASE_NAME}_router"
-    logger.info(f"Configure database name: {DATABASE_NAME}")
-    config = {"database-name": DATABASE_NAME}
-    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
-
     await ops_test.model.add_relation(
         MYSQL[ops_test.cloud_name], MYSQL_ROUTER[ops_test.cloud_name]
     )
