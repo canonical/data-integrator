@@ -135,6 +135,7 @@ def create_table_mysql(credentials: Dict[str, str], database_name: str) -> bool:
     config = get_mysql_config(credentials, database_name)
     with MysqlConnector(config) as cursor:
         try:
+            cursor.execute(f"DROP TABLE IF EXISTS {TABLE_NAME};")
             cursor.execute(
                 (
                     f"CREATE TABLE IF NOT EXISTS {TABLE_NAME} ("
