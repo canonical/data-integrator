@@ -1,4 +1,7 @@
 # Charmed Data Integrator Operator
+[![Charmhub](https://charmhub.io/data-integrator/badge.svg)](https://charmhub.io/data-integrator)
+[![Release](https://github.com/canonical/data-integrator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/data-integrator/actions/workflows/release.yaml)
+[![Tests](https://github.com/canonical/data-integrator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/data-integrator/actions/workflows/ci.yaml)
 
 ## Overview
 
