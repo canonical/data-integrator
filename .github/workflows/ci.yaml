@@ -80,8 +80,7 @@ jobs:
           - mysql
           - postgresql
           - mongodb
-          # Disabling due to https://github.com/canonical/data-integrator/issues/40
-          # - opensearch
+          - opensearch
         juju-version:
           - juju-bootstrap-option: "2.9.44"
             juju-snap-channel: "2.9/stable"
