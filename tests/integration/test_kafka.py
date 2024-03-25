@@ -50,44 +50,40 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_and_relate_kafka(ops_test: OpsTest):
+async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
     """Test the relation with Kafka and the correct production and consumption of messagges."""
     await asyncio.gather(
         ops_test.model.deploy(
-            ZOOKEEPER[ops_test.cloud_name],
+            ZOOKEEPER[cloud_name],
             channel="edge",
-            application_name=ZOOKEEPER[ops_test.cloud_name],
+            application_name=ZOOKEEPER[cloud_name],
             num_units=1,
             series="jammy",
         ),
         ops_test.model.deploy(
-            KAFKA[ops_test.cloud_name],
+            KAFKA[cloud_name],
             channel="edge",
-            application_name=KAFKA[ops_test.cloud_name],
+            application_name=KAFKA[cloud_name],
             num_units=1,
             series="jammy",
         ),
     )
 
-    await ops_test.model.wait_for_idle(
-        apps=[ZOOKEEPER[ops_test.cloud_name]], timeout=1000, status="active"
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[KAFKA[ops_test.cloud_name]], timeout=1000, status="blocked"
-    )
+    await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name]], timeout=1000, status="active")
+    await ops_test.model.wait_for_idle(apps=[KAFKA[cloud_name]], timeout=1000, status="blocked")
 
-    await ops_test.model.add_relation(KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name])
+    await ops_test.model.add_relation(KAFKA[cloud_name], ZOOKEEPER[cloud_name])
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name]],
+            apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name]],
             timeout=2000,
             idle_period=60,
             status="active",
         )
 
-    await ops_test.model.add_relation(KAFKA[ops_test.cloud_name], DATA_INTEGRATOR)
+    await ops_test.model.add_relation(KAFKA[cloud_name], DATA_INTEGRATOR)
     await ops_test.model.wait_for_idle(
-        apps=[KAFKA[ops_test.cloud_name], ZOOKEEPER[ops_test.cloud_name], DATA_INTEGRATOR],
+        apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name], DATA_INTEGRATOR],
         timeout=2000,
         idle_period=60,
         status="active",
@@ -102,7 +98,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     await fetch_action_kafka(
         ops_test.model.applications[APP].units[0],
         "create-topic",
-        KAFKA[ops_test.cloud_name],
+        KAFKA[cloud_name],
         json.dumps(credentials),
         TOPIC_NAME,
     )
@@ -111,24 +107,24 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     await fetch_action_kafka(
         ops_test.model.applications[APP].units[0],
         "produce-messages",
-        KAFKA[ops_test.cloud_name],
+        KAFKA[cloud_name],
         json.dumps(credentials),
         TOPIC_NAME,
     )
     logger.info("Check messages in logs")
     check_logs(
         model_full_name=ops_test.model_full_name,
-        kafka_unit_name=f"{KAFKA[ops_test.cloud_name]}/0",
+        kafka_unit_name=f"{KAFKA[cloud_name]}/0",
         topic=TOPIC_NAME,
     )
 
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-        f"{DATA_INTEGRATOR}:kafka", f"{KAFKA[ops_test.cloud_name]}:kafka-client"
+        f"{DATA_INTEGRATOR}:kafka", f"{KAFKA[cloud_name]}:kafka-client"
     )
-    await ops_test.model.wait_for_idle(apps=[KAFKA[ops_test.cloud_name], DATA_INTEGRATOR])
+    await ops_test.model.wait_for_idle(apps=[KAFKA[cloud_name], DATA_INTEGRATOR])
 
-    await ops_test.model.add_relation(DATA_INTEGRATOR, KAFKA[ops_test.cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, KAFKA[ops_test.cloud_name]])
+    await ops_test.model.add_relation(DATA_INTEGRATOR, KAFKA[cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, KAFKA[cloud_name]])
 
     new_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
@@ -140,14 +136,14 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     await fetch_action_kafka(
         ops_test.model.applications[APP].units[0],
         "produce-messages",
-        KAFKA[ops_test.cloud_name],
+        KAFKA[cloud_name],
         json.dumps(new_credentials),
         TOPIC_NAME,
     )
     logger.info("Check messages in logs")
     check_logs(
         model_full_name=ops_test.model_full_name,
-        kafka_unit_name=f"{KAFKA[ops_test.cloud_name]}/0",
+        kafka_unit_name=f"{KAFKA[cloud_name]}/0",
         topic=TOPIC_NAME,
     )
 

@@ -43,24 +43,22 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 
 
 @pytest.mark.group(1)
-async def test_deploy_and_relate_mysql(ops_test: OpsTest):
+async def test_deploy_and_relate_mysql(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MySQL and database accessibility."""
     await asyncio.gather(
         ops_test.model.deploy(
-            MYSQL[ops_test.cloud_name],
+            MYSQL[cloud_name],
             channel="8.0/edge",
-            application_name=MYSQL[ops_test.cloud_name],
+            application_name=MYSQL[cloud_name],
             num_units=1,
             series="jammy",
             trust=True,
         )
     )
-    await ops_test.model.wait_for_idle(apps=[MYSQL[ops_test.cloud_name]], wait_for_active=True)
-    assert ops_test.model.applications[MYSQL[ops_test.cloud_name]].status == "active"
-    integrator_relation = await ops_test.model.add_relation(
-        DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]
-    )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]])
+    await ops_test.model.wait_for_idle(apps=[MYSQL[cloud_name]], wait_for_active=True)
+    assert ops_test.model.applications[MYSQL[cloud_name]].status == "active"
+    integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL[cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[cloud_name]])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     # check if secrets are used on Juju3
@@ -75,41 +73,41 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    logger.info(f"Create table on {MYSQL[ops_test.cloud_name]}")
+    logger.info(f"Create table on {MYSQL[cloud_name]}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "create-table",
-        MYSQL[ops_test.cloud_name],
+        MYSQL[cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
-    logger.info(f"Insert data in the table on {MYSQL[ops_test.cloud_name]}")
+    logger.info(f"Insert data in the table on {MYSQL[cloud_name]}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "insert-data",
-        MYSQL[ops_test.cloud_name],
+        MYSQL[cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
-    logger.info(f"Check assessibility of inserted data on {MYSQL[ops_test.cloud_name]}")
+    logger.info(f"Check assessibility of inserted data on {MYSQL[cloud_name]}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
-        MYSQL[ops_test.cloud_name],
+        MYSQL[cloud_name],
         json.dumps(credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
     #  remove relation and test connection again
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-        f"{DATA_INTEGRATOR}:mysql", f"{MYSQL[ops_test.cloud_name]}:database"
+        f"{DATA_INTEGRATOR}:mysql", f"{MYSQL[cloud_name]}:database"
     )
 
-    await ops_test.model.wait_for_idle(apps=[MYSQL[ops_test.cloud_name], DATA_INTEGRATOR])
-    await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL[ops_test.cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]])
+    await ops_test.model.wait_for_idle(apps=[MYSQL[cloud_name], DATA_INTEGRATOR])
+    await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL[cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[cloud_name]])
 
     # join with another relation and check the accessibility of the previously created database
     new_credentials = await fetch_action_get_credentials(
@@ -118,12 +116,12 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest):
 
     assert credentials != new_credentials
     logger.info(
-        f"Check assessibility of inserted data on {MYSQL[ops_test.cloud_name]} with new credentials"
+        f"Check assessibility of inserted data on {MYSQL[cloud_name]} with new credentials"
     )
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
-        MYSQL[ops_test.cloud_name],
+        MYSQL[cloud_name],
         json.dumps(new_credentials),
         DATABASE_NAME,
     )

@@ -21,3 +21,12 @@ async def app_charm(ops_test: OpsTest):
     charm_path = "tests/integration/app-charm"
     charm = await ops_test.build_charm(charm_path)
     return charm
+
+
+@pytest.fixture(scope="module")
+async def cloud_name(ops_test: OpsTest):
+    """Checks the cloud."""
+    if ops_test.model.info.provider_type == "kubernetes":
+        return "microk8s"
+    else:
+        return "localhost"
