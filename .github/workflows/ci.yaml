@@ -44,7 +44,6 @@ jobs:
     with:
       cache: true
 
-
   integration-test:
     strategy:
       fail-fast: false
@@ -53,14 +52,17 @@ jobs:
           - agent: 2.9.46
             libjuju: ^2
           - agent: 3.1.7
-    name: Integration test charm | ${{ matrix.juju.agent }}
+        cloud:
+          - lxd
+          - microk8s
+    name: Integration test charm | ${{ matrix.juju.agent }} | ${{ matrix.cloud }}
     needs:
       - lint
-      - unit-test
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.0.0
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-      cloud: lxd
+      cloud: ${{ matrix.cloud }}
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
+      microk8s-snap-channel: 1.29-strict/stable

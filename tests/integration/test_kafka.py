@@ -23,6 +23,7 @@ from .helpers import check_logs, fetch_action_get_credentials, fetch_action_kafk
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
     await asyncio.gather(
@@ -47,6 +48,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     """Test the relation with Kafka and the correct production and consumption of messagges."""
@@ -150,6 +152,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest):
     )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_topic_setting(ops_test: OpsTest):
     """Tests that requesting a wildcard topic will generate an error."""

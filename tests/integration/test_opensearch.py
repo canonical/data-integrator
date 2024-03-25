@@ -52,6 +52,7 @@ async def run_request(
     return result.results
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
     """Deploys charms for testing.
@@ -120,6 +121,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     )
 
 
+@pytest.mark.group(1)
 async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     """Verifies intended use case of data-integrator charm.
 
@@ -176,6 +178,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     assert set(artists) == {"Vulfpeck"}
 
 
+@pytest.mark.group(1)
 async def test_recycle_credentials(ops_test: OpsTest):
     """Tests that we can recreate credentials by removing and creating a new relation."""
     if ops_test.cloud_name != "localhost":
