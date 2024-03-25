@@ -8,12 +8,6 @@ concurrency:
 
 on:
   pull_request:
-    paths-ignore:
-      - '.gitignore'
-      - '.jujuignore'
-      - 'LICENSE'
-      - '**.md'
-      - .github/renovate.json5
   schedule:
     - cron: '53 0 * * *' # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
@@ -25,7 +19,7 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v13.0.0
 
   unit-test:
-    name: Unit test charm
+    name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -44,6 +38,13 @@ jobs:
     with:
       cache: true
 
+  build-test:
+    name: Build test charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.0.0
+    with:
+      cache: true
+      path-to-charm-directory: tests/integration/app-charm
+
   integration-test:
     strategy:
       fail-fast: false
@@ -61,7 +62,7 @@ jobs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.0.0
     with:
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      artifact-prefix: packed-charm-cache
       cloud: ${{ matrix.cloud }}
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
