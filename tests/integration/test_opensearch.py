@@ -24,6 +24,7 @@ from .helpers import (
     check_secrets_usage_matching_juju_version,
     fetch_action_get_credentials,
 )
+from .markers import only_with_juju_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ async def run_request(
 
 
 @pytest.mark.group(1)
+@only_with_juju_secrets
 @pytest.mark.abort_on_fail
 async def test_deploy(
     ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath, cloud_name: str
@@ -122,6 +124,7 @@ async def test_deploy(
 
 
 @pytest.mark.group(1)
+@only_with_juju_secrets
 async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: str):
     """Verifies intended use case of data-integrator charm.
 
@@ -179,6 +182,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: 
 
 
 @pytest.mark.group(1)
+@only_with_juju_secrets
 async def test_recycle_credentials(ops_test: OpsTest, cloud_name: str):
     """Tests that we can recreate credentials by removing and creating a new relation."""
     if cloud_name != "localhost":

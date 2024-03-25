@@ -62,7 +62,7 @@ jobs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.0.0
     with:
-      artifact-prefix: packed-charm-cache
+      artifact-prefix: packed-charm-cache-true
       cloud: ${{ matrix.cloud }}
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
