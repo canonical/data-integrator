@@ -745,25 +745,26 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "juju"
-version = "3.3.0.0"
+version = "3.3.1.1"
 description = "Python library for Juju"
 optional = false
 python-versions = "*"
 files = [
-    {file = "juju-3.3.0.0.tar.gz", hash = "sha256:50e68a07a8ea337ed9962527e24bd7d7609e8aa3f43e3a8121418a7c9357d97e"},
+    {file = "juju-3.3.1.1.tar.gz", hash = "sha256:b30b19051a1c394fa1b1a8c6d38c31d8acdceec2f95b33ffb46fab2d791a29fd"},
 ]
 
 [package.dependencies]
 hvac = "*"
 kubernetes = ">=12.0.1"
 macaroonbakery = ">=1.1,<2.0"
-paramiko = ">=2.4.0,<3.0.0"
+packaging = "*"
+paramiko = ">=2.4.0"
 pyasn1 = ">=0.4.4"
 pyRFC3339 = ">=1.0,<2.0"
 pyyaml = ">=5.1.2"
 toposort = ">=1.5,<2"
 typing_inspect = ">=0.6.0"
-websockets = {version = ">=10.0", markers = "python_version > \"3.9\""}
+websockets = ">=8.1"
 
 [[package]]
 name = "kafka-python"
@@ -2065,4 +2066,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "a1870476bd79678c160b40cd07ea8e368b9a1bdb97741323a01b69e9f56d0d64"
+content-hash = "3cbc1f97f29561904b98a36e0493abf6e073dbbb36a6f4a6be38310eab32fc29"
