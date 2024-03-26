@@ -23,10 +23,20 @@ async def app_charm(ops_test: OpsTest):
     return charm
 
 
-@pytest.fixture(scope="module")
-async def cloud_name(ops_test: OpsTest):
+@pytest.fixture()
+async def cloud_name(ops_test: OpsTest, request):
     """Checks the cloud."""
+    if request.node.parent:
+        marks = [m.name for m in request.node.iter_markers()]
+    else:
+        marks = []
     if ops_test.model.info.provider_type == "kubernetes":
+        if "only_on_localhost" in marks:
+            pytest.skip("Does not run on k8s")
+            return
         return "microk8s"
     else:
+        if "only_on_microk8s" in marks:
+            pytest.skip("Does not run on vm")
+            return
         return "localhost"

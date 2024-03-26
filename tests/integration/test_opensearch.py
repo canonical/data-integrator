@@ -24,7 +24,7 @@ from .helpers import (
     check_secrets_usage_matching_juju_version,
     fetch_action_get_credentials,
 )
-from .markers import only_with_juju_secrets
+from .markers import only_on_localhost, only_with_juju_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ async def run_request(
 
 
 @pytest.mark.group(1)
+@only_on_localhost
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
 async def test_deploy(
@@ -68,9 +69,6 @@ async def test_deploy(
     sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
     ```
     """
-    if cloud_name != "localhost":
-        pytest.skip("opensearch does not have a k8s charm yet.")
-
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     # Set kernel params in model config opensearch can run
     model_config = {
@@ -124,6 +122,7 @@ async def test_deploy(
 
 
 @pytest.mark.group(1)
+@only_on_localhost
 @only_with_juju_secrets
 async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: str):
     """Verifies intended use case of data-integrator charm.
@@ -131,9 +130,6 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: 
     This test verifies that we can use the credentials provided to the data-integrator charm to
     update and retrieve data from the opensearch charm.
     """
-    if cloud_name != "localhost":
-        pytest.skip("opensearch does not have a k8s charm yet.")
-
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
@@ -182,12 +178,10 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: 
 
 
 @pytest.mark.group(1)
+@only_on_localhost
 @only_with_juju_secrets
 async def test_recycle_credentials(ops_test: OpsTest, cloud_name: str):
     """Tests that we can recreate credentials by removing and creating a new relation."""
-    if cloud_name != "localhost":
-        pytest.skip("opensearch does not have a k8s charm yet.")
-
     old_credentials = (
         await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
     ).get(OPENSEARCH[cloud_name])
