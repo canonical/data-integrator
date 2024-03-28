@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import re
+import subprocess
 import time
 from pathlib import PosixPath
 
@@ -69,6 +70,17 @@ async def test_deploy(
     sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
     ```
     """
+    args = [
+        "sudo",
+        "sysctl",
+        "-w",
+        "vm.max_map_count=262144",
+        "vm.swappiness=0",
+        "net.ipv4.tcp_retries2=5",
+    ]
+    logger.warning("Setting OpenSearch sysctl config: %s", " ".join(args))
+    subprocess.call(args)
+
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     # Set kernel params in model config opensearch can run
     model_config = {

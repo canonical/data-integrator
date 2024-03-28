@@ -63,7 +63,9 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     )
     assert ops_test.model.applications[POSTGRESQL[cloud_name]].status == "active"
     await ops_test.model.add_relation(DATA_INTEGRATOR, POSTGRESQL[cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL[cloud_name]])
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, POSTGRESQL[cloud_name]], status="active"
+    )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     # get credential for PostgreSQL
