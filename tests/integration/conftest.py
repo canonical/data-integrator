@@ -2,30 +2,10 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import json
-import os
 from pathlib import Path
 
 import pytest
 from pytest_operator.plugin import OpsTest
-
-
-@pytest.fixture(scope="module")
-def ops_test(ops_test: OpsTest) -> OpsTest:
-    if os.environ.get("CI") == "true":
-        # Running in GitHub Actions; skip build step
-        # (GitHub Actions uses a separate, cached build step. See .github/workflows/ci.yaml)
-        packed_charms = json.loads(os.environ["CI_PACKED_CHARMS"])
-
-        async def build_charm(charm_path, bases_index: int = None) -> Path:
-            for charm in packed_charms:
-                if Path(charm_path) == Path(charm["directory_path"]):
-                    if bases_index is None or bases_index == charm["bases_index"]:
-                        return charm["file_path"]
-            raise ValueError(f"Unable to find .charm file for {bases_index=} at {charm_path=}")
-
-        ops_test.build_charm = build_charm
-    return ops_test
 
 
 @pytest.fixture(scope="module")
@@ -41,3 +21,22 @@ async def app_charm(ops_test: OpsTest):
     charm_path = "tests/integration/app-charm"
     charm = await ops_test.build_charm(charm_path)
     return charm
+
+
+@pytest.fixture()
+async def cloud_name(ops_test: OpsTest, request):
+    """Checks the cloud."""
+    if request.node.parent:
+        marks = [m.name for m in request.node.iter_markers()]
+    else:
+        marks = []
+    if ops_test.model.info.provider_type == "kubernetes":
+        if "only_on_localhost" in marks:
+            pytest.skip("Does not run on k8s")
+            return
+        return "microk8s"
+    else:
+        if "only_on_microk8s" in marks:
+            pytest.skip("Does not run on vm")
+            return
+        return "localhost"
