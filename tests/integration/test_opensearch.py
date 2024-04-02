@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import re
+import subprocess
 import time
 from pathlib import PosixPath
 
@@ -24,6 +25,7 @@ from .helpers import (
     check_secrets_usage_matching_juju_version,
     fetch_action_get_credentials,
 )
+from .markers import only_on_localhost, only_with_juju_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +54,13 @@ async def run_request(
     return result.results
 
 
+@pytest.mark.group(1)
+@only_on_localhost
+@only_with_juju_secrets
 @pytest.mark.abort_on_fail
-async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
+async def test_deploy(
+    ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath, cloud_name: str
+):
     """Deploys charms for testing.
 
     Note for developers, if deploying opensearch fails with some kernel parameter not set, run the
@@ -63,8 +70,16 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
     ```
     """
-    if ops_test.cloud_name != "localhost":
-        pytest.skip("opensearch does not have a k8s charm yet.")
+    args = [
+        "sudo",
+        "sysctl",
+        "-w",
+        "vm.max_map_count=262144",
+        "vm.swappiness=0",
+        "net.ipv4.tcp_retries2=5",
+    ]
+    logger.warning("Setting OpenSearch sysctl config: %s", " ".join(args))
+    subprocess.call(args)
 
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
     # Set kernel params in model config opensearch can run
@@ -82,9 +97,9 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 
     await asyncio.gather(
         ops_test.model.deploy(
-            OPENSEARCH[ops_test.cloud_name],
+            OPENSEARCH[cloud_name],
             channel="edge",
-            application_name=OPENSEARCH[ops_test.cloud_name],
+            application_name=OPENSEARCH[cloud_name],
             num_units=2,
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
@@ -94,19 +109,17 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME],
         idle_period=10,
         timeout=1600,
     )
     config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
-    await ops_test.model.relate(OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME)
-    integrator_relation = await ops_test.model.relate(
-        DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]
-    )
+    await ops_test.model.relate(OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME)
+    integrator_relation = await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[cloud_name])
 
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=10,
         timeout=1600,
@@ -120,17 +133,17 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     )
 
 
-async def test_sending_requests_using_opensearch(ops_test: OpsTest):
+@pytest.mark.group(1)
+@only_on_localhost
+@only_with_juju_secrets
+async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: str):
     """Verifies intended use case of data-integrator charm.
 
     This test verifies that we can use the credentials provided to the data-integrator charm to
     update and retrieve data from the opensearch charm.
     """
-    if ops_test.cloud_name != "localhost":
-        pytest.skip("opensearch does not have a k8s charm yet.")
-
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=30,
         timeout=1000,
@@ -139,7 +152,7 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     # get credentials for opensearch
     credentials = (
         await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
-    ).get(OPENSEARCH[ops_test.cloud_name])
+    ).get(OPENSEARCH[cloud_name])
     logger.error(credentials)
 
     # This request can be temperamental, because opensearch can appear active without having
@@ -176,31 +189,31 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest):
     assert set(artists) == {"Vulfpeck"}
 
 
-async def test_recycle_credentials(ops_test: OpsTest):
+@pytest.mark.group(1)
+@only_on_localhost
+@only_with_juju_secrets
+async def test_recycle_credentials(ops_test: OpsTest, cloud_name: str):
     """Tests that we can recreate credentials by removing and creating a new relation."""
-    if ops_test.cloud_name != "localhost":
-        pytest.skip("opensearch does not have a k8s charm yet.")
-
     old_credentials = (
         await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
-    ).get(OPENSEARCH[ops_test.cloud_name])
+    ).get(OPENSEARCH[cloud_name])
 
     # Recreate relation to generate new credentials
-    await ops_test.model.applications[OPENSEARCH[ops_test.cloud_name]].remove_relation(
-        f"{OPENSEARCH[ops_test.cloud_name]}:opensearch-client", DATA_INTEGRATOR
+    await ops_test.model.applications[OPENSEARCH[cloud_name]].remove_relation(
+        f"{OPENSEARCH[cloud_name]}:opensearch-client", DATA_INTEGRATOR
     )
     await asyncio.gather(
         ops_test.model.wait_for_idle(
-            apps=[OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
+            apps=[OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
             status="active",
             idle_period=10,
         ),
         ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], status="blocked"),
     )
 
-    await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name]),
+    await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[cloud_name]),
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, OPENSEARCH[ops_test.cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
+        apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
         idle_period=10,
     )
@@ -208,7 +221,7 @@ async def test_recycle_credentials(ops_test: OpsTest):
     # get new credentials for opensearch
     new_credentials = (
         await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
-    ).get(OPENSEARCH[ops_test.cloud_name])
+    ).get(OPENSEARCH[cloud_name])
     logger.error(new_credentials)
 
     get_jazz_again = json.loads(
