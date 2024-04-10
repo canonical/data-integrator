@@ -81,7 +81,7 @@ async def test_deploy(
     logger.warning("Setting OpenSearch sysctl config: %s", " ".join(args))
     subprocess.call(args)
 
-    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "CN_CA"}
+    tls_config = {"ca-common-name": "CN_CA"}
     # Set kernel params in model config opensearch can run
     model_config = {
         "logging-config": "<root>=INFO;unit=DEBUG",
@@ -108,6 +108,8 @@ async def test_deploy(
         ),
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
+    await ops_test.model.relate(OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME)
+
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME],
         idle_period=10,
@@ -115,7 +117,6 @@ async def test_deploy(
     )
     config = {"index-name": INDEX_NAME, "extra-user-roles": OPENSEARCH_EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
-    await ops_test.model.relate(OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME)
     integrator_relation = await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[cloud_name])
 
     await ops_test.model.wait_for_idle(
