@@ -166,6 +166,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
     credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
+    logger.info(credentials)
     logger.info(f"Create table on {PGBOUNCER[cloud_name]}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
