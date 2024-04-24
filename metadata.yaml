@@ -1,14 +1,26 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+
 name: data-integrator
+display-name: Data Integrator
+summary: Integrator charm for getting credentials for non-native applications.
 description: |
-  Integrator charm for getting credentials for non-native applications.
-summary: |
   Integrator charm for getting credentials for non-native applications.
   Not all applications implement a data_interfaces relation but allow setting
   credentials via config. Also, some of the applications are run outside of juju.
   This integrator charm allows receiving credentials which can be passed into
   application config directly without implementing juju-native relation.
+docs: https://discourse.charmhub.io/t/s3-integrator-documentation/14012
+source: https://github.com/canonical/data-integrator
+issues: https://github.com/canonical/data-integrator/issues
+website:
+  - https://ubuntu.com/data
+  - https://charmhub.io/data-integrator
+  - https://github.com/canonical/data-integrator
+  - https://launchpad.net/~data-platform
+  - https://matrix.to/#/%23charmhub-data-platform%3Aubuntu.com
+maintainers:
+  - Data Platform Team <data-platform@lists.launchpad.net>
 
 peers:
   data-integrator-peers:
