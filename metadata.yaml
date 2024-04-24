@@ -10,7 +10,7 @@ description: |
   credentials via config. Also, some of the applications are run outside of juju.
   This integrator charm allows receiving credentials which can be passed into
   application config directly without implementing juju-native relation.
-docs: https://discourse.charmhub.io/t/s3-integrator-documentation/14012
+docs: https://discourse.charmhub.io/t/14012
 source: https://github.com/canonical/data-integrator
 issues: https://github.com/canonical/data-integrator/issues
 website:
