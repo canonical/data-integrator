@@ -67,9 +67,9 @@ jobs:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.46
+          - agent: 2.9.49
             libjuju: ^2
-          - agent: 3.1.7
+          - agent: 3.1.8
         cloud:
           - lxd
           - microk8s

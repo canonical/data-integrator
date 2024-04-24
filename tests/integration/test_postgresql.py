@@ -213,6 +213,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
     new_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
+    logger.info(new_credentials)
 
     assert credentials != new_credentials
     logger.info(
