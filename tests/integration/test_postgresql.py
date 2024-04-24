@@ -5,6 +5,7 @@
 import asyncio
 import json
 import logging
+import subprocess
 from pathlib import PosixPath
 from time import sleep
 
@@ -145,16 +146,21 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
     """Test the relation with PgBouncer and database accessibility."""
     logger.info(f"Test the relation with {PGBOUNCER[cloud_name]}.")
     num_units = 0 if cloud_name == "localhost" else 1
-    await asyncio.gather(
-        ops_test.model.deploy(
-            PGBOUNCER[cloud_name],
-            application_name=PGBOUNCER[cloud_name],
-            channel="1/edge",
-            num_units=num_units,
-            series="jammy",
-            trust=True,
-        ),
-    )
+    status = await ops_test.model.get_status()
+    args = [
+        "juju",
+        "deploy",
+        "pgbouncer-k8s",
+        "-m",
+        status.model.name,
+        "-n",
+        str(num_units),
+        "--series",
+        "jammy",
+        "--channel",
+        "1/edge/monitoring",
+    ]
+    subprocess.run(args)
     await ops_test.model.add_relation(PGBOUNCER[cloud_name], POSTGRESQL[cloud_name])
     await ops_test.model.add_relation(PGBOUNCER[cloud_name], DATA_INTEGRATOR)
     await ops_test.model.wait_for_idle(
