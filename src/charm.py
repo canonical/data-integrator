@@ -15,10 +15,10 @@ from typing import Dict, MutableMapping, Optional
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseRequires,
-    DataRequires,
     IndexCreatedEvent,
     KafkaRequires,
     OpenSearchRequires,
+    RequirerData,
     TopicCreatedEvent,
 )
 from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent, RelationEvent
@@ -336,7 +336,7 @@ class IntegratorCharm(CharmBase):
         return any(possible_relations)
 
     @staticmethod
-    def _check_for_credentials(requirer: DataRequires) -> bool:
+    def _check_for_credentials(requirer: RequirerData) -> bool:
         """Check if credentials are present in the relation databag."""
         for relation in requirer.relations:
             if requirer.fetch_relation_field(
