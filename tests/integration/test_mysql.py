@@ -156,9 +156,7 @@ async def test_deploy_and_relate_mysql_router(ops_test: OpsTest, cloud_name: str
             trust=True,
         ),
     )
-    await ops_test.model.add_relation(
-        MYSQL[cloud_name], MYSQL_ROUTER[cloud_name]
-    )
+    await ops_test.model.add_relation(MYSQL[cloud_name], MYSQL_ROUTER[cloud_name])
     await ops_test.model.add_relation(
         f"{DATA_INTEGRATOR}:mysql", f"{MYSQL_ROUTER[cloud_name]}:database"
     )
