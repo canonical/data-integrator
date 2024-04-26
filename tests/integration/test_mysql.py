@@ -141,6 +141,7 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]])
 
 
+@pytest.mark.group(1)
 async def test_deploy_and_relate_mysql_router(ops_test: OpsTest, cloud_name: str):
     """Test the relation with mysql-router and database accessibility."""
     logger.info(f"Test the relation with {MYSQL_ROUTER[cloud_name]}.")
