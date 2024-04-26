@@ -7,6 +7,7 @@ DATA_INTEGRATOR = "data-integrator"
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
 MYSQL = {"localhost": "mysql", "microk8s": "mysql-k8s"}
+MYSQL_ROUTER = {"localhost": "mysql-router", "microk8s": "mysql-router-k8s"}
 POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}
 PGBOUNCER = {"localhost": "pgbouncer", "microk8s": "pgbouncer-k8s"}
 MONGODB = {"localhost": "mongodb", "microk8s": "mongodb-k8s"}
