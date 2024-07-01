@@ -68,14 +68,14 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
     await asyncio.gather(
         ops_test.model.deploy(
             ZOOKEEPER[cloud_name],
-            channel="edge",
+            channel="3/edge",
             application_name=ZOOKEEPER[cloud_name],
             num_units=1,
             series="jammy",
         ),
         ops_test.model.deploy(
             KAFKA[cloud_name],
-            channel="edge",
+            channel="3/edge",
             application_name=KAFKA[cloud_name],
             num_units=1,
             series="jammy",
