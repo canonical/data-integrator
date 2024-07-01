@@ -11,9 +11,8 @@ only_with_juju_secrets = pytest.mark.skipif(
 only_without_juju_secrets = pytest.mark.skipif(
     juju_.has_secrets, reason="Requires juju version w/o secrets"
 )
-no_juju31 = pytest.mark.skipif(
-    juju_.has_secrets, reason="Requires juju version different form 3.1"
-)
+no_juju31 = pytest.mark.skipif(juju_.not_juju31, reason="Requires juju version greater than 3.1")
+only_juju31 = pytest.mark.skipif(juju_.only_juju31, reason="Requires juju version 3.1")
 # Skipped in the cloud_name fixture
 only_on_localhost = pytest.mark.only_on_localhost
 only_on_microk8s = pytest.mark.only_on_microk8s
