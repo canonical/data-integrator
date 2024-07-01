@@ -77,7 +77,6 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
         await ops_test.model.wait_for_idle(
             apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name]],
             timeout=2000,
-            idle_period=60,
             status="active",
         )
 
@@ -85,7 +84,6 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.wait_for_idle(
         apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name], DATA_INTEGRATOR],
         timeout=2000,
-        idle_period=60,
         status="active",
     )
 
