@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
+    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
+        pytest.skip("Test is incompatible with Juju 3.1")
+
     await asyncio.gather(
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
@@ -45,6 +48,9 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 @pytest.mark.group(1)
 async def test_deploy_and_relate_mysql(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MySQL and database accessibility."""
+    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
+        pytest.skip("Test is incompatible with Juju 3.1")
+
     await asyncio.gather(
         ops_test.model.deploy(
             MYSQL[cloud_name],
