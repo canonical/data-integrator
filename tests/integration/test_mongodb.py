@@ -47,6 +47,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 
 @pytest.mark.group(1)
 @only_with_juju_secrets
+@only_juju31
 async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MongoDB and database accessibility."""
     channel = "5/edge" if cloud_name == "localhost" else "edge"

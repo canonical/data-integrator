@@ -9,8 +9,7 @@ import juju.unit
 # enough to check for secrets
 _libjuju_version = importlib.metadata.version("juju")
 has_secrets = int(_libjuju_version.split(".")[0]) >= 3
-not_juju31 = int(_libjuju_version.split(".")[0]) != 3 or int(_libjuju_version.split(".")[1]) != 1
-only_juju31 = int(_libjuju_version.split(".")[0]) != 3 or int(_libjuju_version.split(".")[1]) == 1
+is_juju31 = _libjuju_version.startswith("3.1.")
 
 
 async def run_action(unit: juju.unit.Unit, action_name, **params):
