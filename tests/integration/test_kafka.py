@@ -5,7 +5,6 @@
 import asyncio
 import json
 import logging
-import subprocess
 from pathlib import PosixPath
 
 import pytest
@@ -26,19 +25,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy(
-    ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath, cloud_name: str
-):
-    if cloud_name == "localhost":
-        args = [
-            "sudo",
-            "sysctl",
-            "-w",
-            "vm.swappiness=1",
-        ]
-        logger.warning("Setting Kafka sysctl config: %s", " ".join(args))
-        subprocess.call(args)
-
+async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
     await asyncio.gather(
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
