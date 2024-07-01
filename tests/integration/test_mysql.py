@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.group(1)
+@no_juju31
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
     await asyncio.gather(
@@ -44,7 +45,6 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 
 
 @pytest.mark.group(1)
-@no_juju31
 async def test_deploy_and_relate_mysql(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MySQL and database accessibility."""
     await asyncio.gather(
