@@ -70,6 +70,7 @@ jobs:
           - agent: 2.9.49
             libjuju: ^2
           - agent: 3.1.8
+          - agent: 3.4.4
         cloud:
           - lxd
           - microk8s

@@ -55,14 +55,14 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
     await asyncio.gather(
         ops_test.model.deploy(
             ZOOKEEPER[cloud_name],
-            channel="edge",
+            channel="3/edge",
             application_name=ZOOKEEPER[cloud_name],
             num_units=1,
             series="jammy",
         ),
         ops_test.model.deploy(
             KAFKA[cloud_name],
-            channel="edge",
+            channel="3/edge",
             application_name=KAFKA[cloud_name],
             num_units=1,
             series="jammy",
@@ -73,11 +73,11 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.wait_for_idle(apps=[KAFKA[cloud_name]], timeout=1000, status="blocked")
 
     await ops_test.model.add_relation(KAFKA[cloud_name], ZOOKEEPER[cloud_name])
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
             apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name]],
             timeout=2000,
-            idle_period=60,
+            idle_period=30,
             status="active",
         )
 
@@ -85,7 +85,7 @@ async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.wait_for_idle(
         apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name], DATA_INTEGRATOR],
         timeout=2000,
-        idle_period=60,
+        idle_period=30,
         status="active",
     )
 
