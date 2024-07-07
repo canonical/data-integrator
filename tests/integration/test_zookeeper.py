@@ -63,10 +63,10 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
             trust=True,
         )
     )
-    await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name]], wait_for_active=True)
+    await ops_test.model.wait_for_idle(apps=[provider_name], wait_for_active=True)
     assert ops_test.model.applications[provider_name].status == "active"
     integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, provider_name)
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, provider_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, provider_name], wait_for_active=True)
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     # check if secrets are used on Juju3
