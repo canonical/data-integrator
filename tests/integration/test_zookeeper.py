@@ -81,56 +81,56 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    # logger.info(f"Create table on {MYSQL[cloud_name]}")
-    # result = await fetch_action_database(
-    #     ops_test.model.applications[APP].units[0],
-    #     "create-table",
-    #     MYSQL[cloud_name],
-    #     json.dumps(credentials),
-    #     DATABASE_NAME,
-    # )
-    # assert result["ok"]
-    # logger.info(f"Insert data in the table on {MYSQL[cloud_name]}")
-    # result = await fetch_action_database(
-    #     ops_test.model.applications[APP].units[0],
-    #     "insert-data",
-    #     MYSQL[cloud_name],
-    #     json.dumps(credentials),
-    #     DATABASE_NAME,
-    # )
-    # assert result["ok"]
-    # logger.info(f"Check assessibility of inserted data on {MYSQL[cloud_name]}")
-    # result = await fetch_action_database(
-    #     ops_test.model.applications[APP].units[0],
-    #     "check-inserted-data",
-    #     MYSQL[cloud_name],
-    #     json.dumps(credentials),
-    #     DATABASE_NAME,
-    # )
-    # assert result["ok"]
-    # #  remove relation and test connection again
-    # await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-    #     f"{DATA_INTEGRATOR}:mysql", f"{MYSQL[cloud_name]}:database"
-    # )
-    #
-    # await ops_test.model.wait_for_idle(apps=[MYSQL[cloud_name], DATA_INTEGRATOR])
-    # await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL[cloud_name])
-    # await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[cloud_name]])
-    #
-    # # join with another relation and check the accessibility of the previously created database
-    # new_credentials = await fetch_action_get_credentials(
-    #     ops_test.model.applications[DATA_INTEGRATOR].units[0]
-    # )
-    #
-    # assert credentials != new_credentials
-    # logger.info(
-    #     f"Check assessibility of inserted data on {MYSQL[cloud_name]} with new credentials"
-    # )
-    # result = await fetch_action_database(
-    #     ops_test.model.applications[APP].units[0],
-    #     "check-inserted-data",
-    #     MYSQL[cloud_name],
-    #     json.dumps(new_credentials),
-    #     DATABASE_NAME,
-    # )
-    # assert result["ok"]
+    logger.info(f"Create zNode on {ZOOKEEPER[cloud_name]}")
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "create-table",
+        ZOOKEEPER[cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]
+    logger.info(f"Insert zNode on {ZOOKEEPER[cloud_name]}")
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "insert-data",
+        ZOOKEEPER[cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]
+    logger.info(f"Check assessibility of inserted data on {ZOOKEEPER[cloud_name]}")
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        ZOOKEEPER[cloud_name],
+        json.dumps(credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]
+    #  remove relation and test connection again
+    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+        f"{DATA_INTEGRATOR}:mysql", f"{ZOOKEEPER[cloud_name]}:database"
+    )
+
+    await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name], DATA_INTEGRATOR])
+    await ops_test.model.add_relation(DATA_INTEGRATOR, ZOOKEEPER[cloud_name])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]])
+
+    # join with another relation and check the accessibility of the previously created database
+    new_credentials = await fetch_action_get_credentials(
+        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    )
+
+    assert credentials != new_credentials
+    logger.info(
+        f"Check assessibility of inserted data on {ZOOKEEPER[cloud_name]} with new credentials"
+    )
+    result = await fetch_action_database(
+        ops_test.model.applications[APP].units[0],
+        "check-inserted-data",
+        ZOOKEEPER[cloud_name],
+        json.dumps(new_credentials),
+        DATABASE_NAME,
+    )
+    assert result["ok"]

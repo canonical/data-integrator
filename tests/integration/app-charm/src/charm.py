@@ -14,6 +14,8 @@ import logging
 from helpers import (
     KAFKA,
     KAFKA_K8S,
+    ZOOKEEPER,
+    ZOOKEEPER_K8S,
     MONGODB,
     MONGODB_K8S,
     MYSQL,
@@ -25,15 +27,18 @@ from helpers import (
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
+    check_inserted_data_zookeeper,
     create_table_mongodb,
     create_table_mysql,
     create_table_postgresql,
+    create_table_zookeeper,
     create_topic,
     http_request,
     insert_data_mongodb,
     insert_data_mysql,
     insert_data_postgresql,
-    produce_messages,
+    insert_data_zookeeper,
+    produce_messages
 )
 from connector import get_zookeeper_client
 from ops.charm import CharmBase, ActionEvent
@@ -64,10 +69,6 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(getattr(self.on, "produce_messages_action"), self._produce_messages)
         self.framework.observe(getattr(self.on, "create_topic_action"), self._create_topic)
 
-        # ZooKeeper actions
-        self.framework.observe(getattr(self.on, "create_znode_action"), self._create_znode)
-        self.framework.observe(getattr(self.on, "get_znodes_action"), self._get_znodes)
-
         self.framework.observe(getattr(self.on, "http_request_action"), self._http_request)
 
     def _on_start(self, _) -> None:
@@ -97,6 +98,9 @@ class ApplicationCharm(CharmBase):
         elif product == MONGODB or product == MONGODB_K8S:
             executed = create_table_mongodb(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
+            executed = create_table_zookeeper(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 
@@ -124,6 +128,9 @@ class ApplicationCharm(CharmBase):
         elif product == MONGODB or product == MONGODB_K8S:
             executed = insert_data_mongodb(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
+            executed = insert_data_zookeeper(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 
@@ -150,6 +157,9 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == MONGODB or product == MONGODB_K8S:
             executed = check_inserted_data_mongodb(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+        elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
+            executed = check_inserted_data_zookeeper(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
@@ -202,53 +212,6 @@ class ApplicationCharm(CharmBase):
 
         response = http_request(credentials, endpoint, method, payload)
         event.set_results({"results": json.dumps(response)})
-
-    def _create_znode(self, event: ActionEvent) -> None:
-        """Handle the action that creates a table on different databases."""
-        if not self.unit.is_leader():
-            event.fail("The action can be run only on leader unit.")
-            return
-
-        # read parameters from the event
-        znode = event.params["znode"]
-        credentials = json.loads(event.params["credentials"])
-
-        username = credentials[KAFKA]["username"]
-        password = credentials[KAFKA]["password"]
-        servers = credentials[KAFKA]["endpoints"]
-
-        with get_zookeeper_client(
-            hosts=servers,
-            username=username,
-            password=password
-        ) as client:
-            client.create(znode)
-
-        event.set_results({"ok": True})
-
-    def _get_znodes(self, event: ActionEvent) -> None:
-        """Handle the action that creates a table on different databases."""
-        if not self.unit.is_leader():
-            event.fail("The action can be run only on leader unit.")
-            return
-
-        # read parameters from the event
-        credentials = json.loads(event.params["credentials"])
-
-        username = credentials[KAFKA]["username"]
-        password = credentials[KAFKA]["password"]
-        servers = credentials[KAFKA]["endpoints"]
-
-        with get_zookeeper_client(
-            hosts=servers,
-            username=username,
-            password=password
-        ) as client:
-            client.get(znode)
-
-        event.set_results({"ok": True})
-
-
 
 
 if __name__ == "__main__":
