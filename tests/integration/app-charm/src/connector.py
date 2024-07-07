@@ -3,8 +3,9 @@
 # See LICENSE file for licensing details.
 
 
-import mysql.connector
 from contextlib import contextmanager
+
+import mysql.connector
 from kazoo.client import KazooClient
 
 
@@ -40,11 +41,7 @@ class MysqlConnector:
 
 
 @contextmanager
-def get_zookeeper_client(
-        hosts: str,
-        username: str,
-        password: str
-):
+def get_zookeeper_client(hosts: str, username: str, password: str):
     client = KazooClient(
         hosts=hosts,
         sasl_options={

@@ -11,11 +11,10 @@ of the libraries in this repository.
 import json
 import logging
 
+from connector import get_zookeeper_client
 from helpers import (
     KAFKA,
     KAFKA_K8S,
-    ZOOKEEPER,
-    ZOOKEEPER_K8S,
     MONGODB,
     MONGODB_K8S,
     MYSQL,
@@ -24,6 +23,8 @@ from helpers import (
     PGBOUNCER_K8S,
     POSTGRESQL,
     POSTGRESQL_K8S,
+    ZOOKEEPER,
+    ZOOKEEPER_K8S,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
@@ -38,10 +39,9 @@ from helpers import (
     insert_data_mysql,
     insert_data_postgresql,
     insert_data_zookeeper,
-    produce_messages
+    produce_messages,
 )
-from connector import get_zookeeper_client
-from ops.charm import CharmBase, ActionEvent
+from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
 

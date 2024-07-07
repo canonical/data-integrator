@@ -81,6 +81,7 @@ async def fetch_action_kafka(
     result = await action.wait()
     return result.results
 
+
 async def fetch_action_database(
     unit: Unit, action_name: str, product: str, credentials: str, database_name: str
 ) -> Dict:
