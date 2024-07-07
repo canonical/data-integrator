@@ -4,7 +4,7 @@
 
 import tempfile
 from json import JSONDecodeError
-from typing import Dict
+from typing import Dict, List
 
 import psycopg2
 import requests
@@ -12,6 +12,7 @@ from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector
 from kafka.admin import NewTopic
 from pymongo import MongoClient
+from kazoo.client import KazooClient
 
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"
@@ -334,3 +335,8 @@ def http_request(
         return resp.json()
     except JSONDecodeError:
         return {"status_code": resp.status_code, "text": resp.text}
+
+
+def get_all_node(client: KazooClient, node: str = "/") -> List[str]:
+    children = client.get_children(node)
+    return [node] + [get_all_node(client, child) for child in children]

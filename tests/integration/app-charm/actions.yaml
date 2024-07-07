@@ -71,6 +71,26 @@ create-topic:
       description: The credentials exposed by the data-integrator.
   required: [product,topic-name,credentials]
 
+create-znode:
+  description: create a znode
+  params:
+    znode:
+      type: string
+      description: The name of the topic
+    credentials:
+      type: string
+      description: The credentials exposed by the data-integrator.
+  required: [znode,credentials]
+
+get-znodes:
+  description: create a znode
+  params:
+    credentials:
+      type: string
+      description: The credentials exposed by the data-integrator.
+  required: [credentials]
+
+
 http-request:
   description: run an HTTP request
   params:
