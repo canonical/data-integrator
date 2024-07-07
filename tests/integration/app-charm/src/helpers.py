@@ -4,14 +4,13 @@
 
 import tempfile
 from json import JSONDecodeError
-from typing import Dict, List
+from typing import Dict
 
 import psycopg2
 import requests
 from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector, get_zookeeper_client
 from kafka.admin import NewTopic
-from kazoo.client import KazooClient, NoNodeError
 from pymongo import MongoClient
 
 MYSQL = "mysql"

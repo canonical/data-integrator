@@ -11,7 +11,6 @@ of the libraries in this repository.
 import json
 import logging
 
-from connector import get_zookeeper_client
 from helpers import (
     KAFKA,
     KAFKA_K8S,
@@ -41,7 +40,7 @@ from helpers import (
     insert_data_zookeeper,
     produce_messages,
 )
-from ops.charm import ActionEvent, CharmBase
+from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
 

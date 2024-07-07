@@ -82,26 +82,6 @@ async def fetch_action_kafka(
     return result.results
 
 
-async def fetch_action_database(
-    unit: Unit, action_name: str, product: str, credentials: str, database_name: str
-) -> Dict:
-    """Helper to run an action to execute commands with databases.
-
-    Args:
-        unit: The juju unit on which to run the action
-        action_name: name of the action
-        product: the name of the product
-        credentials: credentials used to connect
-        database_name: name of the database
-    Returns:
-        The result of the action
-    """
-    parameters = {"product": product, "credentials": credentials, "database-name": database_name}
-    action = await unit.run_action(action_name=action_name, **parameters)
-    result = await action.wait()
-    return result.results
-
-
 def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
     """Check that logs are written for a Kafka topic.
 
