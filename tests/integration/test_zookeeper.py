@@ -110,7 +110,7 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     assert result["ok"]
     #  remove relation and test connection again
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
-        DATA_INTEGRATOR, ZOOKEEPER[cloud_name]
+        f"{DATA_INTEGRATOR}:zookeeper", f"{ZOOKEEPER[cloud_name]}:zookeeper"
     )
 
     await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name], DATA_INTEGRATOR])
