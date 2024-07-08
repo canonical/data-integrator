@@ -3,7 +3,10 @@
 # See LICENSE file for licensing details.
 
 
+from contextlib import contextmanager
+
 import mysql.connector
+from kazoo.client import KazooClient
 
 
 class MysqlConnector:
@@ -35,3 +38,21 @@ class MysqlConnector:
         self.connection.commit()
         self.cursor.close()
         self.connection.close()
+
+
+@contextmanager
+def get_zookeeper_client(hosts: str, username: str, password: str):
+    client = KazooClient(
+        hosts=hosts,
+        sasl_options={
+            "mechanism": "DIGEST-MD5",
+            "username": username,
+            "password": password,
+        },
+    )
+    client.start()
+
+    yield client
+
+    client.stop()
+    client.close()
