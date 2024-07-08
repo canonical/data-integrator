@@ -66,7 +66,11 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.wait_for_idle(apps=[provider_name], wait_for_active=True)
     assert ops_test.model.applications[provider_name].status == "active"
     integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, provider_name)
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, provider_name], wait_for_active=True)
+
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[DATA_INTEGRATOR, provider_name], wait_for_active=True, idle_period=30
+        )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     # check if secrets are used on Juju3
@@ -115,7 +119,12 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
 
     await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name], DATA_INTEGRATOR])
     await ops_test.model.add_relation(DATA_INTEGRATOR, ZOOKEEPER[cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]])
+
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]], wait_for_active=True,
+            idle_period=30
+        )
 
     # join with another relation and check the accessibility of the previously created database
     new_credentials = await fetch_action_get_credentials(
