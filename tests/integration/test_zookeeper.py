@@ -122,8 +122,7 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
 
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]], wait_for_active=True,
-            idle_period=30
+            apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]], wait_for_active=True, idle_period=30
         )
 
     # join with another relation and check the accessibility of the previously created database
