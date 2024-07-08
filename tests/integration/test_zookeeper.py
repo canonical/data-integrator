@@ -67,9 +67,9 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     assert ops_test.model.applications[provider_name].status == "active"
     integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, provider_name)
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward(fast_interval="30s"):
         await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR, provider_name], wait_for_active=True, idle_period=30
+            apps=[DATA_INTEGRATOR, provider_name], wait_for_active=True, idle_period=15
         )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
@@ -120,9 +120,9 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name], DATA_INTEGRATOR])
     await ops_test.model.add_relation(DATA_INTEGRATOR, ZOOKEEPER[cloud_name])
 
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward(fast_interval="30s"):
         await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]], wait_for_active=True, idle_period=30
+            apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]], wait_for_active=True, idle_period=15
         )
 
     # join with another relation and check the accessibility of the previously created database
