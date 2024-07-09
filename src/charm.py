@@ -57,7 +57,7 @@ class IntegratorCharm(CharmBase):
 
         self.framework.observe(self.on.update_status, self._on_update_status)
 
-        # Databases: MySQL, PostgreSQL and MongoDB
+        # Databases: MySQL, PostgreSQL, MongoDB and ZooKeeper
         self.databases: Dict[str, DatabaseRequires] = {
             name: self._setup_database_requirer(name) for name in DATABASES
         }

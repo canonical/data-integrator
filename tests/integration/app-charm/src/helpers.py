@@ -9,7 +9,7 @@ from typing import Dict
 import psycopg2
 import requests
 from charms.kafka.v0.client import KafkaClient
-from connector import MysqlConnector
+from connector import MysqlConnector, get_zookeeper_client
 from kafka.admin import NewTopic
 from pymongo import MongoClient
 
@@ -334,3 +334,59 @@ def http_request(
         return resp.json()
     except JSONDecodeError:
         return {"status_code": resp.status_code, "text": resp.text}
+
+
+# ZOOKEEPER
+
+
+def create_table_zookeeper(credentials: Dict[str, str], database_name: str) -> bool:
+    """Create a zNode in a ZooKeeper database."""
+    username = credentials[ZOOKEEPER]["username"]
+    password = credentials[ZOOKEEPER]["password"]
+    servers = credentials[ZOOKEEPER]["endpoints"].split(",")
+
+    port = 2181 if credentials[ZOOKEEPER]["tls"] == "disabled" else 2182
+
+    endpoints = [f"{server}:{port}" for server in servers]
+    try:
+        with get_zookeeper_client(hosts=endpoints, username=username, password=password) as client:
+            client.create(f"/{database_name}/{TABLE_NAME}")
+
+    except Exception:
+        return False
+    return True
+
+
+def insert_data_zookeeper(credentials: Dict[str, str], database_name: str) -> bool:
+    """Insert some testing data in a ZooKeeper zNode."""
+    username = credentials[ZOOKEEPER]["username"]
+    password = credentials[ZOOKEEPER]["password"]
+    servers = credentials[ZOOKEEPER]["endpoints"].split(",")
+
+    port = 2181 if credentials[ZOOKEEPER]["tls"] == "disabled" else 2182
+
+    endpoints = [f"{server}:{port}" for server in servers]
+    try:
+        with get_zookeeper_client(hosts=endpoints, username=username, password=password) as client:
+            client.set(f"{database_name}/{TABLE_NAME}", "some data".encode("utf-8"))
+    except Exception:
+        return False
+    return True
+
+
+def check_inserted_data_zookeeper(credentials: Dict[str, str], database_name: str) -> bool:
+    """Check that data are inserted in a ZooKeeper zNode."""
+    username = credentials[ZOOKEEPER]["username"]
+    password = credentials[ZOOKEEPER]["password"]
+    servers = credentials[ZOOKEEPER]["endpoints"].split(",")
+
+    port = 2181 if credentials[ZOOKEEPER]["tls"] == "disabled" else 2182
+
+    endpoints = [f"{server}:{port}" for server in servers]
+    try:
+        with get_zookeeper_client(hosts=endpoints, username=username, password=password) as client:
+            data = client.get(f"{database_name}/{TABLE_NAME}")
+            assert data.decode("utf-8") == "some data"
+    except Exception:
+        return False
+    return True

@@ -22,17 +22,22 @@ from helpers import (
     PGBOUNCER_K8S,
     POSTGRESQL,
     POSTGRESQL_K8S,
+    ZOOKEEPER,
+    ZOOKEEPER_K8S,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
+    check_inserted_data_zookeeper,
     create_table_mongodb,
     create_table_mysql,
     create_table_postgresql,
+    create_table_zookeeper,
     create_topic,
     http_request,
     insert_data_mongodb,
     insert_data_mysql,
     insert_data_postgresql,
+    insert_data_zookeeper,
     produce_messages,
 )
 from ops.charm import CharmBase
@@ -92,6 +97,9 @@ class ApplicationCharm(CharmBase):
         elif product == MONGODB or product == MONGODB_K8S:
             executed = create_table_mongodb(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
+            executed = create_table_zookeeper(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 
@@ -119,6 +127,9 @@ class ApplicationCharm(CharmBase):
         elif product == MONGODB or product == MONGODB_K8S:
             executed = insert_data_mongodb(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
+            executed = insert_data_zookeeper(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 
@@ -145,6 +156,9 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == MONGODB or product == MONGODB_K8S:
             executed = check_inserted_data_mongodb(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+        elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
+            executed = check_inserted_data_zookeeper(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
