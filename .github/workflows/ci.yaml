@@ -16,7 +16,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v16.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v18.0.0
 
   unit-test:
     name: Unit tests
@@ -57,7 +57,7 @@ jobs:
           - .
           - tests/integration/app-charm
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v16.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v18.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: true
@@ -67,10 +67,10 @@ jobs:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.49
+          - agent: 2.9.50
             libjuju: ^2
-          - agent: 3.1.8
-          - agent: 3.4.4
+          - agent: 3.1.9
+          - agent: 3.4.5
         cloud:
           - lxd
           - microk8s
@@ -80,7 +80,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v16.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v18.0.0
     with:
       artifact-prefix: packed-charm-cache-true
       cloud: ${{ matrix.cloud }}
