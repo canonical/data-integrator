@@ -741,12 +741,12 @@ i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "juju"
-version = "3.5.0.0"
+version = "3.5.2.0"
 description = "Python library for Juju"
 optional = false
 python-versions = "*"
 files = [
-    {file = "juju-3.5.0.0.tar.gz", hash = "sha256:c69fbe63cb12991690787ce3d70812390bf3ca62b6c5e9ef15df00c1f03dd7e6"},
+    {file = "juju-3.5.2.0.tar.gz", hash = "sha256:dd9a36330e63acd8f62bf478fd7e385e51f44dc3918e7a67d0593fd054e1e80a"},
 ]
 
 [package.dependencies]
@@ -1576,8 +1576,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v16.2.1"
-resolved_reference = "ddb4b5112daf309a5665e14caa5dfee03b96eae0"
+reference = "v18.0.0"
+resolved_reference = "da8bb57d6a9650fef8683cb76f233cd672f63db5"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
@@ -1614,8 +1614,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v16.2.1"
-resolved_reference = "ddb4b5112daf309a5665e14caa5dfee03b96eae0"
+reference = "v18.0.0"
+resolved_reference = "da8bb57d6a9650fef8683cb76f233cd672f63db5"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -1633,8 +1633,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v16.2.1"
-resolved_reference = "ddb4b5112daf309a5665e14caa5dfee03b96eae0"
+reference = "v18.0.0"
+resolved_reference = "da8bb57d6a9650fef8683cb76f233cd672f63db5"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2022,4 +2022,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "07c49b82bd84aef0bf945a1df633fae98f9d2a14435396dbe817de1e0eff4592"
+content-hash = "d43f7d311e2d6cad6e1eeb42724251126f698aa4cb0e1e20fe411ba18bd59256"
