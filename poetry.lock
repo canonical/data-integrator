@@ -1576,19 +1576,19 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v18.0.0"
-resolved_reference = "da8bb57d6a9650fef8683cb76f233cd672f63db5"
+reference = "v21.0.1"
+resolved_reference = "06f252ea079edfd055cee236ede28c237467f9b0"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
 name = "pytest-operator"
-version = "0.35.0"
+version = "0.36.0"
 description = "Fixtures for Operators"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytest-operator-0.35.0.tar.gz", hash = "sha256:ed963dc013fc576e218081e95197926b7c98116c1fb5ab234269cf72e0746d5b"},
-    {file = "pytest_operator-0.35.0-py3-none-any.whl", hash = "sha256:026715faba7a0d725ca386fe05a45cfc73746293d8d755be6d2a67ca252267f5"},
+    {file = "pytest_operator-0.36.0-py3-none-any.whl", hash = "sha256:edab65d9d80b19fc85acddeda4a1fd3bb55a781f43ffbb6e9c4002aeeada6ad2"},
+    {file = "pytest_operator-0.36.0.tar.gz", hash = "sha256:041eeabd4c9590614f78b7568c74b0d42f768815a6b5c183da8ccfc23345bea9"},
 ]
 
 [package.dependencies]
@@ -1614,8 +1614,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v18.0.0"
-resolved_reference = "da8bb57d6a9650fef8683cb76f233cd672f63db5"
+reference = "v21.0.1"
+resolved_reference = "06f252ea079edfd055cee236ede28c237467f9b0"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -1633,8 +1633,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v18.0.0"
-resolved_reference = "da8bb57d6a9650fef8683cb76f233cd672f63db5"
+reference = "v21.0.1"
+resolved_reference = "06f252ea079edfd055cee236ede28c237467f9b0"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2022,4 +2022,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d43f7d311e2d6cad6e1eeb42724251126f698aa4cb0e1e20fe411ba18bd59256"
+content-hash = "da3babb1692c6337950541dd139f8b69964235acc4e38dcfe40b8eb9132dda39"
