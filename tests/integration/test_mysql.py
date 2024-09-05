@@ -203,8 +203,13 @@ async def test_deploy_and_relate_mysql_router(ops_test: OpsTest, cloud_name: str
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mysql", f"{MYSQL_ROUTER[cloud_name]}:database"
     )
+    # Subordinate charm will be removed and wait_for_idle expects the app to have units
+    if cloud_name == "localhost":
+        idle_apps = [DATA_INTEGRATOR]
+    else:
+        idle_apps = [DATA_INTEGRATOR, MYSQL_ROUTER[cloud_name]]
 
-    await ops_test.model.wait_for_idle(apps=[MYSQL_ROUTER[cloud_name], DATA_INTEGRATOR])
+    await ops_test.model.wait_for_idle(apps=idle_apps)
     await ops_test.model.add_relation(DATA_INTEGRATOR, MYSQL_ROUTER[cloud_name])
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL_ROUTER[cloud_name]])
 

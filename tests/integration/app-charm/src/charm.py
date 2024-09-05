@@ -18,6 +18,8 @@ from helpers import (
     MONGODB_K8S,
     MYSQL,
     MYSQL_K8S,
+    MYSQL_ROUTER,
+    MYSQL_ROUTER_K8S,
     PGBOUNCER,
     PGBOUNCER_K8S,
     POSTGRESQL,
@@ -91,7 +93,12 @@ class ApplicationCharm(CharmBase):
         ):
             executed = create_table_postgresql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
-        elif product == MYSQL or product == MYSQL_K8S:
+        elif (
+            product == MYSQL
+            or product == MYSQL_K8S
+            or product == MYSQL_ROUTER
+            or product == MYSQL_ROUTER_K8S
+        ):
             executed = create_table_mysql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         elif product == MONGODB or product == MONGODB_K8S:
@@ -121,7 +128,12 @@ class ApplicationCharm(CharmBase):
         ):
             executed = insert_data_postgresql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
-        elif product == MYSQL or product == MYSQL_K8S:
+        elif (
+            product == MYSQL
+            or product == MYSQL_K8S
+            or product == MYSQL_ROUTER
+            or product == MYSQL_ROUTER_K8S
+        ):
             executed = insert_data_mysql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         elif product == MONGODB or product == MONGODB_K8S:
@@ -151,7 +163,12 @@ class ApplicationCharm(CharmBase):
         ):
             executed = check_inserted_data_postgresql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
-        elif product == MYSQL or product == MYSQL_K8S:
+        elif (
+            product == MYSQL
+            or product == MYSQL_K8S
+            or product == MYSQL_ROUTER
+            or product == MYSQL_ROUTER_K8S
+        ):
             executed = check_inserted_data_mysql(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         elif product == MONGODB or product == MONGODB_K8S:

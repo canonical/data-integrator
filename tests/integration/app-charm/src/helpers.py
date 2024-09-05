@@ -14,12 +14,14 @@ from kafka.admin import NewTopic
 from pymongo import MongoClient
 
 MYSQL = "mysql"
+MYSQL_ROUTER = "mysql-router"
 POSTGRESQL = "postgresql"
 PGBOUNCER = "pgbouncer"
 MONGODB = "mongodb"
 OPENSEARCH = "opensearch"
 
 MYSQL_K8S = "mysql-k8s"
+MYSQL_ROUTER_K8S = "mysql-router-k8s"
 POSTGRESQL_K8S = "postgresql-k8s"
 PGBOUNCER_K8S = "pgbouncer-k8s"
 MONGODB_K8S = "mongodb-k8s"
@@ -103,6 +105,7 @@ def get_mysql_config(credentials: Dict[str, str], database_name) -> Dict[str, st
         "user": credentials[MYSQL]["username"],
         "password": credentials[MYSQL]["password"],
         "host": credentials[MYSQL]["endpoints"].split(":")[0],
+        "port": credentials[MYSQL]["endpoints"].split(":")[1],
         "database": database_name,
         "raise_on_warnings": False,
     }
