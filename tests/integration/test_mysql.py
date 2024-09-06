@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 from pathlib import PosixPath
+from time import sleep
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -138,12 +139,15 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mysql", f"{MYSQL[cloud_name]}:database"
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[ops_test.cloud_name]])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MYSQL[cloud_name]])
 
 
 @pytest.mark.group(1)
 async def test_deploy_and_relate_mysql_router(ops_test: OpsTest, cloud_name: str):
     """Test the relation with mysql-router and database accessibility."""
+    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
+        pytest.skip("Test is incompatible with Juju 3.1")
+
     logger.info(f"Test the relation with {MYSQL_ROUTER[cloud_name]}.")
     num_units = 0 if cloud_name == "localhost" else 1
     channel = "dpe/edge" if cloud_name == "localhost" else "8.0/edge"
