@@ -6,7 +6,6 @@ import asyncio
 import json
 import logging
 from pathlib import PosixPath
-from time import sleep
 
 import pytest
 from pytest_operator.plugin import OpsTest
