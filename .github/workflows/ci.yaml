@@ -67,10 +67,10 @@ jobs:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.50
+          - agent: 2.9.50  # renovate: juju-agent-pin-minor
             libjuju: ^2
-          - agent: 3.1.9
-          - agent: 3.4.5
+          - agent: 3.1.9  # renovate: juju-agent-pin-minor
+          - agent: 3.4.5  # renovate: juju-agent-pin-minor
         cloud:
           - lxd
           - microk8s
@@ -86,4 +86,4 @@ jobs:
       cloud: ${{ matrix.cloud }}
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
-      microk8s-snap-channel: 1.29-strict/stable
+      microk8s-snap-channel: 1.29-strict/stable  # renovate: latest microk8s
