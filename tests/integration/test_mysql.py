@@ -23,12 +23,12 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
-    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
-        pytest.skip("Test is incompatible with Juju 3.1")
-
     await asyncio.gather(
         ops_test.model.deploy(
-            data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
+            data_integrator_charm,
+            application_name="data-integrator",
+            num_units=1,
+            series="jammy",
         ),
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
@@ -48,9 +48,6 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 @pytest.mark.group(1)
 async def test_deploy_and_relate_mysql(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MySQL and database accessibility."""
-    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
-        pytest.skip("Test is incompatible with Juju 3.1")
-
     await asyncio.gather(
         ops_test.model.deploy(
             MYSQL[cloud_name],
@@ -144,9 +141,6 @@ async def test_deploy_and_relate_mysql(ops_test: OpsTest, cloud_name: str):
 @pytest.mark.group(1)
 async def test_deploy_and_relate_mysql_router(ops_test: OpsTest, cloud_name: str):
     """Test the relation with mysql-router and database accessibility."""
-    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
-        pytest.skip("Test is incompatible with Juju 3.1")
-
     logger.info(f"Test the relation with {MYSQL_ROUTER[cloud_name]}.")
     num_units = 0 if cloud_name == "localhost" else 1
     channel = "dpe/edge" if cloud_name == "localhost" else "8.0/edge"
