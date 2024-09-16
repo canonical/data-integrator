@@ -56,11 +56,10 @@ async def test_deploy(
 @only_with_juju_secrets
 async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MongoDB and database accessibility."""
-    channel = "5/edge" if cloud_name == "localhost" else "edge"
     await asyncio.gather(
         ops_test.model.deploy(
             MONGODB[cloud_name],
-            channel=channel,
+            channel="6/edge",
             application_name=MONGODB[cloud_name],
             num_units=1,
             series="jammy",
