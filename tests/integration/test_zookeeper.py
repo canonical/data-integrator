@@ -23,12 +23,12 @@ logger = logging.getLogger(__name__)
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
+    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
+        pytest.skip("Test is incompatible with Juju 3.1")
+
     await asyncio.gather(
         ops_test.model.deploy(
-            data_integrator_charm,
-            application_name="data-integrator",
-            num_units=1,
-            series="jammy",
+            data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
@@ -48,6 +48,9 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 @pytest.mark.group(1)
 async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     """Test the relation with ZooKeeper and database accessibility."""
+    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
+        pytest.skip("Test is incompatible with Juju 3.1")
+
     provider_name = ZOOKEEPER[cloud_name]
 
     await asyncio.gather(
@@ -119,9 +122,7 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
 
     async with ops_test.fast_forward(fast_interval="30s"):
         await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]],
-            wait_for_active=True,
-            idle_period=15,
+            apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]], wait_for_active=True, idle_period=15
         )
 
     # join with another relation and check the accessibility of the previously created database
