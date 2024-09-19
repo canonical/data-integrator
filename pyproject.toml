@@ -46,7 +46,7 @@ pytest-operator-groups = {git = "https://github.com/canonical/data-platform-work
 juju = "^3.5.2.0"
 mysql-connector-python = "^8.4.0"
 psycopg2-binary = "^2.9.9"
-pymongo = "^4.8.0"
+pymongo = "^4.9.1"
 kazoo = "^2.10.0"
 kafka-python = "^2.0.2"
 
