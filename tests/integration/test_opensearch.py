@@ -221,7 +221,7 @@ async def test_recycle_credentials(ops_test: OpsTest, cloud_name: str):
         ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR], status="blocked"),
     )
 
-    await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[cloud_name]),
+    (await ops_test.model.relate(DATA_INTEGRATOR, OPENSEARCH[cloud_name]),)
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",

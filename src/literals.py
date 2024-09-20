@@ -4,7 +4,6 @@
 
 """Literals used by the data-integrator charm."""
 
-
 PEER = "data-integrator-peers"
 MYSQL = "mysql"
 POSTGRESQL = "postgresql"

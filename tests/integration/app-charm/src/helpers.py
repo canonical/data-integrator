@@ -162,13 +162,11 @@ def insert_data_mysql(credentials: Dict[str, str], database_name: str) -> bool:
     with MysqlConnector(config) as cursor:
         try:
             cursor.execute(
-                " ".join(
-                    (
-                        f"INSERT INTO {TABLE_NAME} (",
-                        "username, password, endpoints, version, read_only_endpoints)",
-                        "VALUES (%s, %s, %s, %s, %s)",
-                    )
-                ),
+                " ".join((
+                    f"INSERT INTO {TABLE_NAME} (",
+                    "username, password, endpoints, version, read_only_endpoints)",
+                    "VALUES (%s, %s, %s, %s, %s)",
+                )),
                 (
                     credentials[MYSQL]["username"],
                     credentials[MYSQL]["password"],
