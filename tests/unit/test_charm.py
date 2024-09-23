@@ -186,13 +186,11 @@ class TestCharm(unittest.TestCase):
         # Test action
         action_event = Mock()
         self.harness.charm._on_get_credentials_action(action_event)
-        action_event.set_results.assert_called_once_with(
-            {
-                "ok": True,
-                "mysql": {
-                    "username": "test-username",
-                    "password": "test-password",
-                    "database": "test-database",
-                },
-            }
-        )
+        action_event.set_results.assert_called_once_with({
+            "ok": True,
+            "mysql": {
+                "username": "test-username",
+                "password": "test-password",
+                "database": "test-database",
+            },
+        })

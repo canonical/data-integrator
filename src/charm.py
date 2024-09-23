@@ -115,7 +115,7 @@ class IntegratorCharm(CharmBase):
             )
 
         if self.is_database_related and any(
-            [database != self.database_name for database in self.databases_active.values()]
+            database != self.database_name for database in self.databases_active.values()
         ):
             current_database = list(self.databases_active.values())[0]
             logger.error(
