@@ -38,7 +38,7 @@ juju add-model testing
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 
 # Build the charm locally
-tox run -e build-production
+charmcraftcache pack
 
 
 # Deploy the charm
