@@ -205,6 +205,7 @@ class IntegratorCharm(CharmBase):
         """Event triggered when a database was created for this application."""
         logger.debug(f"Database credentials are received: {event.username}")
         self._on_config_changed(event)
+        self.unit.status = self.get_status()
         if not self.unit.is_leader():
             return
         # update values in the databag
@@ -214,6 +215,7 @@ class IntegratorCharm(CharmBase):
         """Event triggered when a topic was created for this application."""
         logger.debug(f"Kafka credentials are received: {event.username}")
         self._on_config_changed(event)
+        self.unit.status = self.get_status()
         if not self.unit.is_leader():
             return
         # update status of the relations in the peer-databag
@@ -223,6 +225,7 @@ class IntegratorCharm(CharmBase):
         """Event triggered when an index is created for this application."""
         logger.debug(f"OpenSearch credentials are received: {event.username}")
         self._on_config_changed(event)
+        self.unit.status = self.get_status()
         if not self.unit.is_leader:
             return
         # update status of the relations in the peer-databag
