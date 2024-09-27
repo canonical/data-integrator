@@ -10,8 +10,7 @@ ops = "^2.16.1"
 pymongo = "^4.8.0"
 kafka-python = "^2.0.2"
 kazoo = "^2.10.0"
-pure-sasl = "^0.6.2"
 psycopg2 = "^2.9.9"
-mysql-connector-python = "^9.0.0"
+mysql-connector-python = "8.4.0"
 
 [tool.poetry.group.charm-libs.dependencies]
