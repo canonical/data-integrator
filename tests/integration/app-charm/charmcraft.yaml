@@ -19,6 +19,7 @@ parts:
       craftctl default
     charm-binary-python-packages:
       - mysql-connector-python==9.0.0  # renovate: pypi
+  # Binary dependencies for psycopg
   libpq:
     build-packages:
       - libpq-dev
