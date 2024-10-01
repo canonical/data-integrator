@@ -2,9 +2,13 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>canonical/data-platform//renovate_presets/charm.json5"],
   "reviewers": ["dragomirp", "welpaolo"],
+  // Need to check tests dir to update test charm dependenices
+  "poetry": {
+    "ignorePaths": []
+  },
   "packageRules": [
     // Later rules override earlier rules
   ],
-  "regexManagers": [
+  "customManagers": [
   ]
 }

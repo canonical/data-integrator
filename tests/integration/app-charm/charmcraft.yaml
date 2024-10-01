@@ -2,15 +2,33 @@
 # See LICENSE file for licensing details.
 
 type: charm
-
-parts:
-  charm:
-    charm-binary-python-packages:
-      - psycopg2-binary
-      - mysql-connector-python ~= 8.0.33
-
 bases:
   - name: ubuntu
     channel: "22.04"
     architectures: [amd64]
 
+parts:
+  charm:
+    build-packages:
+      - libpq-dev
+    override-build: |
+      # Convert subset of poetry.lock to requirements.txt
+      curl -sSL https://install.python-poetry.org | python3 -
+      /root/.local/bin/poetry export --only main,charm-libs --output requirements.txt
+
+      craftctl default
+    charm-binary-python-packages:
+      - mysql-connector-python
+    charm-strict-dependencies: true
+    charm-requirements: [requirements.txt]
+  # Binary dependencies for psycopg
+  libpq:
+    build-packages:
+      - libpq-dev
+    plugin: dump
+    source: /usr/lib/
+    source-type: local
+    prime:
+      - lib/
+    organize:
+      "*-linux-gnu/libpq.so*": lib/

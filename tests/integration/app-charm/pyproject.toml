@@ -1,0 +1,16 @@
+# Copyright 2024 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ops = "^2.16.1"
+pymongo = "^4.8.0"
+kafka-python = "^2.0.2"
+kazoo = "^2.10.0"
+psycopg2 = "^2.9.9"
+mysql-connector-python = "^9.0.0"
+
+[tool.poetry.group.charm-libs.dependencies]
