@@ -6,27 +6,9 @@
   "poetry": {
     "ignorePaths": []
   },
-  // Need to check tests dir to update test charm dependenices
-  "regex": {
-    "ignorePaths": []
-  },
   "packageRules": [
     // Later rules override earlier rules
-    // Update charmcraft yaml dependencies together with poetry
-    {
-      "matchDatasources": ["pypi"],
-      "groupName": "Python dependencies"
-    }
   ],
   "customManagers": [
-    // Update binary dependencies in charmcraft yaml
-    {
-      "fileMatch": ["^tests/integration/app-charm/charmcraft\\.yaml$"],
-      "matchStrings": [
-        "- (?<packageName>.+)==(?<currentValue>[0-9\\.]+)+ +# renovate: pypi"
-      ],
-      "datasourceTemplate": "pypi",
-      "versioningTemplate": "semver",
-    },
   ]
 }
