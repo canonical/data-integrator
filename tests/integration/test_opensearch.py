@@ -104,6 +104,7 @@ async def test_deploy(
             channel="2/edge",
             application_name=OPENSEARCH[cloud_name],
             num_units=2,
+            config={"profile": "testing"},
         ),
         ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
         ops_test.model.deploy(
