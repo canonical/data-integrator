@@ -53,16 +53,14 @@ jobs:
         charm:
           - path: .
             charmcraft: 2.x/stable
-            cache: true
           - path: tests/integration/app-charm
             charmcraft: latest/stable
-            cache: false
     name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v23.0.5
     with:
       path-to-charm-directory: ${{ matrix.charm.path }}
       charmcraft-snap-channel:  ${{ matrix.charm.charmcraft }}
-      cache: ${{ matrix.charm.cache }}
+      cache: false
 
   integration-test:
     strategy:
