@@ -63,7 +63,7 @@ jobs:
       path-to-charm-directory: ${{ matrix.charm.path }}
       charmcraft-snap-channel: ${{ matrix.charm.charmcraft }}
       cache: ${{ matrix.charm.cache }}
-      artifact-prefix: temp-packed-charm
+      artifact-prefix: temp-packed-charm-${{ matrix.charm.path }}
 
   integration-test:
     strategy:
