@@ -52,9 +52,11 @@ jobs:
       matrix:
         charm:
           - path: .
+            name: data-integrator
             charmcraft: 2.x/stable
             cache: true
           - path: tests/integration/app-charm
+            name: test
             charmcraft: latest/stable
             cache: false
     name: Build charm
@@ -63,7 +65,7 @@ jobs:
       path-to-charm-directory: ${{ matrix.charm.path }}
       charmcraft-snap-channel: ${{ matrix.charm.charmcraft }}
       cache: ${{ matrix.charm.cache }}
-      artifact-prefix: temp-packed-charm-${{ matrix.charm.path }}
+      artifact-prefix: temp-packed-charm-${{ matrix.charm.name }}
 
   integration-test:
     strategy:
