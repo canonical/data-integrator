@@ -21,10 +21,18 @@ from charms.data_platform_libs.v0.data_interfaces import (
     RequirerData,
     TopicCreatedEvent,
 )
-from ops.charm import ActionEvent, CharmBase, RelationBrokenEvent, RelationEvent
-from ops.framework import EventBase
-from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, Relation, StatusBase
+from ops import (
+    ActionEvent,
+    ActiveStatus,
+    BlockedStatus,
+    CharmBase,
+    EventBase,
+    Relation,
+    RelationBrokenEvent,
+    RelationEvent,
+    StatusBase,
+    main,
+)
 
 from literals import DATABASES, KAFKA, OPENSEARCH, PEER
 
