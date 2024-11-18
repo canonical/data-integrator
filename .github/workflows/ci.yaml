@@ -63,6 +63,7 @@ jobs:
       path-to-charm-directory: ${{ matrix.charm.path }}
       charmcraft-snap-channel: ${{ matrix.charm.charmcraft }}
       cache: ${{ matrix.charm.cache }}
+      artifact-prefix: temp-packed-charm
 
   integration-test:
     strategy:
@@ -84,7 +85,7 @@ jobs:
       - build
     uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v23.0.5
     with:
-      artifact-prefix: packed-charm-cache
+      artifact-prefix: temp-packed-charm
       cloud: ${{ matrix.cloud }}
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
