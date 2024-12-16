@@ -99,13 +99,13 @@ telemetry = ["opentelemetry-api (==1.18.0)", "opentelemetry-exporter-otlp-proto-
 
 [[package]]
 name = "ops"
-version = "2.17.0"
+version = "2.17.1"
 description = "The Python library behind great charms"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "ops-2.17.0-py3-none-any.whl", hash = "sha256:b6b7cebd1897bc1ea26312f1ddece693fbb5b392d5a395d5deef59204b98925e"},
-    {file = "ops-2.17.0.tar.gz", hash = "sha256:04f298bed94bfde3dd38ba39d309cda03d595273e815add6d0affb110cacb77b"},
+    {file = "ops-2.17.1-py3-none-any.whl", hash = "sha256:0fabc45740d59619c3265328f51f71f99b06557e22493cdd32d10c2b25bcd553"},
+    {file = "ops-2.17.1.tar.gz", hash = "sha256:de2d1dd382b4a5f3df3ba78a5266d59462644f3f8ea0f4e7479a248998862a3f"},
 ]
 
 [package.dependencies]
@@ -296,4 +296,4 @@ test = ["websockets"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "e5bf6a0641a3be93343a78dabe5b1bc9c837597c709eb1c09b85474d1fa88630"
+content-hash = "665e74c754792c1f7fe44807c9736929d52f58d95c429ed7158b738b7f4c63b2"
