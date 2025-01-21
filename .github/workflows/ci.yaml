@@ -57,9 +57,7 @@ jobs:
       matrix:
         charm:
           - path: .
-            name: data-integrator
           - path: tests/integration/app-charm
-            name: test
     name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.1
     with:
