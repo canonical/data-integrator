@@ -57,11 +57,11 @@ jobs:
       matrix:
         path:
           - .
-          - path: tests/integration/app-charm
+          - tests/integration/app-charm
     name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.1
     with:
-      path-to-charm-directory: ${{ matrix.charm.path }}
+      path-to-charm-directory: ${{ matrix.path }}
       cache: false  # TODO: will change to `true` afte cache is reenabled
       charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
 
