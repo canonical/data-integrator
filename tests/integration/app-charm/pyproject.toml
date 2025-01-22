@@ -3,6 +3,7 @@
 
 [tool.poetry]
 package-mode = false
+requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -12,5 +13,6 @@ kafka-python = "^2.0.2"
 kazoo = "^2.10.0"
 psycopg2 = "^2.9.10"
 mysql-connector-python = "^9.1.0"
+requests = "^2.32.3"
 
 [tool.poetry.group.charm-libs.dependencies]

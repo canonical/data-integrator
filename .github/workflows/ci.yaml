@@ -9,14 +9,18 @@ concurrency:
 on:
   pull_request:
   schedule:
-    - cron: '53 0 * * *' # Daily at 00:53 UTC
+    - cron: '53 0 * * *'  # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
+    outputs:
+      artifact-prefix:
+        description: build_charm.yaml `artifact-prefix` output
+        value: ${{ jobs.build.outputs.artifact-prefix }}
 
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v24.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v29.0.1
 
   unit-test:
     name: Unit tests
@@ -46,26 +50,20 @@ jobs:
         with:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}" # FIXME: current token will expire in 2023-07-04
           github-token: "${{ secrets.GITHUB_TOKEN }}"
+          charmcraft-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
 
   build:
     strategy:
       matrix:
-        charm:
-          - path: .
-            name: data-integrator
-            charmcraft: 2.x/stable
-            cache: true
-          - path: tests/integration/app-charm
-            name: test
-            charmcraft: latest/stable
-            cache: false
+        path:
+          - .
+          - tests/integration/app-charm
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v24.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.1
     with:
-      path-to-charm-directory: ${{ matrix.charm.path }}
-      charmcraft-snap-channel: ${{ matrix.charm.charmcraft }}
-      cache: ${{ matrix.charm.cache }}
-      artifact-prefix: temp-packed-charm-${{ matrix.charm.name }}
+      path-to-charm-directory: ${{ matrix.path }}
+      cache: false  # TODO: will change to `true` afte cache is reenabled
+      charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
 
   integration-test:
     strategy:
@@ -85,9 +83,9 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v24.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.1
     with:
-      artifact-prefix: temp-packed-charm
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: ${{ matrix.cloud }}
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
