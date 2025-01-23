@@ -70,9 +70,6 @@ async def test_deploy(
     sudo sysctl -w vm.max_map_count=262144 vm.swappiness=0 net.ipv4.tcp_retries2=5
     ```
     """
-    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
-        pytest.skip("Test is incompatible with Juju 3.1")
-
     args = [
         "sudo",
         "sysctl",
@@ -147,9 +144,6 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: 
     This test verifies that we can use the credentials provided to the data-integrator charm to
     update and retrieve data from the opensearch charm.
     """
-    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
-        pytest.skip("Test is incompatible with Juju 3.1")
-
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME, APP],
         status="active",
@@ -202,9 +196,6 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: 
 @only_with_juju_secrets
 async def test_recycle_credentials(ops_test: OpsTest, cloud_name: str):
     """Tests that we can recreate credentials by removing and creating a new relation."""
-    if (await ops_test.model.get_status()).model.version.startswith("3.1."):
-        pytest.skip("Test is incompatible with Juju 3.1")
-
     old_credentials = (
         await fetch_action_get_credentials(ops_test.model.applications[DATA_INTEGRATOR].units[0])
     ).get(OPENSEARCH[cloud_name])

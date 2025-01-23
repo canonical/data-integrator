@@ -62,7 +62,6 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.1
     with:
       path-to-charm-directory: ${{ matrix.path }}
-      cache: false  # TODO: will change to `true` afte cache is reenabled
       charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
 
   integration-test:
@@ -72,8 +71,7 @@ jobs:
         juju:
           - agent: 2.9.51  # renovate: juju-agent-pin-minor
             libjuju: ^2
-          - agent: 3.1.10  # renovate: juju-agent-pin-minor
-          - agent: 3.5.4  # renovate: juju-agent-pin-minor
+          - agent: 3.6.2  # renovate: juju-agent-pin-minor
         cloud:
           - lxd
           - microk8s
