@@ -36,7 +36,7 @@ async def app_charm(ops_test: OpsTest):
     return charm
 
 
-@pytest.fixture()
+@pytest.fixture(scope="module")
 async def cloud_name(ops_test: OpsTest, request):
     """Checks the cloud."""
     if request.node.parent:
@@ -56,7 +56,7 @@ async def cloud_name(ops_test: OpsTest, request):
 
 
 @only_on_microk8s
-@pytest.fixture()
+@pytest.fixture(scope="module")
 def s3_bucket_and_creds(cloud_name: str):
     logger.info("Fetching S3 credentials from minio.....")
 
@@ -86,7 +86,7 @@ def s3_bucket_and_creds(cloud_name: str):
     # Delete test bucket if it exists
     if test_bucket in s3.buckets.all():
         logger.info(f"The bucket {TEST_BUCKET_NAME} already exists. Deleting it...")
-        test_bucket.objects.all().delete()
+        test_bucket.objects.all().delete(ChecksumAlgorithm="SHA256")
         test_bucket.delete()
 
     # Create the test bucket
@@ -102,5 +102,5 @@ def s3_bucket_and_creds(cloud_name: str):
     }
 
     logger.info("Tearing down test bucket...")
-    test_bucket.objects.all().delete()
+    test_bucket.objects.all().delete(ChecksumAlgorithm="SHA256")
     test_bucket.delete()
