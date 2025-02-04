@@ -127,7 +127,7 @@ async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
 
     # Integrate integration hub with S3 integrator and wait
     logger.info("Integrating integration-hub charm with s3-integrator charm...")
-    await ops_test.model.integrate(S3_APP_NAME, INTEGRATION_HUB_APP_NAME)
+    await ops_test.model.add_relation(S3_APP_NAME, INTEGRATION_HUB_APP_NAME)
     logger.info("Waiting for s3-integrator and integration-hub charms to be idle and active...")
     await ops_test.model.wait_for_idle(
         apps=[
@@ -146,7 +146,7 @@ async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
 
     # Integrate Kyuubi with Integration Hub and wait
     logger.info("Integrating kyuubi charm with integration-hub charm...")
-    await ops_test.model.integrate(INTEGRATION_HUB_APP_NAME, KYUUBI_APP_NAME)
+    await ops_test.model.add_relation(INTEGRATION_HUB_APP_NAME, KYUUBI_APP_NAME)
     logger.info("Waiting for s3-integrator and integration_hub charms to be idle and active...")
     await ops_test.model.wait_for_idle(
         apps=[
