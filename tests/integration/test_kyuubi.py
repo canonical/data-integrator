@@ -26,6 +26,7 @@ S3_APP_NAME = "s3-integrator"
 INTEGRATION_HUB_APP_NAME = "spark-integration-hub-k8s"
 
 
+@only_on_microk8s
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_data_integrator(
@@ -50,8 +51,8 @@ async def test_deploy_data_integrator(
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.group(1)
 @only_on_microk8s
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
     kyuubi_deploy_args = {
@@ -176,6 +177,7 @@ async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
     logger.info("Successfully deployed minimal working Kyuubi setup.")
 
 
+@only_on_microk8s
 @pytest.mark.group(1)
 async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest):
     """Test the relation with ZooKeeper and database accessibility."""
@@ -196,6 +198,7 @@ async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest):
     )
 
 
+@only_on_microk8s
 @pytest.mark.group(1)
 async def test_data_read_write_on_kyuubi(ops_test: OpsTest):
     """Test the relation with ZooKeeper and database accessibility."""
