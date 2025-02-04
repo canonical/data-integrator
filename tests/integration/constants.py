@@ -22,4 +22,6 @@ OPENSEARCH = {"localhost": "opensearch"}
 INDEX_NAME = "albums"
 OPENSEARCH_EXTRA_USER_ROLES = "default"
 
+KYUUBI = {"microk8s": "kyuubi-k8s"}
+
 APP = "app"

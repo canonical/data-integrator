@@ -2,10 +2,23 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
+import subprocess
 from pathlib import Path
 
+import boto3
+import boto3.session
 import pytest
+from botocore.client import Config
 from pytest_operator.plugin import OpsTest
+
+from .markers import only_on_microk8s
+
+TEST_BUCKET_NAME = "kyuubi-test"
+TEST_PATH_NAME = "spark-events/"
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -40,3 +53,54 @@ async def cloud_name(ops_test: OpsTest, request):
             pytest.skip("Does not run on vm")
             return
         return "localhost"
+
+
+@only_on_microk8s
+@pytest.fixture(scope="module")
+def s3_bucket_and_creds():
+    logger.info("Fetching S3 credentials from minio.....")
+
+    fetch_s3_output = (
+        subprocess.check_output(
+            "./tests/integration/scripts/fetch_s3_credentials.sh | tail -n 3",
+            shell=True,
+            stderr=None,
+        )
+        .decode("utf-8")
+        .strip()
+    )
+
+    logger.info(f"fetch_s3_credentials output:\n{fetch_s3_output}")
+
+    endpoint_url, access_key, secret_key = fetch_s3_output.strip().splitlines()
+
+    session = boto3.session.Session(aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+    s3 = session.resource(
+        service_name="s3",
+        endpoint_url=endpoint_url,
+        verify=False,
+        config=Config(connect_timeout=60, retries={"max_attempts": 4}),
+    )
+    test_bucket = s3.Bucket(TEST_BUCKET_NAME)
+
+    # Delete test bucket if it exists
+    if test_bucket in s3.buckets.all():
+        logger.info(f"The bucket {TEST_BUCKET_NAME} already exists. Deleting it...")
+        test_bucket.objects.all().delete()
+        test_bucket.delete()
+
+    # Create the test bucket
+    s3.create_bucket(Bucket=TEST_BUCKET_NAME)
+    logger.info(f"Created bucket: {TEST_BUCKET_NAME}")
+    test_bucket.put_object(Key=TEST_PATH_NAME)
+    yield {
+        "endpoint": endpoint_url,
+        "access_key": access_key,
+        "secret_key": secret_key,
+        "bucket": TEST_BUCKET_NAME,
+        "path": TEST_PATH_NAME,
+    }
+
+    logger.info("Tearing down test bucket...")
+    test_bucket.objects.all().delete()
+    test_bucket.delete()

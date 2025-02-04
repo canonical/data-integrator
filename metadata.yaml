@@ -45,6 +45,9 @@ requires:
   opensearch:
     interface: opensearch_client
     limit: 1
+  kyuubi:
+    interface: kyuubi_client
+    limit: 1
 
 # subordinate charm integrations
 provides:
