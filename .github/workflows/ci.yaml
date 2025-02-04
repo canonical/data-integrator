@@ -86,3 +86,4 @@ jobs:
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
       microk8s-snap-channel: 1.32-strict/stable  # renovate: latest microk8s
+      minio-addon: true
