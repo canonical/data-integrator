@@ -32,7 +32,7 @@ POSTGRESQL_APP_NAME = "postgresql-k8s"
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_data_integrator(
-    ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath
+    ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath, cloud_name: str
 ):
     await asyncio.gather(
         ops_test.model.deploy(
@@ -57,7 +57,9 @@ async def test_deploy_data_integrator(
 @only_on_microk8s
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
+async def test_deploy_kyuubi_setup(
+    ops_test: OpsTest, s3_bucket_and_creds: dict[str, str], cloud_name: str
+):
     kyuubi_deploy_args = {
         "application_name": KYUUBI_APP_NAME,
         "num_units": 1,
@@ -204,7 +206,7 @@ async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
 @only_with_juju_3
 @only_on_microk8s
 @pytest.mark.group(1)
-async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest):
+async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest, cloud_name: str):
     """Test the relation with ZooKeeper and database accessibility."""
     integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, KYUUBI_APP_NAME)
 
@@ -226,7 +228,7 @@ async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest):
 @only_with_juju_3
 @only_on_microk8s
 @pytest.mark.group(1)
-async def test_data_read_write_on_kyuubi(ops_test: OpsTest):
+async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
     """Test the relation with ZooKeeper and database accessibility."""
     # get credential for Kyuubi
     credentials = await fetch_action_get_credentials(
