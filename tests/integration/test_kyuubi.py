@@ -58,7 +58,7 @@ async def test_deploy_data_integrator(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_kyuubi_setup(
-    ops_test: OpsTest, s3_bucket_and_creds: dict[str, str], cloud_name: str
+    ops_test: OpsTest, cloud_name: str, s3_bucket_and_creds: dict[str, str]
 ):
     kyuubi_deploy_args = {
         "application_name": KYUUBI_APP_NAME,
