@@ -56,7 +56,6 @@ async def cloud_name(ops_test: OpsTest, request):
 
 
 @only_on_microk8s
-@pytest.fixture(scope="module")
 def s3_bucket_and_creds(cloud_name: str):
     logger.info("Fetching S3 credentials from minio.....")
 
