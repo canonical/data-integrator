@@ -16,7 +16,7 @@ from .helpers import (
     fetch_action_database,
     fetch_action_get_credentials,
 )
-from .markers import only_on_microk8s
+from .markers import only_on_microk8s, only_with_juju_3
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +24,10 @@ logger = logging.getLogger(__name__)
 KYUUBI_APP_NAME = "kyuubi-k8s"
 S3_APP_NAME = "s3-integrator"
 INTEGRATION_HUB_APP_NAME = "spark-integration-hub-k8s"
+POSTGRESQL_APP_NAME = "postgresql-k8s"
 
 
+@only_with_juju_3
 @only_on_microk8s
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -51,6 +53,7 @@ async def test_deploy_data_integrator(
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
+@only_with_juju_3
 @only_on_microk8s
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -147,21 +150,8 @@ async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
     # Integrate Kyuubi with Integration Hub and wait
     logger.info("Integrating kyuubi charm with integration-hub charm...")
     await ops_test.model.add_relation(INTEGRATION_HUB_APP_NAME, KYUUBI_APP_NAME)
-    logger.info("Waiting for s3-integrator and integration_hub charms to be idle and active...")
-    await ops_test.model.wait_for_idle(
-        apps=[
-            INTEGRATION_HUB_APP_NAME,
-            S3_APP_NAME,
-        ],
-        idle_period=20,
-        status="active",
-    )
-    logger.info("Waiting for kyuubi charm to be idle...")
-    await ops_test.model.wait_for_idle(
-        apps=[
-            KYUUBI_APP_NAME,
-        ],
-        idle_period=20,
+    logger.info(
+        "Waiting for kyuubi, s3-integrator and integration_hub charms to be idle and active..."
     )
 
     # Wait for everything to settle down
@@ -174,9 +164,44 @@ async def test_deploy_kyuubi_setup(ops_test: OpsTest, s3_bucket_and_creds):
         idle_period=20,
         status="active",
     )
+
+    # Deploy the postgresql charm and wait
+    hub_deploy_args = {
+        "application_name": POSTGRESQL_APP_NAME,
+        "channel": "14/stable",
+        "series": "jammy",
+        "trust": True,
+    }
+    logger.info("Deploying postgresql charm...")
+    await ops_test.model.deploy(POSTGRESQL_APP_NAME, **hub_deploy_args)
+    logger.info("Waiting for postgresql charm to be idle and active...")
+    await ops_test.model.wait_for_idle(
+        apps=[POSTGRESQL_APP_NAME],
+        status="active",
+    )
+
+    # Integrate Kyuubi with Postgresql and wait
+    logger.info("Integrating kyuubi charm with integration-hub charm...")
+    await ops_test.model.add_relation(f"{INTEGRATION_HUB_APP_NAME}:auth-db", POSTGRESQL_APP_NAME)
+    logger.info(
+        "Waiting for kyuubi, s3-integrator and integration_hub, and postgresql charms to be idle and active..."
+    )
+
+    # Wait for everything to settle down
+    await ops_test.model.wait_for_idle(
+        apps=[
+            KYUUBI_APP_NAME,
+            INTEGRATION_HUB_APP_NAME,
+            S3_APP_NAME,
+            POSTGRESQL_APP_NAME,
+        ],
+        idle_period=20,
+        status="active",
+    )
     logger.info("Successfully deployed minimal working Kyuubi setup.")
 
 
+@only_with_juju_3
 @only_on_microk8s
 @pytest.mark.group(1)
 async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest):
@@ -198,6 +223,7 @@ async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest):
     )
 
 
+@only_with_juju_3
 @only_on_microk8s
 @pytest.mark.group(1)
 async def test_data_read_write_on_kyuubi(ops_test: OpsTest):
