@@ -183,8 +183,8 @@ async def test_deploy_kyuubi_setup(
     )
 
     # Integrate Kyuubi with Postgresql and wait
-    logger.info("Integrating kyuubi charm with integration-hub charm...")
-    await ops_test.model.add_relation(f"{INTEGRATION_HUB_APP_NAME}:auth-db", POSTGRESQL_APP_NAME)
+    logger.info("Integrating kyuubi charm with postgresql charm...")
+    await ops_test.model.add_relation(f"{KYUUBI_APP_NAME}:auth-db", POSTGRESQL_APP_NAME)
     logger.info(
         "Waiting for kyuubi, s3-integrator and integration_hub, and postgresql charms to be idle and active..."
     )
