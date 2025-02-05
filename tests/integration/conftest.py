@@ -12,8 +12,6 @@ import pytest
 from botocore.client import Config
 from pytest_operator.plugin import OpsTest
 
-from .markers import only_on_microk8s
-
 TEST_BUCKET_NAME = "kyuubi-test"
 TEST_PATH_NAME = "spark-events/"
 
@@ -36,7 +34,6 @@ async def app_charm(ops_test: OpsTest):
     return charm
 
 
-@pytest.fixture(scope="module")
 async def cloud_name(ops_test: OpsTest, request):
     """Checks the cloud."""
     if request.node.parent:
@@ -55,9 +52,11 @@ async def cloud_name(ops_test: OpsTest, request):
         return "localhost"
 
 
-@only_on_microk8s
 @pytest.fixture(scope="module")
-def s3_bucket_and_creds(cloud_name: str):
+def s3_bucket_and_creds(ops_test: OpsTest):
+    if ops_test.model.info.provider_type != "kubernetes":
+        return
+
     logger.info("Fetching S3 credentials from minio.....")
 
     fetch_s3_output = (
