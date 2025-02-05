@@ -34,6 +34,7 @@ async def app_charm(ops_test: OpsTest):
     return charm
 
 
+@pytest.fixture()
 async def cloud_name(ops_test: OpsTest, request):
     """Checks the cloud."""
     if request.node.parent:
