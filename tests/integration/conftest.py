@@ -55,6 +55,7 @@ async def cloud_name(ops_test: OpsTest, request):
 @pytest.fixture(scope="module")
 def s3_bucket_and_creds(ops_test: OpsTest):
     if ops_test.model.info.provider_type != "kubernetes":
+        yield None
         return
 
     logger.info("Fetching S3 credentials from minio.....")
