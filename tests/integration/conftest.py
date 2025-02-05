@@ -87,7 +87,7 @@ def s3_bucket_and_creds(ops_test: OpsTest):
     # Delete test bucket if it exists
     if test_bucket in s3.buckets.all():
         logger.info(f"The bucket {TEST_BUCKET_NAME} already exists. Deleting it...")
-        test_bucket.objects.all().delete(ChecksumAlgorithm="SHA256")
+        test_bucket.objects.all().delete()
         test_bucket.delete()
 
     # Create the test bucket
@@ -103,5 +103,5 @@ def s3_bucket_and_creds(ops_test: OpsTest):
     }
 
     logger.info("Tearing down test bucket...")
-    test_bucket.objects.all().delete(ChecksumAlgorithm="SHA256")
+    test_bucket.objects.all().delete()
     test_bucket.delete()
