@@ -63,7 +63,7 @@ async def test_deploy_kyuubi_setup(
     kyuubi_deploy_args = {
         "application_name": KYUUBI_APP_NAME,
         "num_units": 1,
-        "channel": "edge",
+        "channel": "latest/edge/bikalpa",
         "series": "jammy",
         "trust": True,
     }
