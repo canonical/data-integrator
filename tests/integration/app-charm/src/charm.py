@@ -14,7 +14,7 @@ import logging
 from helpers import (
     KAFKA,
     KAFKA_K8S,
-    KYUUBI_K8S,
+    KYUUBI,
     MONGODB,
     MONGODB_K8S,
     MYSQL,
@@ -111,7 +111,7 @@ class ApplicationCharm(CharmBase):
         elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
             executed = create_table_zookeeper(credentials, database_name)
             event.set_results({"ok": True if executed else False})
-        elif product == KYUUBI_K8S:
+        elif product == KYUUBI:
             executed = create_table_kyuubi(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         else:
@@ -149,7 +149,7 @@ class ApplicationCharm(CharmBase):
         elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
             executed = insert_data_zookeeper(credentials, database_name)
             event.set_results({"ok": True if executed else False})
-        elif product == KYUUBI_K8S:
+        elif product == KYUUBI:
             executed = insert_data_kyuubi(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         else:
@@ -187,8 +187,9 @@ class ApplicationCharm(CharmBase):
         elif product == ZOOKEEPER or product == ZOOKEEPER_K8S:
             executed = check_inserted_data_zookeeper(credentials, database_name)
             event.set_results({"ok": True if executed else False})
-        elif product == KYUUBI_K8S:
+        elif product == KYUUBI:
             executed = check_inserted_data_kyuubi(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 

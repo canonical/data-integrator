@@ -21,6 +21,7 @@ from .markers import only_on_microk8s, only_with_juju_3
 logger = logging.getLogger(__name__)
 
 
+KYUUBI = "kyuubi"
 KYUUBI_APP_NAME = "kyuubi-k8s"
 S3_APP_NAME = "s3-integrator"
 INTEGRATION_HUB_APP_NAME = "spark-integration-hub-k8s"
@@ -36,9 +37,17 @@ async def test_deploy_data_integrator(
 ):
     await asyncio.gather(
         ops_test.model.deploy(
-            data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
+            data_integrator_charm,
+            application_name="data-integrator",
+            num_units=1,
+            series="jammy",
         ),
-        ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
+        ops_test.model.deploy(
+            app_charm,
+            application_name=APP,
+            num_units=1,
+            series="jammy",
+        ),
     )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
@@ -63,7 +72,7 @@ async def test_deploy_kyuubi_setup(
     kyuubi_deploy_args = {
         "application_name": KYUUBI_APP_NAME,
         "num_units": 1,
-        "channel": "latest/edge/bikalpa",
+        "channel": "latest/edge",
         "series": "jammy",
         "trust": True,
     }
@@ -237,31 +246,31 @@ async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
 
     ### INSERT DATA
 
-    logger.info(f"Create table on {KYUUBI_APP_NAME}")
+    logger.info(f"Create table on {KYUUBI}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "create-table",
-        KYUUBI_APP_NAME,
+        KYUUBI,
         json.dumps(credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
 
-    logger.info(f"Insert rows to table on {KYUUBI_APP_NAME}")
+    logger.info(f"Insert rows to table on {KYUUBI}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "insert-data",
-        KYUUBI_APP_NAME,
+        KYUUBI,
         json.dumps(credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
 
-    logger.info(f"Check assessibility of inserted data on {KYUUBI_APP_NAME}")
+    logger.info(f"Check assessibility of inserted data on {KYUUBI}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
-        KYUUBI_APP_NAME,
+        KYUUBI,
         json.dumps(credentials),
         DATABASE_NAME,
     )
@@ -287,12 +296,16 @@ async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
 
     assert credentials != new_credentials
 
-    logger.info(f"Check assessibility of inserted data on {KYUUBI_APP_NAME} with new credentials")
+    logger.info(f"Check assessibility of inserted data on {KYUUBI} with new credentials")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
-        KYUUBI_APP_NAME,
+        KYUUBI,
         json.dumps(new_credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
+
+    import time
+
+    time.sleep(5 * 60)

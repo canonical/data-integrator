@@ -34,8 +34,7 @@ ZOOKEEPER = "zookeeper"
 KAFKA_K8S = "kafka-k8s"
 ZOOKEEPER_K8S = "zookeeper-k8s"
 
-KYUUBI_K8S = "kyuubi-k8s"
-DB_NAME = "test_db"
+KYUUBI = "kyuubi"
 TABLE_SCHEMA = [("name", str), ("score", int)]
 
 TABLE_NAME = "test_table"
@@ -404,9 +403,9 @@ def check_inserted_data_zookeeper(credentials: Dict[str, str], database_name: st
 
 def create_table_kyuubi(credentials: Dict[str, str], database_name: str) -> bool:
     """Create a table in a Kyuubi backed data warehouse."""
-    username = credentials[KYUUBI_K8S]["username"]
-    password = credentials[KYUUBI_K8S]["password"]
-    endpoint = credentials[KYUUBI_K8S]["endpoints"]
+    username = credentials[KYUUBI]["username"]
+    password = credentials[KYUUBI]["password"]
+    endpoint = credentials[KYUUBI]["endpoints"]
     host, port = endpoint.split(":")
 
     try:
@@ -420,9 +419,9 @@ def create_table_kyuubi(credentials: Dict[str, str], database_name: str) -> bool
 
 def insert_data_kyuubi(credentials: Dict[str, str], database_name: str) -> bool:
     """Insert some testing data in a Kyuubi backed data warehouse."""
-    username = credentials[KYUUBI_K8S]["username"]
-    password = credentials[KYUUBI_K8S]["password"]
-    endpoint = credentials[KYUUBI_K8S]["endpoints"]
+    username = credentials[KYUUBI]["username"]
+    password = credentials[KYUUBI]["password"]
+    endpoint = credentials[KYUUBI]["endpoints"]
     host, port = endpoint.split(":")
 
     try:
@@ -438,9 +437,9 @@ def insert_data_kyuubi(credentials: Dict[str, str], database_name: str) -> bool:
 
 def check_inserted_data_kyuubi(credentials: Dict[str, str], database_name: str) -> bool:
     """Check that data are inserted in a ZooKeeper zNode."""
-    username = credentials[KYUUBI_K8S]["username"]
-    password = credentials[KYUUBI_K8S]["password"]
-    endpoint = credentials[KYUUBI_K8S]["endpoints"]
+    username = credentials[KYUUBI]["username"]
+    password = credentials[KYUUBI]["password"]
+    endpoint = credentials[KYUUBI]["endpoints"]
     host, port = endpoint.split(":")
 
     try:
