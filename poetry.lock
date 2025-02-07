@@ -1286,6 +1286,27 @@ resolved_reference = "1fcbb92c2709178e7869693599b833d15a05293c"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
+name = "pytest-microceph"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = ">=3.8"
+groups = ["integration"]
+files = []
+develop = false
+
+[package.dependencies]
+boto3 = "*"
+pytest = "*"
+
+[package.source]
+type = "git"
+url = "https://github.com/canonical/data-platform-workflows"
+reference = "v29.0.4"
+resolved_reference = "1fcbb92c2709178e7869693599b833d15a05293c"
+subdirectory = "python/pytest_plugins/microceph"
+
+[[package]]
 name = "pytest-operator"
 version = "0.39.0"
 description = "Fixtures for Operators"
@@ -1797,4 +1818,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "2e3ebf0abee62b9fe8c89150a83e1776197b7b77656f4f19d7354bb2df437d46"
+content-hash = "16e3113965c9f4014f597330321f2ff1687aa04aaa577d838d86558dfdfbffce"
