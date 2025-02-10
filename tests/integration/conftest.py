@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+import socket
 from pathlib import Path
 
 import boto3
@@ -14,6 +15,7 @@ from pytest_operator.plugin import OpsTest
 
 TEST_BUCKET_NAME = "kyuubi-test"
 TEST_PATH_NAME = "spark-events/"
+HOST_IP = socket.gethostbyname(socket.gethostname())
 
 
 logger = logging.getLogger(__name__)
@@ -59,7 +61,7 @@ def s3_bucket_and_creds(ops_test: OpsTest, microceph: pytest_microceph.Connectio
         yield None
         return
 
-    endpoint_url = "http://127.0.0.1"
+    endpoint_url = f"http://{HOST_IP}"
     access_key = microceph.access_key_id
     secret_key = microceph.secret_access_key
     bucket_name = microceph.bucket
