@@ -306,7 +306,3 @@ async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
         DATABASE_NAME,
     )
     assert result["ok"]
-
-    import time
-
-    time.sleep(5 * 60)
