@@ -84,7 +84,7 @@ jobs:
         - lint
         - unit-test
         - build
-      uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v29.0.4
+      uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@minio-addon
       with:
         artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
         cloud: ${{ matrix.cloud }}
