@@ -59,7 +59,7 @@ def s3_bucket_and_creds(ops_test: OpsTest, microceph: pytest_microceph.Connectio
         yield None
         return
 
-    endpoint_url = "http://localhost"
+    endpoint_url = "http://127.0.0.1"
     access_key = microceph.access_key_id
     secret_key = microceph.secret_access_key
     bucket_name = microceph.bucket
