@@ -79,7 +79,7 @@ async def test_deploy_kyuubi_setup(
     }
 
     # Deploy the Kyuubi charm and wait
-    logger.info("Deploying kyuubi-k8s charm...")
+    logger.info("Deploying kyuubi-k8s charm....")
     await ops_test.model.deploy(KYUUBI_APP_NAME, **kyuubi_deploy_args)
     logger.info("Waiting for kyuubi-k8s app to be settle...")
     await ops_test.model.wait_for_idle(apps=[KYUUBI_APP_NAME], status="blocked")
