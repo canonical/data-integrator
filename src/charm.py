@@ -207,9 +207,6 @@ class IntegratorCharm(CharmBase):
         if self.is_opensearch_related:
             result[OPENSEARCH] = list(self.opensearch.fetch_relation_data().values())[0]
 
-        import logging
-
-        logging.warning(result)
         event.set_results(result)
 
     def _on_database_created(self, event: DatabaseCreatedEvent) -> None:

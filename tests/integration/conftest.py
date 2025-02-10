@@ -3,17 +3,19 @@
 # See LICENSE file for licensing details.
 
 import logging
-import subprocess
+import socket
 from pathlib import Path
 
 import boto3
 import boto3.session
 import pytest
+import pytest_microceph
 from botocore.client import Config
 from pytest_operator.plugin import OpsTest
 
 TEST_BUCKET_NAME = "kyuubi-test"
 TEST_PATH_NAME = "spark-events/"
+HOST_IP = socket.gethostbyname(socket.gethostname())
 
 
 logger = logging.getLogger(__name__)
@@ -54,26 +56,15 @@ async def cloud_name(ops_test: OpsTest, request):
 
 
 @pytest.fixture(scope="module")
-def s3_bucket_and_creds(ops_test: OpsTest):
+def s3_bucket_and_creds(ops_test: OpsTest, microceph: pytest_microceph.ConnectionInformation):
     if ops_test.model.info.provider_type != "kubernetes":
         yield None
         return
 
-    logger.info("Fetching S3 credentials from minio.....")
-
-    fetch_s3_output = (
-        subprocess.check_output(
-            "./tests/integration/scripts/fetch_s3_credentials.sh | tail -n 3",
-            shell=True,
-            stderr=None,
-        )
-        .decode("utf-8")
-        .strip()
-    )
-
-    logger.info(f"fetch_s3_credentials output:\n{fetch_s3_output}")
-
-    endpoint_url, access_key, secret_key = fetch_s3_output.strip().splitlines()
+    endpoint_url = f"http://{HOST_IP}"
+    access_key = microceph.access_key_id
+    secret_key = microceph.secret_access_key
+    bucket_name = microceph.bucket
 
     session = boto3.session.Session(aws_access_key_id=access_key, aws_secret_access_key=secret_key)
     s3 = session.resource(
@@ -82,23 +73,14 @@ def s3_bucket_and_creds(ops_test: OpsTest):
         verify=False,
         config=Config(connect_timeout=60, retries={"max_attempts": 4}),
     )
-    test_bucket = s3.Bucket(TEST_BUCKET_NAME)
-
-    # Delete test bucket if it exists
-    if test_bucket in s3.buckets.all():
-        logger.info(f"The bucket {TEST_BUCKET_NAME} already exists. Deleting it...")
-        test_bucket.objects.all().delete()
-        test_bucket.delete()
-
-    # Create the test bucket
-    s3.create_bucket(Bucket=TEST_BUCKET_NAME)
-    logger.info(f"Created bucket: {TEST_BUCKET_NAME}")
+    test_bucket = s3.Bucket(bucket_name)
     test_bucket.put_object(Key=TEST_PATH_NAME)
+
     yield {
         "endpoint": endpoint_url,
         "access_key": access_key,
         "secret_key": secret_key,
-        "bucket": TEST_BUCKET_NAME,
+        "bucket": bucket_name,
         "path": TEST_PATH_NAME,
     }
 
