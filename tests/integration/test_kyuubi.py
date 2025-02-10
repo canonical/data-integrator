@@ -75,7 +75,6 @@ async def test_deploy_kyuubi_setup(
         "channel": "latest/edge",
         "series": "jammy",
         "trust": True,
-        "revision": 33,
     }
 
     # Deploy the Kyuubi charm and wait
