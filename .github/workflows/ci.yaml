@@ -62,8 +62,6 @@ jobs:
     with:
       path-to-charm-directory: ${{ matrix.path }}
 
-  tmate:
-
   integration-test:
     strategy:
       fail-fast: false
