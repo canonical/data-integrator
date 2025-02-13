@@ -2,10 +2,22 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
+import socket
+import uuid
 from pathlib import Path
 
 import pytest
+import pytest_microceph
 from pytest_operator.plugin import OpsTest
+from spark_test.core.s3 import Credentials
+
+TEST_BUCKET_NAME = "kyuubi-test"
+TEST_PATH_NAME = "spark-events/"
+HOST_IP = socket.gethostbyname(socket.gethostname())
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
@@ -40,3 +52,17 @@ async def cloud_name(ops_test: OpsTest, request):
             pytest.skip("Does not run on vm")
             return
         return "localhost"
+
+
+@pytest.fixture(scope="module")
+def bucket_name():
+    """S3 Bucket name."""
+    return f"s3-bucket-{uuid.uuid4()}"
+
+
+@pytest.fixture(scope="module")
+def credentials(microceph: pytest_microceph.ConnectionInformation):
+    """S3 credentials to connect to S3 storage."""
+    yield Credentials(
+        access_key=microceph.access_key_id, secret_key=microceph.secret_access_key, host=HOST_IP
+    )

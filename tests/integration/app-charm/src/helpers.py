@@ -12,6 +12,7 @@ from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector, get_zookeeper_client
 from kafka.admin import NewTopic
 from pymongo import MongoClient
+from spark_test.core.kyuubi import KyuubiClient
 
 MYSQL = "mysql"
 MYSQL_ROUTER = "mysql-router"
@@ -32,6 +33,9 @@ ZOOKEEPER = "zookeeper"
 
 KAFKA_K8S = "kafka-k8s"
 ZOOKEEPER_K8S = "zookeeper-k8s"
+
+KYUUBI = "kyuubi"
+TABLE_SCHEMA = [("name", str), ("score", int)]
 
 TABLE_NAME = "test_table"
 
@@ -392,3 +396,58 @@ def check_inserted_data_zookeeper(credentials: Dict[str, str], database_name: st
     except Exception:
         return False
     return True
+
+
+# Kyuubi
+
+
+def create_table_kyuubi(credentials: Dict[str, str], database_name: str) -> bool:
+    """Create a table in a Kyuubi backed data warehouse."""
+    username = credentials[KYUUBI]["username"]
+    password = credentials[KYUUBI]["password"]
+    endpoint = credentials[KYUUBI]["endpoints"]
+    host, port = endpoint.split(":")
+
+    try:
+        client = KyuubiClient(username=username, password=password, host=host, port=port)
+        database = client.get_database(database_name)
+        database.create_table(TABLE_NAME, TABLE_SCHEMA)
+        return TABLE_NAME in database.tables
+    except Exception:
+        return False
+
+
+def insert_data_kyuubi(credentials: Dict[str, str], database_name: str) -> bool:
+    """Insert some testing data in a Kyuubi backed data warehouse."""
+    username = credentials[KYUUBI]["username"]
+    password = credentials[KYUUBI]["password"]
+    endpoint = credentials[KYUUBI]["endpoints"]
+    host, port = endpoint.split(":")
+
+    try:
+        client = KyuubiClient(username=username, password=password, host=host, port=port)
+        database = client.get_database(database_name)
+        table = database.get_table(TABLE_NAME)
+        table.insert(("foo", 1), ("bar", 2))
+        assert ("foo", 1) in table.rows
+        return True
+    except Exception:
+        return False
+
+
+def check_inserted_data_kyuubi(credentials: Dict[str, str], database_name: str) -> bool:
+    """Check that data are inserted in a ZooKeeper zNode."""
+    username = credentials[KYUUBI]["username"]
+    password = credentials[KYUUBI]["password"]
+    endpoint = credentials[KYUUBI]["endpoints"]
+    host, port = endpoint.split(":")
+
+    try:
+        client = KyuubiClient(username=username, password=password, host=host, port=port)
+        database = client.get_database(database_name)
+        table = database.get_table(TABLE_NAME)
+        assert ("foo", 1) in table.rows
+        assert ("bar", 2) in table.rows
+        return True
+    except Exception:
+        return False
