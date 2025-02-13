@@ -15,5 +15,6 @@ psycopg2 = "^2.9.10"
 mysql-connector-python = "^9.2.0"
 requests = "^2.32.3"
 pyhive = {extras = ["hive_pure_sasl"], version = "^0.7.0"}
+spark-k8s-test = "^0.0.1"
 
 [tool.poetry.group.charm-libs.dependencies]

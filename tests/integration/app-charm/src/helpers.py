@@ -11,8 +11,8 @@ import requests
 from charms.kafka.v0.client import KafkaClient
 from connector import MysqlConnector, get_zookeeper_client
 from kafka.admin import NewTopic
-from kyuubi_connector import KyuubiClient
 from pymongo import MongoClient
+from spark_test.core.kyuubi import KyuubiClient
 
 MYSQL = "mysql"
 MYSQL_ROUTER = "mysql-router"

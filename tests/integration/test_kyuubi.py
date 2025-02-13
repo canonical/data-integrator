@@ -9,6 +9,8 @@ from pathlib import PosixPath
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from spark_test.core.s3 import Bucket, Credentials
+from spark_test.fixtures.s3 import bucket, credentials  # noqa
 
 from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME
 from .helpers import (
@@ -67,7 +69,10 @@ async def test_deploy_data_integrator(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_kyuubi_setup(
-    ops_test: OpsTest, s3_bucket_and_creds: dict[str, str], cloud_name: str
+    ops_test: OpsTest,
+    credentials: Credentials,  # noqa: F811
+    bucket: Bucket,  # noqa: F811
+    cloud_name: str,  # noqa: F811
 ):
     kyuubi_deploy_args = {
         "application_name": KYUUBI_APP_NAME,
@@ -103,11 +108,12 @@ async def test_deploy_kyuubi_setup(
     await ops_test.model.wait_for_idle(apps=[S3_APP_NAME])
 
     # Receive S3 params from fixture, apply them and wait
-    endpoint_url = s3_bucket_and_creds["endpoint"]
-    access_key = s3_bucket_and_creds["access_key"]
-    secret_key = s3_bucket_and_creds["secret_key"]
-    bucket_name = s3_bucket_and_creds["bucket"]
-    path = s3_bucket_and_creds["path"]
+    endpoint_url = bucket.s3.meta.endpoint_url
+    access_key = credentials.access_key
+    secret_key = credentials.secret_key
+    bucket_name = bucket.bucket_name
+    path = "spark-events/"
+
     logger.info("Setting up s3 credentials in s3-integrator charm")
     s3_integrator_unit = ops_test.model.applications[S3_APP_NAME].units[0]
     action = await s3_integrator_unit.run_action(
@@ -240,7 +246,7 @@ async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest, cloud_name:
 async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
     """Test the relation with ZooKeeper and database accessibility."""
     # get credential for Kyuubi
-    credentials = await fetch_action_get_credentials(
+    kyuubi_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
@@ -251,7 +257,7 @@ async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
         ops_test.model.applications[APP].units[0],
         "create-table",
         KYUUBI,
-        json.dumps(credentials),
+        json.dumps(kyuubi_credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
@@ -261,7 +267,7 @@ async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
         ops_test.model.applications[APP].units[0],
         "insert-data",
         KYUUBI,
-        json.dumps(credentials),
+        json.dumps(kyuubi_credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
@@ -271,7 +277,7 @@ async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         KYUUBI,
-        json.dumps(credentials),
+        json.dumps(kyuubi_credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
@@ -290,18 +296,18 @@ async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
         )
 
     # Check the accessibility of the previously created database
-    new_credentials = await fetch_action_get_credentials(
+    new_kyuubi_credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
 
-    assert credentials != new_credentials
+    assert kyuubi_credentials != new_kyuubi_credentials
 
     logger.info(f"Check assessibility of inserted data on {KYUUBI} with new credentials")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
         KYUUBI,
-        json.dumps(new_credentials),
+        json.dumps(new_kyuubi_credentials),
         DATABASE_NAME,
     )
     assert result["ok"]
