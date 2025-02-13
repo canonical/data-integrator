@@ -10,7 +10,7 @@ from pathlib import PosixPath
 import pytest
 from pytest_operator.plugin import OpsTest
 from spark_test.core.s3 import Bucket, Credentials
-from spark_test.fixtures.s3 import bucket, credentials  # noqa
+from spark_test.fixtures.s3 import bucket  # noqa
 
 from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME
 from .helpers import (
@@ -70,7 +70,7 @@ async def test_deploy_data_integrator(
 @pytest.mark.abort_on_fail
 async def test_deploy_kyuubi_setup(
     ops_test: OpsTest,
-    credentials: Credentials,  # noqa: F811
+    credentials: Credentials,
     bucket: Bucket,  # noqa: F811
     cloud_name: str,  # noqa: F811
 ):
