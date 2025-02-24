@@ -7,9 +7,9 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ops = "^2.18.0"
-pymongo = "^4.10.1"
-kafka-python = "^2.0.2"
+ops = "^2.18.1"
+pymongo = "^4.11.1"
+kafka-python = "^2.0.4"
 kazoo = "^2.10.0"
 psycopg2 = "^2.9.10"
 mysql-connector-python = "^9.2.0"
