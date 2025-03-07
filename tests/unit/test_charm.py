@@ -8,7 +8,9 @@ from ops.testing import Harness
 
 from charm import IntegratorCharm
 
-BLOCKED_STATUS_NO_CONFIG = BlockedStatus("Please specify either topic, index, or database name")
+BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
+    "Please specify either topic, index, database name, or prefix"
+)
 BLOCKED_STATUS_RELATE = BlockedStatus("Please relate the data-integrator with the desired product")
 BLOCKED_STATUS_REMOVE_DB = BlockedStatus(
     "To change database name: foo, please remove relation and add it again"
@@ -43,7 +45,11 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             action_event.fail.call_args,
-            [("The database name or topic name is not specified in the config.",)],
+            [
+                (
+                    "The database name, topic name, index name, or prefix is not specified in the config.",
+                )
+            ],
         )
 
         self.harness.update_config({"database-name": "foo"})

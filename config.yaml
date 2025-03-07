@@ -14,6 +14,10 @@ options:
     type: string
     default:
     description: The index name for which the access is granted (this parameter is needed for OpenSearch).
+  prefix-name:
+    type: string
+    default:
+    description: The prefix for which the access is granted (this parameter is needed for etcd).
   extra-user-roles:
     type: string
     default:
@@ -22,3 +26,7 @@ options:
     type: string
     default:
     description: the required consumer group prefix for Kafka. (This is an optional parameter that could be specified in case of `consumer` role is set).
+  mtls-client-chain:
+    type: string
+    default:
+    description: The client chain for which the access is granted (this parameter is needed for etcd).
