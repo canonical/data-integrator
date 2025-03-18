@@ -69,7 +69,7 @@ jobs:
         juju:
           - agent: 2.9.51  # renovate: juju-agent-pin-minor
             libjuju: ^2
-          - agent: 3.6.3  # renovate: juju-agent-pin-minor
+          - agent: 3.6.4  # renovate: juju-agent-pin-minor
         cloud:
           - lxd
           - microk8s
