@@ -259,6 +259,7 @@ class IntegratorCharm(CharmBase):
         if self.is_etcd_related:
             result[ETCD] = {
                 "prefix": self.prefix_active,
+                "endpoints": self.etcd.fetch_relation_field(self.etcd_relation.id, "endpoints"),
                 "username": self.etcd.fetch_relation_field(self.etcd_relation.id, "username"),
                 "tls-ca": self.etcd.fetch_relation_field(self.etcd_relation.id, "tls-ca"),
                 "version": self.etcd.fetch_relation_field(self.etcd_relation.id, "version"),
@@ -352,7 +353,7 @@ class IntegratorCharm(CharmBase):
     @property
     def mtls_client_chain(self) -> Optional[str]:
         """Return the configured client chain."""
-        chain = self.model.config.get("mtls-client-chain", None)
+        chain = self.model.config.get("mtls-chain", None)
         if not chain:
             return None
 

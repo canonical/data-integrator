@@ -26,7 +26,7 @@ options:
     type: string
     default:
     description: the required consumer group prefix for Kafka. (This is an optional parameter that could be specified in case of `consumer` role is set).
-  mtls-client-chain:
+  mtls-chain:
     type: string
     default:
     description: The client chain for which the access is granted (this parameter is needed for etcd).
