@@ -3,12 +3,19 @@
 # See LICENSE file for licensing details.
 
 import tempfile
+from datetime import timedelta
 from json import JSONDecodeError
 from typing import Dict
 
 import psycopg2
 import requests
 from charms.kafka.v0.client import KafkaClient
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
 from connector import MysqlConnector, get_zookeeper_client
 from kafka.admin import NewTopic
 from pymongo import MongoClient
@@ -451,3 +458,20 @@ def check_inserted_data_kyuubi(credentials: Dict[str, str], database_name: str) 
         return True
     except Exception:
         return False
+
+
+# ETCD
+
+
+def generate_cert(common_name: str):
+    ca_private_key = generate_private_key()
+    ca_cert = generate_ca(
+        private_key=ca_private_key, validity=timedelta(days=365), common_name="ca_common_name"
+    )
+
+    client_private_key = generate_private_key()
+    client_csr = generate_csr(private_key=client_private_key, common_name=common_name)
+    client_cert = generate_certificate(
+        client_csr, ca_cert, ca_private_key, validity=timedelta(days=365)
+    )
+    return "\n".join([client_cert.raw, ca_cert.raw]), client_private_key.raw

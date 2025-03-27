@@ -38,6 +38,7 @@ from helpers import (
     create_table_postgresql,
     create_table_zookeeper,
     create_topic,
+    generate_cert,
     http_request,
     insert_data_kyuubi,
     insert_data_mongodb,
@@ -75,6 +76,9 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(getattr(self.on, "create_topic_action"), self._create_topic)
 
         self.framework.observe(getattr(self.on, "http_request_action"), self._http_request)
+
+        # Action to generate a certificate
+        self.framework.observe(getattr(self.on, "generate_cert_action"), self._generate_cert)
 
     def _on_start(self, _) -> None:
         self.unit.status = ActiveStatus()
@@ -241,6 +245,19 @@ class ApplicationCharm(CharmBase):
 
         response = http_request(credentials, endpoint, method, payload)
         event.set_results({"results": json.dumps(response)})
+
+    def _generate_cert(self, event) -> None:
+        """Handle the action that generates a certificate."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+
+        # read parameters from the event
+        common_name: str = event.params["common-name"]
+
+        # generate the certificate
+        cert, key = generate_cert(common_name)
+        event.set_results({"certificate": cert, "key": key})
 
 
 if __name__ == "__main__":

@@ -23,5 +23,5 @@ INDEX_NAME = "albums"
 OPENSEARCH_EXTRA_USER_ROLES = "default"
 
 KYUUBI = {"microk8s": "kyuubi-k8s"}
-
+ETCD = {"localhost": "charmed-etcd"}
 APP = "app"
