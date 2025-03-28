@@ -103,7 +103,9 @@ async def test_deploy(
             num_units=2,
             config={"profile": "testing"},
         ),
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, channel="latest/stable", config=tls_config
+        ),
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
