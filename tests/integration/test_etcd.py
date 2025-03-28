@@ -73,7 +73,7 @@ async def test_deploy(
 @pytest.mark.abort_on_fail
 async def test_relate(ops_test: OpsTest, cloud_name: str):
     """Relates the charms."""
-    # generate a certificate usign app-charm
+    # generate a certificate using app-charm
     app: Application = ops_test.model.applications[APP]
     app_unit: Unit = app.units[0]
 
