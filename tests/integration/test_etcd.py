@@ -48,7 +48,7 @@ async def test_deploy(
             application_name=ETCD[cloud_name],
             num_units=3,
         ),
-        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="stable", config=tls_config),
+        ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="1/stable", config=tls_config),
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),

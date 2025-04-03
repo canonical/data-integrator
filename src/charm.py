@@ -168,7 +168,7 @@ class IntegratorCharm(CharmBase):
         """Handle the status update."""
         self.unit.status = self.get_status()
 
-    def _on_config_changed(self, _: EventBase) -> None:  # noqa: C901
+    def _on_config_changed(self, _: EventBase) -> None:
         """Handle on config changed event."""
         # Only execute in the unit leader
         self.unit.status = self.get_status()
@@ -206,18 +206,15 @@ class IntegratorCharm(CharmBase):
                         "extra-user-roles": self.extra_user_roles or "",
                     },
                 )
-        if not self.prefix_active and self.prefix:
+        if self.prefix and (not self.prefix_active or self.mtls_client_chain):
             for rel in self.etcd.relations:
-                self.etcd.update_relation_data(
-                    rel.id,
-                    {
-                        "prefix": self.prefix,
-                    },
-                )
-
-        if self.mtls_client_chain:
-            logger.debug(f"Updating mtls client chain to {self.mtls_client_chain}")
-            for rel in self.etcd.relations:
+                if not self.prefix_active:
+                    self.etcd.update_relation_data(
+                        rel.id,
+                        {
+                            "prefix": self.prefix,
+                        },
+                    )
                 self.etcd.set_mtls_chain(rel.id, self.mtls_client_chain)
 
     def _update_database_relations(self, database_relation_data: Dict[str, str]):
