@@ -289,8 +289,8 @@ class ApplicationCharm(CharmBase):
         # set the results of the action
         event.set_results({"certificate": cert, "key": key})
 
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
-    def _install_etcd_snap(self):
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
+    def _install_etcd_snap(self) -> bool:
         """Install the etcd snap."""
         try:
             self.etcd_snap.ensure(snap.SnapState.Present, channel="3.5/edge")
@@ -298,7 +298,11 @@ class ApplicationCharm(CharmBase):
             return True
         except snap.SnapError as e:
             logger.error(str(e))
-            return False
+            if "snapd is not installed" in str(e):
+                logger.debug("running in k8s")
+                return True
+            else:
+                raise e
 
 
 if __name__ == "__main__":
