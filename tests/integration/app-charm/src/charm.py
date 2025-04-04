@@ -73,7 +73,8 @@ class ApplicationCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.name = CHARM_KEY
-        self.etcd_snap = snap.SnapCache()[ETCD_SNAP_NAME]
+        if self._is_cloud_vm():
+            self.etcd_snap = snap.SnapCache()[ETCD_SNAP_NAME]
 
         self.framework.observe(getattr(self.on, "start"), self._on_start)
         self.framework.observe(getattr(self.on, "install"), self._on_install)
