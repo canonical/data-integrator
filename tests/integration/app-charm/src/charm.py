@@ -10,6 +10,7 @@ of the libraries in this repository.
 
 import json
 import logging
+import subprocess
 from pathlib import Path
 
 from charms.operator_libs_linux.v2 import snap
@@ -96,10 +97,12 @@ class ApplicationCharm(CharmBase):
 
     def _on_install(self, event: InstallEvent):
         """Handle install event."""
-        # install the etcd snap
-        if not self._install_etcd_snap():
-            self.unit.status = BlockedStatus("Failed to install etcd snap")
-            return
+        # install the etcd snap if on VM
+        if self._is_cloud_vm():
+            logger.info("Installing etcd snap")
+            if not self._install_etcd_snap():
+                self.unit.status = BlockedStatus("Failed to install etcd snap")
+                return
 
     def _create_table(self, event) -> None:
         """Handle the action that creates a table on different databases."""
@@ -289,7 +292,7 @@ class ApplicationCharm(CharmBase):
         # set the results of the action
         event.set_results({"certificate": cert, "key": key})
 
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
     def _install_etcd_snap(self) -> bool:
         """Install the etcd snap."""
         try:
@@ -298,11 +301,22 @@ class ApplicationCharm(CharmBase):
             return True
         except snap.SnapError as e:
             logger.error(str(e))
-            if "snapd is not installed" in str(e):
-                logger.debug("running in k8s")
-                return True
-            else:
-                raise e
+            return False
+
+    def _is_cloud_vm(self):
+        """Check if the cloud is a VM."""
+        # Check if the cloud is a VM
+        try:
+            output = subprocess.check_output(["which", "systesmctl"])
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Command failed with error: {e}")
+            return False
+
+        output = output.decode("utf-8").strip()
+        if "systemctl" in output:
+            return True
+        else:
+            return False
 
 
 if __name__ == "__main__":
