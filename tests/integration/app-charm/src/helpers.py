@@ -2,9 +2,11 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import subprocess
 import tempfile
 from datetime import timedelta
 from json import JSONDecodeError
+from pathlib import Path
 from typing import Dict
 
 import psycopg2
@@ -42,7 +44,9 @@ KAFKA_K8S = "kafka-k8s"
 ZOOKEEPER_K8S = "zookeeper-k8s"
 
 KYUUBI = "kyuubi"
+ETCD = "etcd"
 TABLE_SCHEMA = [("name", str), ("score", int)]
+ETCD_SNAP_DIR = "/var/snap/charmed-etcd/common"
 
 TABLE_NAME = "test_table"
 
@@ -475,3 +479,60 @@ def generate_cert(common_name: str):
         client_csr, ca_cert, ca_private_key, validity=timedelta(days=365)
     )
     return "\n".join([client_cert.raw, ca_cert.raw]), client_private_key.raw
+
+
+def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
+    """Insert some testing data in a Etcd database."""
+    endpoints = credentials["endpoints"]
+    server_ca_cert = credentials["tls-ca"]
+    if not Path("client.pem").exists() or not Path("client.key").exists():
+        raise FileNotFoundError("Missing client certificate or key")
+    Path(Path(ETCD_SNAP_DIR) / "ca.pem").write_text(server_ca_cert)
+
+    try:
+        output = subprocess.check_output([
+            "charmed-etcd.etcdctl",
+            "--endpoints",
+            endpoints,
+            "--cert",
+            f"{ETCD_SNAP_DIR}/client.pem",
+            "--key",
+            f"{ETCD_SNAP_DIR}/client.key",
+            "--cacert",
+            f"{ETCD_SNAP_DIR}/ca.pem",
+            "put",
+            f"{database_name}/foo",
+            "bar",
+        ])
+    except subprocess.CalledProcessError:
+        return False
+    return output.decode().strip() == "OK"
+
+
+def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
+    """Check that data are inserted in a Etcd database."""
+    endpoints = credentials["endpoints"]
+    server_ca_cert = credentials["tls-ca"]
+    if not Path("client.pem").exists() or not Path("client.key").exists():
+        raise FileNotFoundError("Missing client certificate or key")
+    Path("ca.pem").write_text(server_ca_cert)
+
+    try:
+        output = subprocess.check_output(
+            [
+                "charmed-etcd.etcdctl",
+                "--endpoints",
+                endpoints,
+                "--cert",
+                f"{ETCD_SNAP_DIR}/client.pem",
+                "--key",
+                f"{ETCD_SNAP_DIR}/client.key",
+                "--cacert",
+                f"{ETCD_SNAP_DIR}/ca.pem",
+                "get",
+                f"{database_name}/foo",
+            ],
+        )
+    except subprocess.CalledProcessError:
+        return False
+    return output.decode().strip().split("\n") == [f"{database_name}/foo", "bar"]

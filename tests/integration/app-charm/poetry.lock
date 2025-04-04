@@ -1283,6 +1283,22 @@ jinja2 = ">=3.1.2"
 lightkube = ">=0.11"
 
 [[package]]
+name = "tenacity"
+version = "9.1.2"
+description = "Retry code until it succeeds"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "tenacity-9.1.2-py3-none-any.whl", hash = "sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138"},
+    {file = "tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb"},
+]
+
+[package.extras]
+doc = ["reno", "sphinx"]
+test = ["pytest", "tornado (>=4.5)", "typeguard"]
+
+[[package]]
 name = "thrift"
 version = "0.21.0"
 description = "Python bindings for the Apache Thrift RPC system"
@@ -1411,4 +1427,4 @@ test = ["websockets"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "2e690548d81196904d83fb8a9eaec2005fa523466ce779ace1cbd3be898f19cd"
+content-hash = "238e040181374bb2a6e264cb317bf4f6365f964953ebc6e14dd7df3c36b43431"

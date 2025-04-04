@@ -3,12 +3,9 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 import logging
-import subprocess
-import tarfile
-from pathlib import Path, PosixPath
-from shutil import rmtree
-from urllib.request import urlretrieve
+from pathlib import PosixPath
 
 import pytest
 from juju.application import Application
@@ -85,10 +82,6 @@ async def test_relate(ops_test: OpsTest, cloud_name: str):
     assert certificate, "The certificate is not generated."
     assert key, "The key is not generated."
 
-    # write the certificate and key to disk
-    Path("client.pem").write_text(certificate)
-    Path("client.key").write_text(key)
-
     # configure the data-integrator charm with the certificate
     config = {"mtls-chain": certificate, "prefix-name": "/test/"}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
@@ -130,16 +123,6 @@ async def test_relate(ops_test: OpsTest, cloud_name: str):
 @pytest.mark.abort_on_fail
 async def test_read_write(ops_test: OpsTest, cloud_name: str):
     """Write and read to the key prefix with the requirer charm."""
-    # download etcdctl binary
-    urlretrieve(
-        "https://github.com/etcd-io/etcd/releases/download/v3.5.18/etcd-v3.5.18-linux-amd64.tar.gz",
-        "etcd-v3.5.18-linux-amd64.tar.gz",
-    )
-    # extract etcdctl binary
-    with tarfile.open("etcd-v3.5.18-linux-amd64.tar.gz", "r:gz") as tar:
-        tar.extractall()
-    Path("etcd-v3.5.18-linux-amd64/etcdctl").rename("etcdctl")
-
     # get endpoints
     # run get credentials action on data-integrator
     action = (
@@ -147,60 +130,26 @@ async def test_read_write(ops_test: OpsTest, cloud_name: str):
     )
     action = await action.wait()
     assert action.status == "completed"
-    endpoints = action.results["etcd"]["endpoints"]
+    credentials = {
+        "endpoints": action.results["etcd"]["endpoints"],
+        "tls-ca": action.results["etcd"]["tls-ca"],
+    }
+    params = {
+        "product": "etcd",
+        "database-name": "/test",
+        "credentials": json.dumps(credentials),
+    }
+    # # write to the key prefix
+    app: Application = ops_test.model.applications[APP]
+    app_unit: Unit = app.units[0]
 
-    # write server certificate to disk
-    Path("ca.pem").write_text(
-        action.results["etcd"]["tls-ca"],
-    )
+    action = await app_unit.run_action("insert-data", **params)
+    action = await action.wait()
+    assert action.status == "completed"
+    assert action.results["ok"] == "True"
 
-    # get certificate from config of data-integrator
-    result = subprocess.check_output(
-        [
-            "./etcdctl",
-            "--endpoints",
-            endpoints,
-            "--cert",
-            "./client.pem",
-            "--key",
-            "./client.key",
-            "--cacert",
-            "./ca.pem",
-            "put",
-            "/test/test-key",
-            "test-value",
-        ],
-    ).strip()
-    assert result.decode().strip() == "OK"
-
-    # read the key
-    result = subprocess.check_output(
-        [
-            "./etcdctl",
-            "--endpoints",
-            endpoints,
-            "--cert",
-            "./client.pem",
-            "--key",
-            "./client.key",
-            "--cacert",
-            "./ca.pem",
-            "get",
-            "/test/test-key",
-        ],
-    ).strip()
-    assert result.decode().strip().split("\n") == ["/test/test-key", "test-value"]
-
-
-@pytest.mark.group(1)
-@only_on_localhost
-@only_with_juju_secrets
-@pytest.mark.abort_on_fail
-async def test_clean(ops_test: OpsTest, cloud_name: str):
-    # delete files used in tests
-    Path("client.pem").unlink(missing_ok=True)
-    Path("client.key").unlink(missing_ok=True)
-    Path("ca.pem").unlink(missing_ok=True)
-    Path("etcd-v3.5.18-linux-amd64.tar.gz").unlink(missing_ok=True)
-    Path("etcdctl").unlink(missing_ok=True)
-    rmtree("etcd-v3.5.18-linux-amd64", ignore_errors=True)
+    # read from the key prefix
+    action = await app_unit.run_action("check-inserted-data", **params)
+    action = await action.wait()
+    assert action.status == "completed"
+    assert action.results["ok"] == "True"

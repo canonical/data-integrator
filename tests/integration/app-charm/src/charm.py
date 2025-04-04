@@ -10,8 +10,12 @@ of the libraries in this repository.
 
 import json
 import logging
+from pathlib import Path
 
+from charms.operator_libs_linux.v2 import snap
 from helpers import (
+    ETCD,
+    ETCD_SNAP_DIR,
     KAFKA,
     KAFKA_K8S,
     KYUUBI,
@@ -27,6 +31,7 @@ from helpers import (
     POSTGRESQL_K8S,
     ZOOKEEPER,
     ZOOKEEPER_K8S,
+    check_inserted_data_etcd,
     check_inserted_data_kyuubi,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
@@ -40,6 +45,7 @@ from helpers import (
     create_topic,
     generate_cert,
     http_request,
+    insert_data_etcd,
     insert_data_kyuubi,
     insert_data_mongodb,
     insert_data_mysql,
@@ -47,14 +53,17 @@ from helpers import (
     insert_data_zookeeper,
     produce_messages,
 )
+from ops import BlockedStatus, InstallEvent
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 logger = logging.getLogger(__name__)
 
 
 CHARM_KEY = "app"
+ETCD_SNAP_NAME = "charmed-etcd"
 
 
 class ApplicationCharm(CharmBase):
@@ -63,8 +72,10 @@ class ApplicationCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.name = CHARM_KEY
+        self.etcd_snap = snap.SnapCache()[ETCD_SNAP_NAME]
 
         self.framework.observe(getattr(self.on, "start"), self._on_start)
+        self.framework.observe(getattr(self.on, "install"), self._on_install)
         # these action are needed because hostnames cannot be resolved outside K8s
         self.framework.observe(getattr(self.on, "create_table_action"), self._create_table)
         self.framework.observe(getattr(self.on, "insert_data_action"), self._insert_data)
@@ -82,6 +93,13 @@ class ApplicationCharm(CharmBase):
 
     def _on_start(self, _) -> None:
         self.unit.status = ActiveStatus()
+
+    def _on_install(self, event: InstallEvent):
+        """Handle install event."""
+        # install the etcd snap
+        if not self._install_etcd_snap():
+            self.unit.status = BlockedStatus("Failed to install etcd snap")
+            return
 
     def _create_table(self, event) -> None:
         """Handle the action that creates a table on different databases."""
@@ -156,6 +174,10 @@ class ApplicationCharm(CharmBase):
         elif product == KYUUBI:
             executed = insert_data_kyuubi(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == ETCD:
+            executed = insert_data_etcd(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+
         else:
             raise ValueError()
 
@@ -193,6 +215,9 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == KYUUBI:
             executed = check_inserted_data_kyuubi(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+        elif product == ETCD:
+            executed = check_inserted_data_etcd(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
@@ -257,7 +282,23 @@ class ApplicationCharm(CharmBase):
 
         # generate the certificate
         cert, key = generate_cert(common_name)
+        # save the certificate and key to disk
+        etcd_snap_dir = Path(ETCD_SNAP_DIR)
+        Path(etcd_snap_dir / "client.pem").write_text(cert)
+        Path(etcd_snap_dir / "client.key").write_text(key)
+        # set the results of the action
         event.set_results({"certificate": cert, "key": key})
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
+    def _install_etcd_snap(self):
+        """Install the etcd snap."""
+        try:
+            self.etcd_snap.ensure(snap.SnapState.Present, channel="3.5/edge")
+            self.etcd_snap.hold()
+            return True
+        except snap.SnapError as e:
+            logger.error(str(e))
+            return False
 
 
 if __name__ == "__main__":
