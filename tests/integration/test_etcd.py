@@ -74,10 +74,11 @@ async def test_relate(ops_test: OpsTest, cloud_name: str):
     app: Application = ops_test.model.applications[APP]
     app_unit: Unit = app.units[0]
 
-    # write to the key prefix
+    # generate cert in the app charm
     action = await app_unit.run_action("generate-cert", **{"common-name": "test-common-name"})
     action = await action.wait()
     assert action.status == "completed"
+
     certificate, key = action.results["certificate"], action.results["key"]
     assert certificate, "The certificate is not generated."
     assert key, "The key is not generated."

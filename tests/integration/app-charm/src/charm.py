@@ -288,6 +288,7 @@ class ApplicationCharm(CharmBase):
         cert, key = generate_cert(common_name)
         # save the certificate and key to disk
         etcd_snap_dir = Path(ETCD_SNAP_DIR)
+        etcd_snap_dir.mkdir(parents=True, exist_ok=True)
         Path(etcd_snap_dir / "client.pem").write_text(cert)
         Path(etcd_snap_dir / "client.key").write_text(key)
         # set the results of the action
