@@ -227,10 +227,7 @@ async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest, cloud_name:
 
     async with ops_test.fast_forward(fast_interval="30s"):
         await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR, KYUUBI_APP_NAME],
-            wait_for_active=True,
-            idle_period=15,
-            timeout=900,
+            apps=[DATA_INTEGRATOR, KYUUBI_APP_NAME], wait_for_active=True, idle_period=15
         )
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
     assert ops_test.model.applications[KYUUBI_APP_NAME].status == "active"
