@@ -485,7 +485,10 @@ def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
     """Insert some testing data in a Etcd database."""
     endpoints = credentials["endpoints"]
     server_ca_cert = credentials["tls-ca"]
-    if not Path("client.pem").exists() or not Path("client.key").exists():
+    if (
+        not Path(Path(ETCD_SNAP_DIR) / "client.pem").exists()
+        or not Path(Path(ETCD_SNAP_DIR) / "client.key").exists()
+    ):
         raise FileNotFoundError("Missing client certificate or key")
     Path(Path(ETCD_SNAP_DIR) / "ca.pem").write_text(server_ca_cert)
 
@@ -513,7 +516,10 @@ def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) ->
     """Check that data are inserted in a Etcd database."""
     endpoints = credentials["endpoints"]
     server_ca_cert = credentials["tls-ca"]
-    if not Path("client.pem").exists() or not Path("client.key").exists():
+    if (
+        not Path(Path(ETCD_SNAP_DIR) / "client.pem").exists()
+        or not Path(Path(ETCD_SNAP_DIR) / "client.key").exists()
+    ):
         raise FileNotFoundError("Missing client certificate or key")
     Path("ca.pem").write_text(server_ca_cert)
 

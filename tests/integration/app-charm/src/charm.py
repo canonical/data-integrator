@@ -309,7 +309,7 @@ class ApplicationCharm(CharmBase):
         """Check if the cloud is a VM."""
         # Check if the cloud is a VM
         try:
-            output = subprocess.check_output(["which", "systesmctl"])
+            output = subprocess.check_output(["which", "systemctl"])
         except subprocess.CalledProcessError as e:
             logger.error(f"Command failed with error: {e}")
             return False
