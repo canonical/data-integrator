@@ -84,7 +84,7 @@ async def test_relate(ops_test: OpsTest, cloud_name: str):
     assert key, "The key is not generated."
 
     # configure the data-integrator charm with the certificate
-    config = {"mtls-chain": certificate, "prefix-name": "/test/"}
+    config = {"mtls-cert": certificate, "prefix-name": "/test/"}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # relate the data-integrator charm with the etcd charm

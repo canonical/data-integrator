@@ -100,7 +100,7 @@ class IntegratorCharm(CharmBase):
             self,
             relation_name=ETCD,
             prefix=self.prefix or "",
-            mtls_chain=self.mtls_client_chain,
+            mtls_cert=self.mtls_client_cert,
         )
         self.framework.observe(
             self.etcd.on.authentication_updated, self._on_authentication_updated
@@ -206,7 +206,7 @@ class IntegratorCharm(CharmBase):
                         "extra-user-roles": self.extra_user_roles or "",
                     },
                 )
-        if self.prefix and (not self.prefix_active or self.mtls_client_chain):
+        if self.prefix and (not self.prefix_active or self.mtls_client_cert):
             for rel in self.etcd.relations:
                 if not self.prefix_active:
                     self.etcd.update_relation_data(
@@ -215,7 +215,7 @@ class IntegratorCharm(CharmBase):
                             "prefix": self.prefix,
                         },
                     )
-                self.etcd.set_mtls_chain(rel.id, self.mtls_client_chain)
+                self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
 
     def _update_database_relations(self, database_relation_data: Dict[str, str]):
         """Update the relation data of the related databases."""
@@ -348,16 +348,16 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("consumer-group-prefix", None)
 
     @property
-    def mtls_client_chain(self) -> Optional[str]:
-        """Return the configured client chain."""
-        chain = self.model.config.get("mtls-chain", None)
-        if not chain:
+    def mtls_client_cert(self) -> Optional[str]:
+        """Return the configured client cert."""
+        cert = self.model.config.get("mtls-cert", None)
+        if not cert:
             return None
 
-        if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", chain):
-            return chain.replace("\\n", "\n")
+        if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", cert):
+            return cert.replace("\\n", "\n")
         else:
-            return base64.b64decode(chain).decode("utf-8").strip()
+            return base64.b64decode(cert).decode("utf-8").strip()
 
     @property
     def prefix(self) -> Optional[str]:
