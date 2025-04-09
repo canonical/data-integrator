@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import unittest
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock, patch
 
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
@@ -19,9 +19,13 @@ BLOCKED_STATUS_REMOVE_KF = BlockedStatus(
     "To change topic: bar, please remove relation and add it again"
 )
 
+juju_version = MagicMock()
+juju_version.has_secrets = True
+
 
 class TestCharm(unittest.TestCase):
-    def setUp(self):
+    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=juju_version)
+    def setUp(self, _):
         self.harness = Harness(IntegratorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
