@@ -96,16 +96,17 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
 
         # etcd
-        self.etcd = EtcdRequires(
-            self,
-            relation_name=ETCD,
-            prefix=self.prefix or "",
-            mtls_cert=self.mtls_client_cert,
-        )
-        self.framework.observe(
-            self.etcd.on.authentication_updated, self._on_authentication_updated
-        )
-        self.framework.observe(self.on[ETCD].relation_broken, self._on_relation_broken)
+        if self.model.juju_version.has_secrets:
+            self.etcd = EtcdRequires(
+                self,
+                relation_name=ETCD,
+                prefix=self.prefix or "",
+                mtls_cert=self.mtls_client_cert,
+            )
+            self.framework.observe(
+                self.etcd.on.authentication_updated, self._on_authentication_updated
+            )
+            self.framework.observe(self.on[ETCD].relation_broken, self._on_relation_broken)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
@@ -386,7 +387,11 @@ class IntegratorCharm(CharmBase):
     @property
     def etcd_relation(self) -> Optional[Relation]:
         """Return the etcd relation if present."""
-        return self.etcd.relations[0] if len(self.etcd.relations) else None
+        return (
+            self.etcd.relations[0]
+            if self.model.juju_version.has_secrets and len(self.etcd.relations)
+            else None
+        )
 
     @property
     def databases_active(self) -> Dict[str, str]:
