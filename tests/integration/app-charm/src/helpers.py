@@ -483,7 +483,7 @@ def generate_cert(common_name: str):
 
 def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
     """Insert some testing data in a Etcd database."""
-    endpoints = credentials["endpoints"]
+    uris = credentials["uris"]
     server_ca_cert = credentials["tls-ca"]
     if (
         not Path(Path(ETCD_SNAP_DIR) / "client.pem").exists()
@@ -496,7 +496,7 @@ def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
         output = subprocess.check_output([
             "charmed-etcd.etcdctl",
             "--endpoints",
-            endpoints,
+            uris,
             "--cert",
             f"{ETCD_SNAP_DIR}/client.pem",
             "--key",
@@ -514,7 +514,7 @@ def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
 
 def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
     """Check that data are inserted in a Etcd database."""
-    endpoints = credentials["endpoints"]
+    uris = credentials["uris"]
     server_ca_cert = credentials["tls-ca"]
     if (
         not Path(Path(ETCD_SNAP_DIR) / "client.pem").exists()
@@ -528,7 +528,7 @@ def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) ->
             [
                 "charmed-etcd.etcdctl",
                 "--endpoints",
-                endpoints,
+                uris,
                 "--cert",
                 f"{ETCD_SNAP_DIR}/client.pem",
                 "--key",

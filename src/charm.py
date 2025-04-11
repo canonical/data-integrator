@@ -15,9 +15,9 @@ from enum import Enum
 from typing import Dict, MutableMapping, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import (
-    AuthenticationEvent,
     DatabaseCreatedEvent,
     DatabaseRequires,
+    EtcdReadyEvent,
     EtcdRequires,
     IndexCreatedEvent,
     KafkaRequires,
@@ -103,9 +103,7 @@ class IntegratorCharm(CharmBase):
                 prefix=self.prefix or "",
                 mtls_cert=self.mtls_client_cert,
             )
-            self.framework.observe(
-                self.etcd.on.authentication_updated, self._on_authentication_updated
-            )
+            self.framework.observe(self.etcd.on.etcd_ready, self._on_etcd_ready)
             self.framework.observe(self.on[ETCD].relation_broken, self._on_relation_broken)
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
@@ -257,6 +255,7 @@ class IntegratorCharm(CharmBase):
         if self.is_etcd_related:
             result[ETCD] = {
                 "prefix": self.prefix_active,
+                "uris": self.etcd.fetch_relation_field(self.etcd_relation.id, "uris"),
                 "endpoints": self.etcd.fetch_relation_field(self.etcd_relation.id, "endpoints"),
                 "username": self.etcd.fetch_relation_field(self.etcd_relation.id, "username"),
                 "tls-ca": self.etcd.fetch_relation_field(self.etcd_relation.id, "tls-ca"),
@@ -292,8 +291,8 @@ class IntegratorCharm(CharmBase):
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
-    def _on_authentication_updated(self, event: AuthenticationEvent) -> None:
-        logger.debug("etcd tls ca received")
+    def _on_etcd_ready(self, event: EtcdReadyEvent) -> None:
+        logger.debug("etcd ready received")
         self._on_config_changed(event)
         if not self.unit.is_leader:
             return
@@ -417,7 +416,7 @@ class IntegratorCharm(CharmBase):
 
     @property
     def prefix_active(self) -> Optional[str]:
-        """Return the configured endpoints."""
+        """Return the configured prefix."""
         if relation := self.etcd_relation:
             return self.etcd.fetch_my_relation_field(relation.id, "prefix")
 
@@ -464,6 +463,8 @@ class IntegratorCharm(CharmBase):
         """Return if a relation with etcd is present."""
         return (
             self.etcd_relation
+            and self.etcd.fetch_relation_field(self.etcd_relation.id, "username") is not None
+            and self.etcd.fetch_relation_field(self.etcd_relation.id, "uris") is not None
             and self.etcd.fetch_relation_field(self.etcd_relation.id, "endpoints") is not None
             and self.etcd.fetch_relation_field(self.etcd_relation.id, "tls-ca") is not None
             and self.etcd.fetch_relation_field(self.etcd_relation.id, "version") is not None

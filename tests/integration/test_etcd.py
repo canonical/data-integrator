@@ -132,7 +132,7 @@ async def test_read_write(ops_test: OpsTest, cloud_name: str):
     action = await action.wait()
     assert action.status == "completed"
     credentials = {
-        "endpoints": action.results["etcd"]["endpoints"],
+        "uris": action.results["etcd"]["uris"],
         "tls-ca": action.results["etcd"]["tls-ca"],
     }
     params = {
