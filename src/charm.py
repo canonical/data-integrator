@@ -292,6 +292,7 @@ class IntegratorCharm(CharmBase):
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
     def _on_etcd_ready(self, event: EtcdReadyEvent) -> None:
+        """Event triggered when the etcd relation is ready."""
         logger.debug("etcd ready received")
         self._on_config_changed(event)
         if not self.unit.is_leader:
@@ -350,14 +351,12 @@ class IntegratorCharm(CharmBase):
     @property
     def mtls_client_cert(self) -> Optional[str]:
         """Return the configured client cert."""
-        cert = self.model.config.get("mtls-cert", None)
-        if not cert:
+        if not (cert := self.model.config.get("mtls-cert", None)):
             return None
 
         if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", cert):
             return cert.replace("\\n", "\n")
-        else:
-            return base64.b64decode(cert).decode("utf-8").strip()
+        return base64.b64decode(cert).decode("utf-8").strip()
 
     @property
     def prefix(self) -> Optional[str]:

@@ -47,6 +47,7 @@ KYUUBI = "kyuubi"
 ETCD = "etcd"
 TABLE_SCHEMA = [("name", str), ("score", int)]
 ETCD_SNAP_DIR = "/var/snap/charmed-etcd/common"
+ETCD_CERTS_DIR = f"{ETCD_SNAP_DIR}/certificates"
 
 TABLE_NAME = "test_table"
 
@@ -467,7 +468,8 @@ def check_inserted_data_kyuubi(credentials: Dict[str, str], database_name: str) 
 # ETCD
 
 
-def generate_cert(common_name: str):
+def generate_cert(common_name: str) -> str:
+    """Generate a self-signed certificate and private key for testing."""
     ca_private_key = generate_private_key()
     ca_cert = generate_ca(
         private_key=ca_private_key, validity=timedelta(days=365), common_name="ca_common_name"
@@ -486,11 +488,11 @@ def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
     uris = credentials["uris"]
     server_ca_cert = credentials["tls-ca"]
     if (
-        not Path(Path(ETCD_SNAP_DIR) / "client.pem").exists()
-        or not Path(Path(ETCD_SNAP_DIR) / "client.key").exists()
+        not Path(Path(ETCD_CERTS_DIR) / "client.pem").exists()
+        or not Path(Path(ETCD_CERTS_DIR) / "client.key").exists()
     ):
         raise FileNotFoundError("Missing client certificate or key")
-    Path(Path(ETCD_SNAP_DIR) / "ca.pem").write_text(server_ca_cert)
+    Path(Path(ETCD_CERTS_DIR) / "ca.pem").write_text(server_ca_cert)
 
     try:
         output = subprocess.check_output([
@@ -498,11 +500,11 @@ def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
             "--endpoints",
             uris,
             "--cert",
-            f"{ETCD_SNAP_DIR}/client.pem",
+            f"{ETCD_CERTS_DIR}/client.pem",
             "--key",
-            f"{ETCD_SNAP_DIR}/client.key",
+            f"{ETCD_CERTS_DIR}/client.key",
             "--cacert",
-            f"{ETCD_SNAP_DIR}/ca.pem",
+            f"{ETCD_CERTS_DIR}/ca.pem",
             "put",
             f"{database_name}/foo",
             "bar",
@@ -517,11 +519,11 @@ def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) ->
     uris = credentials["uris"]
     server_ca_cert = credentials["tls-ca"]
     if (
-        not Path(Path(ETCD_SNAP_DIR) / "client.pem").exists()
-        or not Path(Path(ETCD_SNAP_DIR) / "client.key").exists()
+        not Path(Path(ETCD_CERTS_DIR) / "client.pem").exists()
+        or not Path(Path(ETCD_CERTS_DIR) / "client.key").exists()
     ):
         raise FileNotFoundError("Missing client certificate or key")
-    Path("ca.pem").write_text(server_ca_cert)
+    Path(Path(ETCD_CERTS_DIR) / "ca.pem").write_text(server_ca_cert)
 
     try:
         output = subprocess.check_output(
@@ -530,11 +532,11 @@ def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) ->
                 "--endpoints",
                 uris,
                 "--cert",
-                f"{ETCD_SNAP_DIR}/client.pem",
+                f"{ETCD_CERTS_DIR}/client.pem",
                 "--key",
-                f"{ETCD_SNAP_DIR}/client.key",
+                f"{ETCD_CERTS_DIR}/client.key",
                 "--cacert",
-                f"{ETCD_SNAP_DIR}/ca.pem",
+                f"{ETCD_CERTS_DIR}/ca.pem",
                 "get",
                 f"{database_name}/foo",
             ],

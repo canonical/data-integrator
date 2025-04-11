@@ -16,7 +16,7 @@ from pathlib import Path
 from charms.operator_libs_linux.v2 import snap
 from helpers import (
     ETCD,
-    ETCD_SNAP_DIR,
+    ETCD_CERTS_DIR,
     KAFKA,
     KAFKA_K8S,
     KYUUBI,
@@ -58,7 +58,7 @@ from ops import BlockedStatus, InstallEvent
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
-from tenacity import retry, stop_after_attempt, wait_fixed
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 logger = logging.getLogger(__name__)
 
@@ -99,11 +99,11 @@ class ApplicationCharm(CharmBase):
     def _on_install(self, event: InstallEvent):
         """Handle install event."""
         # install the etcd snap if on VM
-        if self._is_cloud_vm():
-            logger.info("Installing etcd snap")
-            if not self._install_etcd_snap():
-                self.unit.status = BlockedStatus("Failed to install etcd snap")
-                return
+        if not self._is_cloud_vm():
+            return
+        logger.info("Installing etcd snap")
+        if not self._install_etcd_snap():
+            self.unit.status = BlockedStatus("Failed to install etcd snap")
 
     def _create_table(self, event) -> None:
         """Handle the action that creates a table on different databases."""
@@ -287,25 +287,25 @@ class ApplicationCharm(CharmBase):
         # generate the certificate
         cert, key = generate_cert(common_name)
         # save the certificate and key to disk
-        etcd_snap_dir = Path(ETCD_SNAP_DIR)
-        etcd_snap_dir.mkdir(parents=True, exist_ok=True)
-        Path(etcd_snap_dir / "client.pem").write_text(cert)
-        Path(etcd_snap_dir / "client.key").write_text(key)
+        etcd_snap_certs_dir = Path(ETCD_CERTS_DIR)
+        etcd_snap_certs_dir.mkdir(parents=True, exist_ok=True)
+        Path(etcd_snap_certs_dir / "client.pem").write_text(cert)
+        Path(etcd_snap_certs_dir / "client.key").write_text(key)
         # set the results of the action
         event.set_results({"certificate": cert, "key": key})
 
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True)
     def _install_etcd_snap(self) -> bool:
         """Install the etcd snap."""
-        try:
-            self.etcd_snap.ensure(snap.SnapState.Present, channel="3.5/edge")
-            self.etcd_snap.hold()
-            return True
-        except snap.SnapError as e:
-            logger.error(str(e))
-            return False
+        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
+            with attempt:
+                self.etcd_snap.ensure(snap.SnapState.Present, channel="3.5/edge")
+                self.etcd_snap.hold()
+                return True
 
-    def _is_cloud_vm(self):
+        logger.error("Failed to install etcd snap after retries.")
+        return False
+
+    def _is_cloud_vm(self) -> bool:
         """Check if the cloud is a VM."""
         # Check if the cloud is a VM
         try:
@@ -314,11 +314,7 @@ class ApplicationCharm(CharmBase):
             logger.error(f"Command failed with error: {e}")
             return False
 
-        output = output.decode("utf-8").strip()
-        if "systemctl" in output:
-            return True
-        else:
-            return False
+        return "systemctl" in output.decode("utf-8").strip()
 
 
 if __name__ == "__main__":
