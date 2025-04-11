@@ -6,6 +6,9 @@
   "poetry": {
     "ignorePaths": []
   },
+  "regex": {
+    "ignorePaths": []
+  },
   "packageRules": [
     // Later rules override earlier rules
   ],

@@ -18,7 +18,7 @@ from .helpers import (
     fetch_action_database,
     fetch_action_get_credentials,
 )
-from .markers import only_on_localhost, only_on_microk8s, only_with_juju_3
+from .markers import only_on_microk8s, only_with_juju_3
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,6 @@ POSTGRESQL_APP_NAME = "postgresql-k8s"
 
 
 @only_on_microk8s
-@only_on_localhost  # TODO remove when kyuubi is fixed
 @only_with_juju_3
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -66,7 +65,6 @@ async def test_deploy_data_integrator(
 
 
 @only_on_microk8s
-@only_on_localhost  # TODO remove when kyuubi is fixed
 @only_with_juju_3
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -221,7 +219,6 @@ async def test_deploy_kyuubi_setup(
 
 
 @only_on_microk8s
-@only_on_localhost  # TODO remove when kyuubi is fixed
 @only_with_juju_3
 @pytest.mark.group(1)
 async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest, cloud_name: str):
@@ -243,7 +240,6 @@ async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest, cloud_name:
     )
 
 
-@only_on_localhost  # TODO remove when kyuubi is fixed
 @only_with_juju_3
 @only_on_microk8s
 @pytest.mark.group(1)

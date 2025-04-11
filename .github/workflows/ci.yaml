@@ -61,7 +61,6 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v30.1.3
     with:
       path-to-charm-directory: ${{ matrix.path }}
-      cache: false # disable when cache is there
 
   integration-test:
     strategy:
