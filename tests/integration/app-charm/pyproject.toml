@@ -6,7 +6,7 @@ package-mode = false
 requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
-cryptography = "==43.0.1"
+cryptography = "==44.0.1"
 pydantic = "==2.9.1"
 tenacity = "*"
 
