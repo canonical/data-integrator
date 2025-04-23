@@ -13,5 +13,5 @@ KAFKA = "kafka"
 ZOOKEEPER = "zookeeper"
 OPENSEARCH = "opensearch"
 KYUUBI = "kyuubi"
-
+ETCD = "etcd"
 DATABASES = [MYSQL, MONGODB, POSTGRESQL, MONGOS, ZOOKEEPER, KYUUBI]

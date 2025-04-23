@@ -8,13 +8,17 @@ This charm is meant to be used only for testing
 of the libraries in this repository.
 """
 
+import base64
 import logging
+import re
 from enum import Enum
 from typing import Dict, MutableMapping, Optional
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseRequires,
+    EtcdReadyEvent,
+    EtcdRequires,
     IndexCreatedEvent,
     KafkaRequires,
     OpenSearchRequires,
@@ -34,7 +38,7 @@ from ops import (
     main,
 )
 
-from literals import DATABASES, KAFKA, OPENSEARCH, PEER
+from literals import DATABASES, ETCD, KAFKA, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
@@ -91,6 +95,17 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
         self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
 
+        # etcd
+        if self.model.juju_version.has_secrets:
+            self.etcd = EtcdRequires(
+                self,
+                relation_name=ETCD,
+                prefix=self.prefix or "",
+                mtls_cert=self.mtls_client_cert,
+            )
+            self.framework.observe(self.etcd.on.etcd_ready, self._on_etcd_ready)
+            self.framework.observe(self.on[ETCD].relation_broken, self._on_relation_broken)
+
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
         if not self.unit.is_leader():
@@ -100,10 +115,15 @@ class IntegratorCharm(CharmBase):
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
-        if not any([self.topic_name, self.database_name, self.index_name]):
-            return BlockedStatus("Please specify either topic, index, or database name")
+        if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
+            return BlockedStatus("Please specify either topic, index, database name, or prefix")
 
-        if not any([self.is_database_related, self.is_kafka_related, self.is_opensearch_related]):
+        if not any([
+            self.is_database_related,
+            self.is_kafka_related,
+            self.is_opensearch_related,
+            self.is_etcd_related,
+        ]):
             return BlockedStatus("Please relate the data-integrator with the desired product")
 
         if self.is_kafka_related and self.topic_active != self.topic_name:
@@ -120,6 +140,14 @@ class IntegratorCharm(CharmBase):
             )
             return BlockedStatus(
                 f"To change index name: {self.index_active}, please remove relation and add it again"
+            )
+
+        if self.is_etcd_related and self.prefix_active != self.prefix:
+            logger.error(
+                f"Trying to change etcd configuration for existing relation : To change prefix: {self.prefix_active}, please remove relation and add it again"
+            )
+            return BlockedStatus(
+                f"To change prefix name: {self.prefix_active}, please remove relation and add it again"
             )
 
         if self.is_database_related and any(
@@ -177,6 +205,16 @@ class IntegratorCharm(CharmBase):
                         "extra-user-roles": self.extra_user_roles or "",
                     },
                 )
+        if self.prefix and (not self.prefix_active or self.mtls_client_cert):
+            for rel in self.etcd.relations:
+                if not self.prefix_active:
+                    self.etcd.update_relation_data(
+                        rel.id,
+                        {
+                            "prefix": self.prefix,
+                        },
+                    )
+                self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
 
     def _update_database_relations(self, database_relation_data: Dict[str, str]):
         """Update the relation data of the related databases."""
@@ -186,12 +224,19 @@ class IntegratorCharm(CharmBase):
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
-        if not any([self.database_name, self.topic_name, self.index_name]):
-            event.fail("The database name or topic name is not specified in the config.")
+        if not any([self.database_name, self.topic_name, self.index_name, self.prefix]):
+            event.fail(
+                "The database name, topic name, index name, or prefix is not specified in the config."
+            )
             event.set_results({"ok": False})
             return
 
-        if not any([self.is_database_related, self.is_kafka_related, self.is_opensearch_related]):
+        if not any([
+            self.is_database_related,
+            self.is_kafka_related,
+            self.is_opensearch_related,
+            self.is_etcd_related,
+        ]):
             event.fail("The action can be run only after relation is created.")
             event.set_results({"ok": False})
             return
@@ -206,6 +251,16 @@ class IntegratorCharm(CharmBase):
 
         if self.is_opensearch_related:
             result[OPENSEARCH] = list(self.opensearch.fetch_relation_data().values())[0]
+
+        if self.is_etcd_related:
+            result[ETCD] = {
+                "prefix": self.prefix_active,
+                "uris": self.etcd.fetch_relation_field(self.etcd_relation.id, "uris"),
+                "endpoints": self.etcd.fetch_relation_field(self.etcd_relation.id, "endpoints"),
+                "username": self.etcd.fetch_relation_field(self.etcd_relation.id, "username"),
+                "tls-ca": self.etcd.fetch_relation_field(self.etcd_relation.id, "tls-ca"),
+                "version": self.etcd.fetch_relation_field(self.etcd_relation.id, "version"),
+            }
 
         event.set_results(result)
 
@@ -230,6 +285,15 @@ class IntegratorCharm(CharmBase):
     def _on_index_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when an index is created for this application."""
         logger.debug(f"OpenSearch credentials are received: {event.username}")
+        self._on_config_changed(event)
+        if not self.unit.is_leader:
+            return
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event, Statuses.ACTIVE.name)
+
+    def _on_etcd_ready(self, event: EtcdReadyEvent) -> None:
+        """Event triggered when the etcd relation is ready."""
+        logger.debug("etcd ready received")
         self._on_config_changed(event)
         if not self.unit.is_leader:
             return
@@ -285,6 +349,21 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("consumer-group-prefix", None)
 
     @property
+    def mtls_client_cert(self) -> Optional[str]:
+        """Return the configured client cert."""
+        if not (cert := self.model.config.get("mtls-cert", None)):
+            return None
+
+        if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", cert):
+            return cert.replace("\\n", "\n")
+        return base64.b64decode(cert).decode("utf-8").strip()
+
+    @property
+    def prefix(self) -> Optional[str]:
+        """Return the configured prefix."""
+        return self.model.config.get("prefix-name", None)
+
+    @property
     def database_relations(self) -> Dict[str, Relation]:
         """Return the active database relations."""
         return {
@@ -302,6 +381,15 @@ class IntegratorCharm(CharmBase):
     def kafka_relation(self) -> Optional[Relation]:
         """Return the kafka relation if present."""
         return self.kafka.relations[0] if len(self.kafka.relations) else None
+
+    @property
+    def etcd_relation(self) -> Optional[Relation]:
+        """Return the etcd relation if present."""
+        return (
+            self.etcd.relations[0]
+            if self.model.juju_version.has_secrets and len(self.etcd.relations)
+            else None
+        )
 
     @property
     def databases_active(self) -> Dict[str, str]:
@@ -324,6 +412,12 @@ class IntegratorCharm(CharmBase):
         """Return the configured index name."""
         if relation := self.opensearch_relation:
             return self.opensearch.fetch_relation_field(relation.id, "index")
+
+    @property
+    def prefix_active(self) -> Optional[str]:
+        """Return the configured prefix."""
+        if relation := self.etcd_relation:
+            return self.etcd.fetch_my_relation_field(relation.id, "prefix")
 
     @property
     def extra_user_roles_active(self) -> Optional[str]:
@@ -362,6 +456,18 @@ class IntegratorCharm(CharmBase):
     def is_opensearch_related(self) -> bool:
         """Return if a relation with opensearch is present."""
         return self._check_for_credentials(self.opensearch)
+
+    @property
+    def is_etcd_related(self) -> bool:
+        """Return if a relation with etcd is present."""
+        return (
+            self.etcd_relation
+            and self.etcd.fetch_relation_field(self.etcd_relation.id, "username") is not None
+            and self.etcd.fetch_relation_field(self.etcd_relation.id, "uris") is not None
+            and self.etcd.fetch_relation_field(self.etcd_relation.id, "endpoints") is not None
+            and self.etcd.fetch_relation_field(self.etcd_relation.id, "tls-ca") is not None
+            and self.etcd.fetch_relation_field(self.etcd_relation.id, "version") is not None
+        )
 
     @property
     def app_peer_data(self) -> MutableMapping[str, str]:

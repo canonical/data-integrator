@@ -1,14 +1,16 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import unittest
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock, patch
 
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import IntegratorCharm
 
-BLOCKED_STATUS_NO_CONFIG = BlockedStatus("Please specify either topic, index, or database name")
+BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
+    "Please specify either topic, index, database name, or prefix"
+)
 BLOCKED_STATUS_RELATE = BlockedStatus("Please relate the data-integrator with the desired product")
 BLOCKED_STATUS_REMOVE_DB = BlockedStatus(
     "To change database name: foo, please remove relation and add it again"
@@ -17,9 +19,13 @@ BLOCKED_STATUS_REMOVE_KF = BlockedStatus(
     "To change topic: bar, please remove relation and add it again"
 )
 
+juju_version = MagicMock()
+juju_version.has_secrets = True
+
 
 class TestCharm(unittest.TestCase):
-    def setUp(self):
+    @patch("ops.jujuversion.JujuVersion.from_environ", return_value=juju_version)
+    def setUp(self, _):
         self.harness = Harness(IntegratorCharm)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
@@ -43,7 +49,11 @@ class TestCharm(unittest.TestCase):
 
         self.assertEqual(
             action_event.fail.call_args,
-            [("The database name or topic name is not specified in the config.",)],
+            [
+                (
+                    "The database name, topic name, index name, or prefix is not specified in the config.",
+                )
+            ],
         )
 
         self.harness.update_config({"database-name": "foo"})

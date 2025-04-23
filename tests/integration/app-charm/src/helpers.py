@@ -2,13 +2,22 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import subprocess
 import tempfile
+from datetime import timedelta
 from json import JSONDecodeError
+from pathlib import Path
 from typing import Dict
 
 import psycopg2
 import requests
 from charms.kafka.v0.client import KafkaClient
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    generate_ca,
+    generate_certificate,
+    generate_csr,
+    generate_private_key,
+)
 from connector import MysqlConnector, get_zookeeper_client
 from kafka.admin import NewTopic
 from pymongo import MongoClient
@@ -35,7 +44,10 @@ KAFKA_K8S = "kafka-k8s"
 ZOOKEEPER_K8S = "zookeeper-k8s"
 
 KYUUBI = "kyuubi"
+ETCD = "etcd"
 TABLE_SCHEMA = [("name", str), ("score", int)]
+ETCD_SNAP_DIR = "/var/snap/charmed-etcd/common"
+ETCD_CERTS_DIR = f"{ETCD_SNAP_DIR}/certificates"
 
 TABLE_NAME = "test_table"
 
@@ -451,3 +463,84 @@ def check_inserted_data_kyuubi(credentials: Dict[str, str], database_name: str) 
         return True
     except Exception:
         return False
+
+
+# ETCD
+
+
+def generate_cert(common_name: str) -> str:
+    """Generate a self-signed certificate and private key for testing."""
+    ca_private_key = generate_private_key()
+    ca_cert = generate_ca(
+        private_key=ca_private_key, validity=timedelta(days=365), common_name="ca_common_name"
+    )
+
+    client_private_key = generate_private_key()
+    client_csr = generate_csr(private_key=client_private_key, common_name=common_name)
+    client_cert = generate_certificate(
+        client_csr, ca_cert, ca_private_key, validity=timedelta(days=365)
+    )
+    return "\n".join([client_cert.raw, ca_cert.raw]), client_private_key.raw
+
+
+def insert_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
+    """Insert some testing data in a Etcd database."""
+    uris = credentials["uris"]
+    server_ca_cert = credentials["tls-ca"]
+    if (
+        not Path(Path(ETCD_CERTS_DIR) / "client.pem").exists()
+        or not Path(Path(ETCD_CERTS_DIR) / "client.key").exists()
+    ):
+        raise FileNotFoundError("Missing client certificate or key")
+    Path(Path(ETCD_CERTS_DIR) / "ca.pem").write_text(server_ca_cert)
+
+    try:
+        output = subprocess.check_output([
+            "charmed-etcd.etcdctl",
+            "--endpoints",
+            uris,
+            "--cert",
+            f"{ETCD_CERTS_DIR}/client.pem",
+            "--key",
+            f"{ETCD_CERTS_DIR}/client.key",
+            "--cacert",
+            f"{ETCD_CERTS_DIR}/ca.pem",
+            "put",
+            f"{database_name}/foo",
+            "bar",
+        ])
+    except subprocess.CalledProcessError:
+        return False
+    return output.decode().strip() == "OK"
+
+
+def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) -> bool:
+    """Check that data are inserted in a Etcd database."""
+    uris = credentials["uris"]
+    server_ca_cert = credentials["tls-ca"]
+    if (
+        not Path(Path(ETCD_CERTS_DIR) / "client.pem").exists()
+        or not Path(Path(ETCD_CERTS_DIR) / "client.key").exists()
+    ):
+        raise FileNotFoundError("Missing client certificate or key")
+    Path(Path(ETCD_CERTS_DIR) / "ca.pem").write_text(server_ca_cert)
+
+    try:
+        output = subprocess.check_output(
+            [
+                "charmed-etcd.etcdctl",
+                "--endpoints",
+                uris,
+                "--cert",
+                f"{ETCD_CERTS_DIR}/client.pem",
+                "--key",
+                f"{ETCD_CERTS_DIR}/client.key",
+                "--cacert",
+                f"{ETCD_CERTS_DIR}/ca.pem",
+                "get",
+                f"{database_name}/foo",
+            ],
+        )
+    except subprocess.CalledProcessError:
+        return False
+    return output.decode().strip().split("\n") == [f"{database_name}/foo", "bar"]

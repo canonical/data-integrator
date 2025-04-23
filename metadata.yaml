@@ -48,6 +48,9 @@ requires:
   kyuubi:
     interface: kyuubi_client
     limit: 1
+  etcd:
+    interface: etcd_client
+    limit: 1
 
 # subordinate charm integrations
 provides:

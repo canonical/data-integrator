@@ -13,7 +13,7 @@ create-table:
     credentials:
       type: string
       description: The credentials exposed by the data-integrator.
-  required: [product,database-name,credentials]
+  required: [product, database-name, credentials]
 
 insert-data:
   description: insert data in the table
@@ -27,7 +27,7 @@ insert-data:
     credentials:
       type: string
       description: The credentials exposed by the data-integrator
-  required: [product,database-name,credentials]
+  required: [product, database-name, credentials]
 
 check-inserted-data:
   description: check the data inside the table
@@ -41,7 +41,7 @@ check-inserted-data:
     credentials:
       type: string
       description: The credentials exposed by the data-integrator.
-  required: [product,database-name,credentials]
+  required: [product, database-name, credentials]
 
 produce-messages:
   description: produce messages on a given topic
@@ -55,7 +55,7 @@ produce-messages:
     credentials:
       type: string
       description: The credentials exposed by the data-integrator.
-  required: [product,topic-name,credentials]
+  required: [product, topic-name, credentials]
 
 create-topic:
   description: create a topic
@@ -69,7 +69,7 @@ create-topic:
     credentials:
       type: string
       description: The credentials exposed by the data-integrator.
-  required: [product,topic-name,credentials]
+  required: [product, topic-name, credentials]
 
 http-request:
   description: run an HTTP request
@@ -87,3 +87,11 @@ http-request:
       description: The credentials exposed by the data-integrator.
       type: string
   required: [method, endpoint, credentials]
+
+generate-cert:
+  description: generate a TLS certificate for mTLS testing
+  params:
+    common-name:
+      description: Common name for the certificate
+      type: string
+  required: [common-name]

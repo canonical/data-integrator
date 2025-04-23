@@ -10,8 +10,13 @@ of the libraries in this repository.
 
 import json
 import logging
+import subprocess
+from pathlib import Path
 
+from charms.operator_libs_linux.v2 import snap
 from helpers import (
+    ETCD,
+    ETCD_CERTS_DIR,
     KAFKA,
     KAFKA_K8S,
     KYUUBI,
@@ -27,6 +32,7 @@ from helpers import (
     POSTGRESQL_K8S,
     ZOOKEEPER,
     ZOOKEEPER_K8S,
+    check_inserted_data_etcd,
     check_inserted_data_kyuubi,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
@@ -38,7 +44,9 @@ from helpers import (
     create_table_postgresql,
     create_table_zookeeper,
     create_topic,
+    generate_cert,
     http_request,
+    insert_data_etcd,
     insert_data_kyuubi,
     insert_data_mongodb,
     insert_data_mysql,
@@ -46,14 +54,17 @@ from helpers import (
     insert_data_zookeeper,
     produce_messages,
 )
+from ops import BlockedStatus, InstallEvent
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 logger = logging.getLogger(__name__)
 
 
 CHARM_KEY = "app"
+ETCD_SNAP_NAME = "charmed-etcd"
 
 
 class ApplicationCharm(CharmBase):
@@ -62,8 +73,11 @@ class ApplicationCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.name = CHARM_KEY
+        if self._is_cloud_vm():
+            self.etcd_snap = snap.SnapCache()[ETCD_SNAP_NAME]
 
         self.framework.observe(getattr(self.on, "start"), self._on_start)
+        self.framework.observe(getattr(self.on, "install"), self._on_install)
         # these action are needed because hostnames cannot be resolved outside K8s
         self.framework.observe(getattr(self.on, "create_table_action"), self._create_table)
         self.framework.observe(getattr(self.on, "insert_data_action"), self._insert_data)
@@ -76,8 +90,20 @@ class ApplicationCharm(CharmBase):
 
         self.framework.observe(getattr(self.on, "http_request_action"), self._http_request)
 
+        # Action to generate a certificate
+        self.framework.observe(getattr(self.on, "generate_cert_action"), self._generate_cert)
+
     def _on_start(self, _) -> None:
         self.unit.status = ActiveStatus()
+
+    def _on_install(self, event: InstallEvent):
+        """Handle install event."""
+        # install the etcd snap if on VM
+        if not self._is_cloud_vm():
+            return
+        logger.info("Installing etcd snap")
+        if not self._install_etcd_snap():
+            self.unit.status = BlockedStatus("Failed to install etcd snap")
 
     def _create_table(self, event) -> None:
         """Handle the action that creates a table on different databases."""
@@ -152,6 +178,10 @@ class ApplicationCharm(CharmBase):
         elif product == KYUUBI:
             executed = insert_data_kyuubi(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == ETCD:
+            executed = insert_data_etcd(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+
         else:
             raise ValueError()
 
@@ -189,6 +219,9 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == KYUUBI:
             executed = check_inserted_data_kyuubi(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+        elif product == ETCD:
+            executed = check_inserted_data_etcd(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
@@ -241,6 +274,47 @@ class ApplicationCharm(CharmBase):
 
         response = http_request(credentials, endpoint, method, payload)
         event.set_results({"results": json.dumps(response)})
+
+    def _generate_cert(self, event) -> None:
+        """Handle the action that generates a certificate."""
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit.")
+            return
+
+        # read parameters from the event
+        common_name: str = event.params["common-name"]
+
+        # generate the certificate
+        cert, key = generate_cert(common_name)
+        # save the certificate and key to disk
+        etcd_snap_certs_dir = Path(ETCD_CERTS_DIR)
+        etcd_snap_certs_dir.mkdir(parents=True, exist_ok=True)
+        Path(etcd_snap_certs_dir / "client.pem").write_text(cert)
+        Path(etcd_snap_certs_dir / "client.key").write_text(key)
+        # set the results of the action
+        event.set_results({"certificate": cert, "key": key})
+
+    def _install_etcd_snap(self) -> bool:
+        """Install the etcd snap."""
+        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5)):
+            with attempt:
+                self.etcd_snap.ensure(snap.SnapState.Present, channel="3.5/edge")
+                self.etcd_snap.hold()
+                return True
+
+        logger.error("Failed to install etcd snap after retries.")
+        return False
+
+    def _is_cloud_vm(self) -> bool:
+        """Check if the cloud is a VM."""
+        # Check if the cloud is a VM
+        try:
+            output = subprocess.check_output(["which", "systemctl"])
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Command failed with error: {e}")
+            return False
+
+        return "systemctl" in output.decode("utf-8").strip()
 
 
 if __name__ == "__main__":
