@@ -286,7 +286,7 @@ class IntegratorCharm(CharmBase):
         """Event triggered when an index is created for this application."""
         logger.debug(f"OpenSearch credentials are received: {event.username}")
         self._on_config_changed(event)
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
@@ -295,7 +295,7 @@ class IntegratorCharm(CharmBase):
         """Event triggered when the etcd relation is ready."""
         logger.debug("etcd ready received")
         self._on_config_changed(event)
-        if not self.unit.is_leader:
+        if not self.unit.is_leader():
             return
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
