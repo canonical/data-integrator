@@ -49,10 +49,10 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     await asyncio.gather(
         ops_test.model.deploy(
             POSTGRESQL[cloud_name],
-            channel="14/edge",
+            channel="16/edge",
             application_name=POSTGRESQL[cloud_name],
             num_units=1,
-            series="jammy",
+            series="noble",
             trust=True,
         )
     )
@@ -145,13 +145,14 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
     """Test the relation with PgBouncer and database accessibility."""
     logger.info(f"Test the relation with {PGBOUNCER[cloud_name]}.")
     num_units = 0 if cloud_name == "localhost" else 1
+    series = "noble" if cloud_name == "localhost" else "jammy"
     await asyncio.gather(
         ops_test.model.deploy(
             PGBOUNCER[cloud_name],
             application_name=PGBOUNCER[cloud_name],
             channel="1/edge",
             num_units=num_units,
-            series="jammy",
+            series=series,
             trust=True,
         ),
     )
