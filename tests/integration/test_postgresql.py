@@ -17,6 +17,7 @@ from .helpers import (
     fetch_action_database,
     fetch_action_get_credentials,
 )
+from .juju_ import has_secrets
 
 logger = logging.getLogger(__name__)
 
@@ -46,13 +47,15 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 @pytest.mark.group(1)
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     """Test the relation with PostgreSQL and database accessibility."""
+    channel = "16/edge" if has_secrets else "14/edge"
+    series = "noble" if has_secrets else "jammy"
     await asyncio.gather(
         ops_test.model.deploy(
             POSTGRESQL[cloud_name],
-            channel="16/edge",
+            channel=channel,
             application_name=POSTGRESQL[cloud_name],
             num_units=1,
-            series="noble",
+            series=series,
             trust=True,
         )
     )
@@ -145,14 +148,13 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
     """Test the relation with PgBouncer and database accessibility."""
     logger.info(f"Test the relation with {PGBOUNCER[cloud_name]}.")
     num_units = 0 if cloud_name == "localhost" else 1
-    series = "noble" if cloud_name == "localhost" else "jammy"
     await asyncio.gather(
         ops_test.model.deploy(
             PGBOUNCER[cloud_name],
             application_name=PGBOUNCER[cloud_name],
             channel="1/edge",
             num_units=num_units,
-            series=series,
+            series="jammy",
             trust=True,
         ),
     )
