@@ -56,6 +56,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
             application_name=POSTGRESQL[cloud_name],
             num_units=1,
             series=series,
+            config={"profile": "testing"},
             trust=True,
         )
     )
