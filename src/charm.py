@@ -108,8 +108,6 @@ class IntegratorCharm(CharmBase):
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
-        if not self.unit.is_leader():
-            return
         # update peer databag to trigger the charm status update
         self._update_relation_status(event, Statuses.BROKEN.name)
 
@@ -268,8 +266,6 @@ class IntegratorCharm(CharmBase):
         """Event triggered when a database was created for this application."""
         logger.debug(f"Database credentials are received: {event.username}")
         self._on_config_changed(event)
-        if not self.unit.is_leader():
-            return
         # update values in the databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
@@ -277,8 +273,6 @@ class IntegratorCharm(CharmBase):
         """Event triggered when a topic was created for this application."""
         logger.debug(f"Kafka credentials are received: {event.username}")
         self._on_config_changed(event)
-        if not self.unit.is_leader():
-            return
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
@@ -286,8 +280,6 @@ class IntegratorCharm(CharmBase):
         """Event triggered when an index is created for this application."""
         logger.debug(f"OpenSearch credentials are received: {event.username}")
         self._on_config_changed(event)
-        if not self.unit.is_leader():
-            return
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
@@ -295,13 +287,13 @@ class IntegratorCharm(CharmBase):
         """Event triggered when the etcd relation is ready."""
         logger.debug("etcd ready received")
         self._on_config_changed(event)
-        if not self.unit.is_leader():
-            return
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
     def _update_relation_status(self, event: RelationEvent, status: str) -> None:
         """Update the relation status in the peer-relation databag."""
+        if not self.unit.is_leader():
+            return
         self.set_secret("app", event.relation.name, status)
 
     def _on_peer_relation_changed(self, _: RelationEvent) -> None:
