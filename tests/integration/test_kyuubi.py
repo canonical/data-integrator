@@ -171,17 +171,6 @@ async def test_deploy_kyuubi_setup(
         "Waiting for kyuubi, s3-integrator and integration_hub charms to be idle and active..."
     )
 
-    # Wait for everything to settle down
-    await ops_test.model.wait_for_idle(
-        apps=[
-            KYUUBI_APP_NAME,
-            INTEGRATION_HUB_APP_NAME,
-            S3_APP_NAME,
-        ],
-        idle_period=20,
-        status="active",
-    )
-
     # Deploy the postgresql charm and wait
     hub_deploy_args = {
         "application_name": POSTGRESQL_APP_NAME,
@@ -191,11 +180,6 @@ async def test_deploy_kyuubi_setup(
     }
     logger.info("Deploying postgresql charm...")
     await ops_test.model.deploy(POSTGRESQL_APP_NAME, **hub_deploy_args)
-    logger.info("Waiting for postgresql charm to be idle and active...")
-    await ops_test.model.wait_for_idle(
-        apps=[POSTGRESQL_APP_NAME],
-        status="active",
-    )
 
     # Integrate Kyuubi with Postgresql and wait
     logger.info("Integrating kyuubi charm with postgresql charm...")
