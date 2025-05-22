@@ -27,18 +27,20 @@ topic-name - `string`; The topic name for which the access is granted.
 
 index-name - `string`; The index name for which the access is granted. [OPENSEARCH ONLY]
 
+role-type - `string`; The type or role to create when integrated.
+
 extra-user-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 extra-group-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 
-| Product    | database-name      | topic-name         | index-name         | extra-user-roles   | extra-group-roles  |
-|------------|--------------------|--------------------|--------------------|--------------------|--------------------|
-| MySQL      | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: |
-| PostgreSQL | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: |
-| MongoDB    | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: |
-| Kafka      |                    | :heavy_check_mark: |                    | :heavy_check_mark: | :white_check_mark: |
-| OpenSearch |                    |                    | :heavy_check_mark: | :white_check_mark: | :white_check_mark: |
+| Product    | database-name      | topic-name         | index-name         | role-type          | extra-user-roles   | extra-group-roles  |
+|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: |                    | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
+| OpenSearch |                    |                    | :heavy_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
@@ -74,12 +76,17 @@ juju config data-integrator database-name=test-database
 
 In addition:
 
+- Optional field `role-type` can be specified.
+```shell
+juju config data-integrator database-name=test-database role-type=GROUP
+```
+
 - Optional fields `extra-user-roles` or `extra-group-roles` can be specified.
 ```shell
-juju config data-integrator database-name=test-database extra-user-roles=admin
+juju config data-integrator database-name=test-database role-type=USER extra-user-roles=admin
 ```
 ```shell
-juju config data-integrator database-name=test-database extra-group-roles=admin
+juju config data-integrator database-name=test-database role-type=GROUP extra-group-roles=admin
 ```
 
 For Kafka, please configure the desired `topic-name`:
@@ -111,7 +118,7 @@ When the relation is removed, the access with the previous credentials will be r
 juju remove-relation data-integrator <application>
 ```
 
-> If you need to modify `database-name`, `topic-name`, `index-name`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation changing the desired field, and relate the data-integrator with the application again.
+> If you need to modify `database-name`, `topic-name`, `index-name`, `role-type`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation changing the desired field, and relate the data-integrator with the application again.
 
 #### Retrieve credentials
 

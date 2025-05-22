@@ -53,6 +53,7 @@ class IntegratorCharm(CharmBase):
             self,
             relation_name=relation_name,
             database_name=self.database_name or "",
+            role_type=self.role_type or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
             external_node_connectivity=True,
@@ -87,6 +88,7 @@ class IntegratorCharm(CharmBase):
                 )
                 else ""
             ),
+            role_type=self.role_type or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
@@ -99,6 +101,7 @@ class IntegratorCharm(CharmBase):
             self,
             relation_name=OPENSEARCH,
             index=self.index_name or "",
+            role_type=self.role_type or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
         )
@@ -210,6 +213,7 @@ class IntegratorCharm(CharmBase):
         if not self.databases_active and self.database_name:
             database_relation_data = {
                 "database": self.database_name,
+                "role-type": self.role_type or "",
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
@@ -225,6 +229,7 @@ class IntegratorCharm(CharmBase):
                     rel.id,
                     {
                         "topic": self.topic_name,
+                        "role-type": self.role_type or "",
                         "extra-user-roles": self.extra_user_roles or "",
                         "extra-group-roles": self.extra_group_roles or "",
                         "consumer-group-prefix": self.consumer_group_prefix or "",
@@ -237,6 +242,7 @@ class IntegratorCharm(CharmBase):
                     rel.id,
                     {
                         "index": self.index_name or "",
+                        "role-type": self.role_type or "",
                         "extra-user-roles": self.extra_user_roles or "",
                         "extra-group-roles": self.extra_group_roles or "",
                     },
@@ -369,6 +375,11 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("index-name", None)
 
     @property
+    def role_type(self) -> Optional[str]:
+        """Return the configured role type."""
+        return self.model.config.get("role-type", None)
+
+    @property
     def extra_user_roles(self) -> Optional[str]:
         """Return the configured extra user roles."""
         return self.model.config.get("extra-user-roles", None)
@@ -453,6 +464,11 @@ class IntegratorCharm(CharmBase):
         """Return the configured prefix."""
         if relation := self.etcd_relation:
             return self.etcd.fetch_my_relation_field(relation.id, "prefix")
+
+    @property
+    def role_type_active(self) -> Optional[str]:
+        """Return the configured role-type parameter."""
+        return self._get_active_value("role-type")
 
     @property
     def extra_user_roles_active(self) -> Optional[str]:
