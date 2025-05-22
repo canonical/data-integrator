@@ -29,13 +29,16 @@ index-name - `string`; The index name for which the access is granted. [OPENSEAR
 
 extra-user-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
-| Product    | database-name      | topic-name         | index-name         | extra-user-roles   |
-|------------|--------------------|--------------------|--------------------|--------------------|
-| MySQL      | :heavy_check_mark: |                    |                    | :white_check_mark: |
-| PostgreSQL | :heavy_check_mark: |                    |                    | :white_check_mark: |
-| MongoDB    | :heavy_check_mark: |                    |                    | :white_check_mark: |
-| Kafka      |                    | :heavy_check_mark: |                    | :heavy_check_mark: |
-| OpenSearch |                    |                    | :heavy_check_mark: | :white_check_mark: |
+extra-group-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
+
+
+| Product    | database-name      | topic-name         | index-name         | extra-user-roles   | extra-group-roles  |
+|------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: |                    | :heavy_check_mark: | :white_check_mark: |
+| OpenSearch |                    |                    | :heavy_check_mark: | :white_check_mark: | :white_check_mark: |
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
@@ -68,13 +71,18 @@ If you want to require access to a database, specify the `database-name` paramet
 ```shell
 juju config data-integrator database-name=test-database
 ```
-In addition, required `extra-user-roles` can be specified.
 
+In addition:
+
+- Optional fields `extra-user-roles` or `extra-group-roles` can be specified.
 ```shell
 juju config data-integrator database-name=test-database extra-user-roles=admin
 ```
+```shell
+juju config data-integrator database-name=test-database extra-group-roles=admin
+```
 
-Instead, for Kafka please configure the desired `topic-name`:
+For Kafka, please configure the desired `topic-name`:
 
 ```shell
 juju config data-integrator topic-name=test-topic extra-user-roles=producer,consumer
@@ -103,7 +111,7 @@ When the relation is removed, the access with the previous credentials will be r
 juju remove-relation data-integrator <application>
 ```
 
-> If you need to modify `database-name`, `topic-name`, `index-name`, or `extra-user-roles` and the relation has been already established, you need to remove the relation and then change the `database-name`, `topic-name`, `index-name`, or `extra-user-roles`, and finally relate the data-integrator with the desidered application.
+> If you need to modify `database-name`, `topic-name`, `index-name`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation changing the desired field, and relate the data-integrator with the application again.
 
 #### Retrieve credentials
 

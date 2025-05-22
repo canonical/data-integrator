@@ -54,6 +54,7 @@ class IntegratorCharm(CharmBase):
             relation_name=relation_name,
             database_name=self.database_name or "",
             extra_user_roles=self.extra_user_roles or "",
+            extra_group_roles=self.extra_group_roles or "",
             external_node_connectivity=True,
         )
         self.framework.observe(database_requirer.on.database_created, self._on_database_created)
@@ -87,6 +88,7 @@ class IntegratorCharm(CharmBase):
                 else ""
             ),
             extra_user_roles=self.extra_user_roles or "",
+            extra_group_roles=self.extra_group_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
@@ -98,6 +100,7 @@ class IntegratorCharm(CharmBase):
             relation_name=OPENSEARCH,
             index=self.index_name or "",
             extra_user_roles=self.extra_user_roles or "",
+            extra_group_roles=self.extra_group_roles or "",
         )
         self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
         self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
@@ -208,6 +211,7 @@ class IntegratorCharm(CharmBase):
             database_relation_data = {
                 "database": self.database_name,
                 "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
             }
             self._update_database_relations(database_relation_data)
 
@@ -222,6 +226,7 @@ class IntegratorCharm(CharmBase):
                     {
                         "topic": self.topic_name,
                         "extra-user-roles": self.extra_user_roles or "",
+                        "extra-group-roles": self.extra_group_roles or "",
                         "consumer-group-prefix": self.consumer_group_prefix or "",
                     },
                 )
@@ -233,6 +238,7 @@ class IntegratorCharm(CharmBase):
                     {
                         "index": self.index_name or "",
                         "extra-user-roles": self.extra_user_roles or "",
+                        "extra-group-roles": self.extra_group_roles or "",
                     },
                 )
         if self.prefix and (not self.prefix_active or self.mtls_client_cert):
@@ -368,6 +374,11 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("extra-user-roles", None)
 
     @property
+    def extra_group_roles(self) -> Optional[str]:
+        """Return the configured extra group roles."""
+        return self.model.config.get("extra-group-roles", None)
+
+    @property
     def consumer_group_prefix(self) -> Optional[str]:
         """Return the configured consumer group prefix."""
         return self.model.config.get("consumer-group-prefix", None)
@@ -447,6 +458,11 @@ class IntegratorCharm(CharmBase):
     def extra_user_roles_active(self) -> Optional[str]:
         """Return the configured user-extra-roles parameter."""
         return self._get_active_value("extra-user-roles")
+
+    @property
+    def extra_group_roles_active(self) -> Optional[str]:
+        """Return the configured group-extra-roles parameter."""
+        return self._get_active_value("extra-group-roles")
 
     @property
     def is_database_related(self) -> bool:
