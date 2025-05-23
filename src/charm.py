@@ -124,6 +124,19 @@ class IntegratorCharm(CharmBase):
         # update peer databag to trigger the charm status update
         self._update_relation_status(event, Statuses.BROKEN.name)
 
+    def _changes_role_info(self) -> bool:
+        """Return whether any of the role config options changed."""
+        # Cache values to speed up comparison
+        active_type = self.role_type_active
+        active_user_roles = self.extra_user_roles_active
+        active_group_roles = self.extra_group_roles_active
+
+        return any([
+            active_type and active_type != self.role_type,
+            active_user_roles and active_user_roles != self.extra_user_roles,
+            active_group_roles and active_group_roles != self.extra_group_roles,
+        ])
+
     def _get_active_value(self, key: str) -> Optional[str]:
         """Return the active value for a given relation databag key."""
         for requirer in self.databases.values():
@@ -157,6 +170,9 @@ class IntegratorCharm(CharmBase):
             self.is_etcd_related,
         ]):
             return BlockedStatus("Please relate the data-integrator with the desired product")
+
+        if self._changes_role_info():
+            return BlockedStatus("To change role info, please remove relation and add it again")
 
         if self.is_kafka_related and self.topic_active != self.topic_name:
             logger.error(
@@ -247,6 +263,7 @@ class IntegratorCharm(CharmBase):
                         "extra-group-roles": self.extra_group_roles or "",
                     },
                 )
+
         if self.prefix and (not self.prefix_active or self.mtls_client_cert):
             for rel in self.etcd.relations:
                 if not self.prefix_active:
