@@ -118,6 +118,21 @@ class IntegratorCharm(CharmBase):
         # update peer databag to trigger the charm status update
         self._update_relation_status(event, Statuses.BROKEN.name)
 
+    def _get_active_value(self, key: str) -> Optional[str]:
+        """Return the active value for a given relation databag key."""
+        for requirer in self.databases.values():
+            if not requirer.relations:
+                continue
+            if relation := requirer.relations[0]:
+                return requirer.fetch_relation_field(relation.id, key)
+
+        if relation := self.kafka_relation:
+            return self.kafka.fetch_relation_field(relation.id, key)
+        if relation := self.opensearch_relation:
+            return self.opensearch.fetch_relation_field(relation.id, key)
+        if relation := self.etcd_relation:
+            return self.etcd.fetch_my_relation_field(relation.id, key)
+
     def get_status(self) -> StatusBase:
         """Return the current application status."""
         if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
@@ -431,11 +446,7 @@ class IntegratorCharm(CharmBase):
     @property
     def extra_user_roles_active(self) -> Optional[str]:
         """Return the configured user-extra-roles parameter."""
-        return (
-            self.kafka.fetch_relation_field(relation.id, "extra-user-roles")
-            if (relation := self.kafka_relation)
-            else None
-        )
+        return self._get_active_value("extra-user-roles")
 
     @property
     def is_database_related(self) -> bool:
