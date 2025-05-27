@@ -223,63 +223,83 @@ class IntegratorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        # update relation databag
-        # if a relation has been created before configuring the topic or database name
-        # update the relation databag with the proper value
-        if not self.databases_active and self.database_name:
+        # Update relation databag
+        if self.database_name and not self.databases_active:
+            self._on_config_changed_database()
+        if self.topic_name and not self.topic_active:
+            self._on_config_changed_topic()
+        if self.index_name and not self.index_active:
+            self._on_config_changed_index()
+        if self.prefix and (not self.prefix_active or self.mtls_client_cert):
+            self._on_config_changed_prefix()
+
+    def _on_config_changed_database(self) -> None:
+        """Handle on config changed database event."""
+        if self.role_type:
             database_relation_data = {
                 "database": self.database_name,
-                "role-type": self.role_type or "",
+                "role-type": self.role_type,
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
-            self._update_database_relations(database_relation_data)
+        else:
+            database_relation_data = {
+                "database": self.database_name,
+                "extra-user-roles": self.extra_user_roles or "",
+            }
 
-        if (
-            not self.topic_active
-            and self.topic_name
-            and KafkaRequires.is_topic_value_acceptable(self.topic_name)
-        ):
-            for rel in self.kafka.relations:
-                self.kafka.update_relation_data(
-                    rel.id,
-                    {
-                        "topic": self.topic_name,
-                        "role-type": self.role_type or "",
-                        "extra-user-roles": self.extra_user_roles or "",
-                        "extra-group-roles": self.extra_group_roles or "",
-                        "consumer-group-prefix": self.consumer_group_prefix or "",
-                    },
-                )
+        for db_name, rel in self.database_relations.items():
+            self.databases[db_name].update_relation_data(rel.id, database_relation_data)
 
-        if not self.index_active and self.index_name:
-            for rel in self.opensearch.relations:
-                self.opensearch.update_relation_data(
-                    rel.id,
-                    {
-                        "index": self.index_name or "",
-                        "role-type": self.role_type or "",
-                        "extra-user-roles": self.extra_user_roles or "",
-                        "extra-group-roles": self.extra_group_roles or "",
-                    },
-                )
+    def _on_config_changed_topic(self) -> None:
+        """Handle on config changed topic event."""
+        if not KafkaRequires.is_topic_value_acceptable(self.topic_name):
+            return
 
-        if self.prefix and (not self.prefix_active or self.mtls_client_cert):
-            for rel in self.etcd.relations:
-                if not self.prefix_active:
-                    self.etcd.update_relation_data(
-                        rel.id,
-                        {
-                            "prefix": self.prefix,
-                        },
-                    )
-                self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
+        if self.role_type:
+            topic_relation_data = {
+                "topic": self.topic_name,
+                "role-type": self.role_type,
+                "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
+            }
+        else:
+            topic_relation_data = {
+                "topic": self.topic_name,
+                "extra-user-roles": self.extra_user_roles or "",
+                "consumer-group-prefix": self.consumer_group_prefix or "",
+            }
 
-    def _update_database_relations(self, database_relation_data: Dict[str, str]):
-        """Update the relation data of the related databases."""
-        for db_name, relation in self.database_relations.items():
-            logger.debug(f"Updating databag for database: {db_name}")
-            self.databases[db_name].update_relation_data(relation.id, database_relation_data)
+        for rel in self.kafka.relations:
+            self.kafka.update_relation_data(rel.id, topic_relation_data)
+
+    def _on_config_changed_index(self) -> None:
+        """Handle on config changed index event."""
+        if self.role_type:
+            index_relation_data = {
+                "index": self.index_name,
+                "role-type": self.role_type,
+                "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
+            }
+        else:
+            index_relation_data = {
+                "index": self.index_name,
+                "extra-user-roles": self.extra_user_roles or "",
+            }
+
+        for rel in self.opensearch.relations:
+            self.opensearch.update_relation_data(rel.id, index_relation_data)
+
+    def _on_config_changed_prefix(self) -> None:
+        """Handle on config changed prefix event."""
+        prefix_relation_data = {
+            "prefix": self.prefix,
+        }
+
+        for rel in self.etcd.relations:
+            self.etcd.update_relation_data(rel.id, prefix_relation_data)
+            self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
