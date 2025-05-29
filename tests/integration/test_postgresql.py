@@ -90,7 +90,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
         DATABASE_NAME,
     )
     assert result["ok"]
-    logger.info(f"Check assessibility of inserted data on {POSTGRESQL[cloud_name]}")
+    logger.info(f"Check accessibility of inserted data on {POSTGRESQL[cloud_name]}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
@@ -121,7 +121,7 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     )
     assert credentials != new_credentials
     logger.info(
-        f"Check assessibility of inserted data on {POSTGRESQL[cloud_name]} with new credentials"
+        f"Check accessibility of inserted data on {POSTGRESQL[cloud_name]} with new credentials"
     )
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
@@ -132,11 +132,11 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
 
-    logger.info(f"Unlock (unreleate) {DATA_INTEGRATOR} for the PgBouncer tests")
+    logger.info(f"Unlock (unrelate) {DATA_INTEGRATOR} for the PgBouncer tests")
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:postgresql", f"{POSTGRESQL[cloud_name]}:database"
     )
-    # Ensuring full cleanup of relation traces, avodiing faluire on re-creating it soon
+    # Ensuring full cleanup of relation traces, avoiding failure on re-creating it soon
     sleep(3)
 
 
@@ -184,7 +184,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
         DATABASE_NAME,
     )
     assert result["ok"]
-    logger.info(f"Check assessibility of inserted data on {PGBOUNCER[cloud_name]}")
+    logger.info(f"Check accessibility of inserted data on {PGBOUNCER[cloud_name]}")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
         "check-inserted-data",
@@ -216,7 +216,7 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
 
     assert credentials != new_credentials
     logger.info(
-        f"Check assessibility of inserted data on {PGBOUNCER[cloud_name]} with new credentials"
+        f"Check accessibility of inserted data on {PGBOUNCER[cloud_name]} with new credentials"
     )
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],
