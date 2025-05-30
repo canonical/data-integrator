@@ -107,7 +107,9 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     integrator_relation = await ops_test.model.add_relation(
         DATA_INTEGRATOR, POSTGRESQL[cloud_name]
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, POSTGRESQL[cloud_name]])
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, POSTGRESQL[cloud_name]], status="active"
+    )
 
     # check if secrets are used on Juju3
     assert await check_secrets_usage_matching_juju_version(
@@ -155,12 +157,14 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
             trust=True,
         ),
     )
+
     await ops_test.model.add_relation(PGBOUNCER[cloud_name], POSTGRESQL[cloud_name])
+    await ops_test.model.wait_for_idle(apps=[POSTGRESQL[cloud_name]], status="active")
+
     await ops_test.model.add_relation(PGBOUNCER[cloud_name], DATA_INTEGRATOR)
     await ops_test.model.wait_for_idle(
-        apps=[DATA_INTEGRATOR, PGBOUNCER[cloud_name]], status="active"
+        apps=[PGBOUNCER[cloud_name], DATA_INTEGRATOR], status="active"
     )
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
 
     logger.info(f"Get credential for {PGBOUNCER[cloud_name]}")
     credentials = await fetch_action_get_credentials(
@@ -207,7 +211,9 @@ async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
 
     await ops_test.model.wait_for_idle(apps=idle_apps)
     await ops_test.model.add_relation(DATA_INTEGRATOR, PGBOUNCER[cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, PGBOUNCER[cloud_name]])
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, PGBOUNCER[cloud_name]], status="active"
+    )
 
     logger.info("Relate and check the accessibility of the previously created database")
     new_credentials = await fetch_action_get_credentials(
