@@ -46,14 +46,14 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 @pytest.mark.group(1)
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     """Test the relation with PostgreSQL and database accessibility."""
-    await asyncio.gather(
-        ops_test.model.deploy(
+    print(
+        await ops_test.juju(
+            "deploy",
             POSTGRESQL[cloud_name],
-            channel="14/edge",
-            application_name=POSTGRESQL[cloud_name],
-            num_units=1,
-            series="jammy",
-            trust=True,
+            "--channel=14/edge/trigger",
+            "--num-units=1",
+            "--trust",
+            "--series=jammy",
         )
     )
     await ops_test.model.wait_for_idle(
