@@ -8,6 +8,9 @@ from ops.testing import Harness
 
 from charm import IntegratorCharm
 
+BLOCKED_STATUS_INVALID_KF_TOPIC = BlockedStatus(
+    "Please pass an acceptable topic value"
+)
 BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
     "Please specify either topic, index, database name, or prefix"
 )
@@ -171,6 +174,12 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.model.unit.status,
             BLOCKED_STATUS_REMOVE_KF,
+        )
+        self.harness.update_config({"topic-name": "*"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_INVALID_KF_TOPIC,
         )
 
     def test_relation_created(self):
