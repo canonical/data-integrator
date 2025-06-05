@@ -8,9 +8,7 @@ from ops.testing import Harness
 
 from charm import IntegratorCharm
 
-BLOCKED_STATUS_INVALID_KF_TOPIC = BlockedStatus(
-    "Please pass an acceptable topic value"
-)
+BLOCKED_STATUS_INVALID_KF_TOPIC = BlockedStatus("Please pass an acceptable topic value")
 BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
     "Please specify either topic, index, database name, or prefix"
 )

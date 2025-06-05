@@ -190,7 +190,11 @@ class IntegratorCharm(CharmBase):
             }
             self._update_database_relations(database_relation_data)
 
-        if not self.topic_active and self.topic_name and is_topic_value_accetpable(self.topic_name):
+        if (
+            not self.topic_active
+            and self.topic_name
+            and is_topic_value_accetpable(self.topic_name)
+        ):
             for rel in self.kafka.relations:
                 self.kafka.update_relation_data(
                     rel.id,
