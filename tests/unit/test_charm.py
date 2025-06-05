@@ -143,6 +143,14 @@ class TestCharm(unittest.TestCase):
             BLOCKED_STATUS_RELATE,
         )
 
+        self.harness.update_config({"topic-name": "bar"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(self.harness.charm.config["topic-name"], "bar")
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+
         self.harness.update_config({"topic-name": "*"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(self.harness.charm.config["topic-name"], "*")
