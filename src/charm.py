@@ -119,7 +119,7 @@ class IntegratorCharm(CharmBase):
 
         if self.topic_name and not is_topic_value_accetpable(self.topic_name):
             logger.error(
-                f"Trying to pass an invalid topic value, please pass an acceptable value instead"
+                f"Trying to pass an invalid topic value: {self.topic_name}, please pass an acceptable value instead"
             )
             return BlockedStatus("Please pass an acceptable topic value")
 
