@@ -143,6 +143,14 @@ class TestCharm(unittest.TestCase):
             BLOCKED_STATUS_RELATE,
         )
 
+        self.harness.update_config({"topic-name": "*"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(self.harness.charm.config["topic-name"], "*")
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_INVALID_KF_TOPIC,
+        )
+
         self.harness.update_config({"topic-name": "bar"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(self.harness.charm.config["topic-name"], "bar")
@@ -174,12 +182,6 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             self.harness.model.unit.status,
             BLOCKED_STATUS_REMOVE_KF,
-        )
-        self.harness.update_config({"topic-name": "*"})
-        self.harness.charm._on_config_changed(Mock())
-        self.assertEqual(
-            self.harness.model.unit.status,
-            BLOCKED_STATUS_INVALID_KF_TOPIC,
         )
 
     def test_relation_created(self):
