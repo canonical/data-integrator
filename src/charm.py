@@ -530,10 +530,17 @@ class IntegratorCharm(CharmBase):
     def _check_for_credentials(requirer: RequirerData) -> bool:
         """Check if credentials are present in the relation databag."""
         for relation in requirer.relations:
-            if requirer.fetch_relation_field(
-                relation.id, "username"
-            ) and requirer.fetch_relation_field(relation.id, "password"):
+            data = requirer.fetch_relation_data(
+                [relation.id],
+                ["username", "password", "role-name", "role-password"],
+            ).get(relation.id, {})
+
+            if any([
+                all(data.get(field) for field in ("username", "password")),
+                all(data.get(field) for field in ("role-name",)),
+            ]):
                 return True
+
         return False
 
     @property
