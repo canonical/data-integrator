@@ -157,13 +157,6 @@ async def test_deploy_kyuubi_setup(
         status="active",
     )
 
-    # Add configuration key to prevent resource starvation during tests
-    unit = ops_test.model.applications[INTEGRATION_HUB_APP_NAME].units[0]
-    action = await unit.run_action(
-        action_name="add-config", conf="spark.kubernetes.executor.request.cores=0.1"
-    )
-    _ = await action.wait()
-
     # Integrate Kyuubi with Integration Hub and wait
     logger.info("Integrating kyuubi charm with integration-hub charm...")
     await ops_test.model.add_relation(INTEGRATION_HUB_APP_NAME, KYUUBI_APP_NAME)
