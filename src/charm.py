@@ -12,18 +12,21 @@ import base64
 import logging
 import re
 from enum import Enum
-from typing import Dict, MutableMapping, Optional
+from typing import Dict, MutableMapping, Optional, Union
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseRequires,
+    DatabaseRoleCreatedEvent,
     EtcdReadyEvent,
     EtcdRequires,
     IndexCreatedEvent,
+    IndexRoleCreatedEvent,
     KafkaRequires,
     OpenSearchRequires,
     RequirerData,
     TopicCreatedEvent,
+    TopicRoleCreatedEvent,
 )
 from ops import (
     ActionEvent,
@@ -41,7 +44,13 @@ from ops import (
 from literals import DATABASES, ETCD, KAFKA, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
+
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
+RoleCreatedEvents = Union[
+    DatabaseRoleCreatedEvent,
+    IndexRoleCreatedEvent,
+    TopicRoleCreatedEvent,
+]
 
 
 class IntegratorCharm(CharmBase):
@@ -59,6 +68,7 @@ class IntegratorCharm(CharmBase):
             external_node_connectivity=True,
         )
         self.framework.observe(database_requirer.on.database_created, self._on_database_created)
+        self.framework.observe(database_requirer.on.database_role_created, self._on_role_created)
         self.framework.observe(self.on[relation_name].relation_broken, self._on_relation_broken)
         return database_requirer
 
@@ -94,6 +104,7 @@ class IntegratorCharm(CharmBase):
             consumer_group_prefix=self.consumer_group_prefix or "",
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
+        self.framework.observe(self.kafka.on.topic_role_created, self._on_role_created)
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
 
         # OpenSearch
@@ -106,6 +117,7 @@ class IntegratorCharm(CharmBase):
             extra_group_roles=self.extra_group_roles or "",
         )
         self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
+        self.framework.observe(self.opensearch.on.index_role_created, self._on_role_created)
         self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
 
         # etcd
@@ -360,6 +372,13 @@ class IntegratorCharm(CharmBase):
     def _on_index_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when an index is created for this application."""
         logger.debug(f"OpenSearch credentials are received: {event.username}")
+        self._on_config_changed(event)
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event, Statuses.ACTIVE.name)
+
+    def _on_role_created(self, event: RoleCreatedEvents) -> None:
+        """Event triggered when a role is created for this application."""
+        logger.debug(f"Role credentials are received: {event.role_name}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
