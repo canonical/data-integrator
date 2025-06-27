@@ -167,8 +167,9 @@ async def test_deploy_kyuubi_setup(
     # Deploy the postgresql charm and wait
     hub_deploy_args = {
         "application_name": POSTGRESQL_APP_NAME,
-        "channel": "14/stable",
-        "series": "jammy",
+        "channel": "16/edge",
+        "series": "noble",
+        "config": {"profile": "testing"},
         "trust": True,
     }
     logger.info("Deploying postgresql charm...")
