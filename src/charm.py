@@ -24,7 +24,6 @@ from charms.data_platform_libs.v0.data_interfaces import (
     OpenSearchRequires,
     RequirerData,
     TopicCreatedEvent,
-    is_topic_value_acceptable,
 )
 from ops import (
     ActionEvent,
@@ -79,7 +78,7 @@ class IntegratorCharm(CharmBase):
         self.kafka = KafkaRequires(
             self,
             relation_name=KAFKA,
-            topic=self.topic_name if is_topic_value_acceptable(self.topic_name) else "",
+            topic=self.topic_name if KafkaRequires.is_topic_value_acceptable(self.topic_name) else "",
             extra_user_roles=self.extra_user_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
         )
@@ -117,7 +116,7 @@ class IntegratorCharm(CharmBase):
         if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
             return BlockedStatus("Please specify either topic, index, database name, or prefix")
 
-        if self.topic_name and not is_topic_value_acceptable(self.topic_name):
+        if self.topic_name and not KafkaRequires.is_topic_value_acceptable(self.topic_name):
             logger.error(
                 f"Trying to pass an invalid topic value: {self.topic_name}, please pass an acceptable value instead"
             )
@@ -193,7 +192,7 @@ class IntegratorCharm(CharmBase):
         if (
             not self.topic_active
             and self.topic_name
-            and is_topic_value_acceptable(self.topic_name)
+            and KafkaRequires.is_topic_value_acceptable(self.topic_name)
         ):
             for rel in self.kafka.relations:
                 self.kafka.update_relation_data(
