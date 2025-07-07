@@ -78,7 +78,11 @@ class IntegratorCharm(CharmBase):
         self.kafka = KafkaRequires(
             self,
             relation_name=KAFKA,
-            topic=self.topic_name if KafkaRequires.is_topic_value_acceptable(self.topic_name) else "",
+            topic=(
+                self.topic_name
+                if KafkaRequires.is_topic_value_acceptable(self.topic_name)
+                else ""
+            ),
             extra_user_roles=self.extra_user_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
         )
