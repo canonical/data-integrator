@@ -161,4 +161,4 @@ async def test_topic_setting(ops_test: OpsTest):
         raise_on_error=False,
         idle_period=40,
     )
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "error"
+    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
