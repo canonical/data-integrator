@@ -78,7 +78,14 @@ class IntegratorCharm(CharmBase):
         self.kafka = KafkaRequires(
             self,
             relation_name=KAFKA,
-            topic=self.topic_name or "",
+            topic=(
+                self.topic_name
+                if (
+                    self.topic_name is not None
+                    and KafkaRequires.is_topic_value_acceptable(self.topic_name)
+                )
+                else ""
+            ),
             extra_user_roles=self.extra_user_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
         )
@@ -115,6 +122,12 @@ class IntegratorCharm(CharmBase):
         """Return the current application status."""
         if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
             return BlockedStatus("Please specify either topic, index, database name, or prefix")
+
+        if self.topic_name and not KafkaRequires.is_topic_value_acceptable(self.topic_name):
+            logger.error(
+                f"Trying to pass an invalid topic value: {self.topic_name}, please pass an acceptable value instead"
+            )
+            return BlockedStatus("Please pass an acceptable topic value")
 
         if not any([
             self.is_database_related,
@@ -183,12 +196,16 @@ class IntegratorCharm(CharmBase):
             }
             self._update_database_relations(database_relation_data)
 
-        if not self.topic_active and self.topic_name:
+        if (
+            not self.topic_active
+            and self.topic_name
+            and KafkaRequires.is_topic_value_acceptable(self.topic_name)
+        ):
             for rel in self.kafka.relations:
                 self.kafka.update_relation_data(
                     rel.id,
                     {
-                        "topic": self.topic_name or "",
+                        "topic": self.topic_name,
                         "extra-user-roles": self.extra_user_roles or "",
                         "consumer-group-prefix": self.consumer_group_prefix or "",
                     },
