@@ -85,6 +85,7 @@ juju config data-integrator database-name=test-database role-type=GROUP
 ```shell
 juju config data-integrator database-name=test-database role-type=USER extra-user-roles=admin
 ```
+
 ```shell
 juju config data-integrator database-name=test-database role-type=GROUP extra-group-roles=admin
 ```
@@ -118,7 +119,7 @@ When the relation is removed, the access with the previous credentials will be r
 juju remove-relation data-integrator <application>
 ```
 
-> If you need to modify `database-name`, `topic-name`, `index-name`, `role-type`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation changing the desired field, and relate the data-integrator with the application again.
+> If you need to modify `database-name`, `topic-name`, `index-name`, `role-type`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation, change the desired fields, and then relate the data-integrator with the application again.
 
 #### Retrieve credentials
 
