@@ -16,17 +16,17 @@ from typing import Dict, MutableMapping, Optional, Union
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
+    DatabaseEntityCreatedEvent,
     DatabaseRequires,
-    DatabaseRoleCreatedEvent,
     EtcdReadyEvent,
     EtcdRequires,
     IndexCreatedEvent,
-    IndexRoleCreatedEvent,
+    IndexEntityCreatedEvent,
     KafkaRequires,
     OpenSearchRequires,
     RequirerData,
     TopicCreatedEvent,
-    TopicRoleCreatedEvent,
+    TopicEntityCreatedEvent,
 )
 from ops import (
     ActionEvent,
@@ -46,10 +46,10 @@ from literals import DATABASES, ETCD, KAFKA, OPENSEARCH, PEER
 logger = logging.getLogger(__name__)
 
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
-RoleCreatedEvents = Union[
-    DatabaseRoleCreatedEvent,
-    IndexRoleCreatedEvent,
-    TopicRoleCreatedEvent,
+EntityCreatedEvents = Union[
+    DatabaseEntityCreatedEvent,
+    IndexEntityCreatedEvent,
+    TopicEntityCreatedEvent,
 ]
 
 
@@ -62,13 +62,19 @@ class IntegratorCharm(CharmBase):
             self,
             relation_name=relation_name,
             database_name=self.database_name or "",
-            role_type=self.role_type or "",
+            entity_type=self.entity_type or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
             external_node_connectivity=True,
         )
-        self.framework.observe(database_requirer.on.database_created, self._on_database_created)
-        self.framework.observe(database_requirer.on.database_role_created, self._on_role_created)
+        self.framework.observe(
+            database_requirer.on.database_created,
+            self._on_database_created,
+        )
+        self.framework.observe(
+            database_requirer.on.database_entity_created,
+            self._on_entity_created,
+        )
         self.framework.observe(self.on[relation_name].relation_broken, self._on_relation_broken)
         return database_requirer
 
@@ -98,13 +104,13 @@ class IntegratorCharm(CharmBase):
                 )
                 else ""
             ),
-            role_type=self.role_type or "",
+            entity_type=self.entity_type or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
-        self.framework.observe(self.kafka.on.topic_role_created, self._on_role_created)
+        self.framework.observe(self.kafka.on.topic_entity_created, self._on_entity_created)
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
 
         # OpenSearch
@@ -112,12 +118,12 @@ class IntegratorCharm(CharmBase):
             self,
             relation_name=OPENSEARCH,
             index=self.index_name or "",
-            role_type=self.role_type or "",
+            entity_type=self.entity_type or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
         )
         self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
-        self.framework.observe(self.opensearch.on.index_role_created, self._on_role_created)
+        self.framework.observe(self.opensearch.on.index_entity_created, self._on_entity_created)
         self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
 
         # etcd
@@ -139,12 +145,12 @@ class IntegratorCharm(CharmBase):
     def _changes_role_info(self) -> bool:
         """Return whether any of the role config options changed."""
         # Cache values to speed up comparison
-        active_type = self.role_type_active
+        active_type = self.entity_type_active
         active_user_roles = self.extra_user_roles_active
         active_group_roles = self.extra_group_roles_active
 
         return any([
-            active_type and active_type != self.role_type,
+            active_type and active_type != self.entity_type,
             active_user_roles and active_user_roles != self.extra_user_roles,
             active_group_roles and active_group_roles != self.extra_group_roles,
         ])
@@ -247,10 +253,10 @@ class IntegratorCharm(CharmBase):
 
     def _on_config_changed_database(self) -> None:
         """Handle on config changed database event."""
-        if self.role_type:
+        if self.entity_type:
             database_relation_data = {
                 "database": self.database_name,
-                "role-type": self.role_type,
+                "entity-type": self.entity_type,
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
@@ -268,10 +274,10 @@ class IntegratorCharm(CharmBase):
         if not KafkaRequires.is_topic_value_acceptable(self.topic_name):
             return
 
-        if self.role_type:
+        if self.entity_type:
             topic_relation_data = {
                 "topic": self.topic_name,
-                "role-type": self.role_type,
+                "entity-type": self.entity_type,
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
@@ -287,10 +293,10 @@ class IntegratorCharm(CharmBase):
 
     def _on_config_changed_index(self) -> None:
         """Handle on config changed index event."""
-        if self.role_type:
+        if self.entity_type:
             index_relation_data = {
                 "index": self.index_name,
-                "role-type": self.role_type,
+                "entity-type": self.entity_type,
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
@@ -376,9 +382,9 @@ class IntegratorCharm(CharmBase):
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
-    def _on_role_created(self, event: RoleCreatedEvents) -> None:
-        """Event triggered when a role is created for this application."""
-        logger.debug(f"Role credentials are received: {event.role_name}")
+    def _on_entity_created(self, event: EntityCreatedEvents) -> None:
+        """Event triggered when an entity is created for this application."""
+        logger.debug(f"Entity credentials are received: {event.entity_name}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
@@ -431,9 +437,9 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("index-name", None)
 
     @property
-    def role_type(self) -> Optional[str]:
+    def entity_type(self) -> Optional[str]:
         """Return the configured role type."""
-        return self.model.config.get("role-type", None)
+        return self.model.config.get("entity-type", None)
 
     @property
     def extra_user_roles(self) -> Optional[str]:
@@ -522,9 +528,9 @@ class IntegratorCharm(CharmBase):
             return self.etcd.fetch_my_relation_field(relation.id, "prefix")
 
     @property
-    def role_type_active(self) -> Optional[str]:
-        """Return the configured role-type parameter."""
-        return self._get_active_value("role-type")
+    def entity_type_active(self) -> Optional[str]:
+        """Return the configured entity-type parameter."""
+        return self._get_active_value("entity-type")
 
     @property
     def extra_user_roles_active(self) -> Optional[str]:
@@ -551,12 +557,12 @@ class IntegratorCharm(CharmBase):
         for relation in requirer.relations:
             data = requirer.fetch_relation_data(
                 [relation.id],
-                ["username", "password", "role-name", "role-password"],
+                ["username", "password", "entity-name", "entity-password"],
             ).get(relation.id, {})
 
             if any([
                 all(data.get(field) for field in ("username", "password")),
-                all(data.get(field) for field in ("role-name",)),
+                all(data.get(field) for field in ("entity-name",)),
             ]):
                 return True
 

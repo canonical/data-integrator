@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-from charms.data_platform_libs.v0.data_interfaces import ROLE_USER
+from charms.data_platform_libs.v0.data_interfaces import ENTITY_USER
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
@@ -96,13 +96,13 @@ class TestCharm(unittest.TestCase):
         )
         self.assertEqual(self.harness.charm.config["topic-name"], "bar")
 
-        self.harness.update_config({"role-type": ROLE_USER})
+        self.harness.update_config({"entity-type": ENTITY_USER})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
             self.harness.model.unit.status,
             BLOCKED_STATUS_RELATE,
         )
-        self.assertEqual(self.harness.charm.config["role-type"], ROLE_USER)
+        self.assertEqual(self.harness.charm.config["entity-type"], ENTITY_USER)
 
         self.harness.update_config({"extra-user-roles": "admin"})
         self.harness.charm._on_config_changed(Mock())
