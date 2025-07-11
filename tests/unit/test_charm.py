@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
+from charms.data_platform_libs.v0.data_interfaces import ENTITY_USER
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
@@ -10,14 +11,16 @@ from charm import IntegratorCharm
 
 BLOCKED_STATUS_INVALID_KF_TOPIC = BlockedStatus("Please pass an acceptable topic value")
 BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
-    "Please specify either topic, index, database name, or prefix"
+    "Please specify either topic, index, database name, or prefix",
 )
-BLOCKED_STATUS_RELATE = BlockedStatus("Please relate the data-integrator with the desired product")
+BLOCKED_STATUS_RELATE = BlockedStatus(
+    "Please relate the data-integrator with the desired product",
+)
 BLOCKED_STATUS_REMOVE_DB = BlockedStatus(
-    "To change database name: foo, please remove relation and add it again"
+    "To change database name: foo, please remove relation and add it again",
 )
 BLOCKED_STATUS_REMOVE_KF = BlockedStatus(
-    "To change topic: bar, please remove relation and add it again"
+    "To change topic: bar, please remove relation and add it again",
 )
 
 juju_version = MagicMock()
@@ -93,6 +96,14 @@ class TestCharm(unittest.TestCase):
         )
         self.assertEqual(self.harness.charm.config["topic-name"], "bar")
 
+        self.harness.update_config({"entity-type": ENTITY_USER})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+        self.assertEqual(self.harness.charm.config["entity-type"], ENTITY_USER)
+
         self.harness.update_config({"extra-user-roles": "admin"})
         self.harness.charm._on_config_changed(Mock())
         self.assertEqual(
@@ -100,6 +111,14 @@ class TestCharm(unittest.TestCase):
             BLOCKED_STATUS_RELATE,
         )
         self.assertEqual(self.harness.charm.config["extra-user-roles"], "admin")
+
+        self.harness.update_config({"extra-group-roles": "custom_role_1"})
+        self.harness.charm._on_config_changed(Mock())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+        self.assertEqual(self.harness.charm.config["extra-group-roles"], "custom_role_1")
 
     def test_get_unit_status(self):
         self.harness.set_leader(True)

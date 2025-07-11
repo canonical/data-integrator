@@ -12,18 +12,21 @@ import base64
 import logging
 import re
 from enum import Enum
-from typing import Dict, MutableMapping, Optional
+from typing import Dict, MutableMapping, Optional, Union
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
+    DatabaseEntityCreatedEvent,
     DatabaseRequires,
     EtcdReadyEvent,
     EtcdRequires,
     IndexCreatedEvent,
+    IndexEntityCreatedEvent,
     KafkaRequires,
     OpenSearchRequires,
     RequirerData,
     TopicCreatedEvent,
+    TopicEntityCreatedEvent,
 )
 from ops import (
     ActionEvent,
@@ -41,7 +44,13 @@ from ops import (
 from literals import DATABASES, ETCD, KAFKA, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
+
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
+EntityCreatedEvents = Union[
+    DatabaseEntityCreatedEvent,
+    IndexEntityCreatedEvent,
+    TopicEntityCreatedEvent,
+]
 
 
 class IntegratorCharm(CharmBase):
@@ -53,10 +62,19 @@ class IntegratorCharm(CharmBase):
             self,
             relation_name=relation_name,
             database_name=self.database_name or "",
+            entity_type=self.entity_type or "",
             extra_user_roles=self.extra_user_roles or "",
+            extra_group_roles=self.extra_group_roles or "",
             external_node_connectivity=True,
         )
-        self.framework.observe(database_requirer.on.database_created, self._on_database_created)
+        self.framework.observe(
+            database_requirer.on.database_created,
+            self._on_database_created,
+        )
+        self.framework.observe(
+            database_requirer.on.database_entity_created,
+            self._on_entity_created,
+        )
         self.framework.observe(self.on[relation_name].relation_broken, self._on_relation_broken)
         return database_requirer
 
@@ -86,10 +104,13 @@ class IntegratorCharm(CharmBase):
                 )
                 else ""
             ),
+            entity_type=self.entity_type or "",
             extra_user_roles=self.extra_user_roles or "",
+            extra_group_roles=self.extra_group_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
         )
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
+        self.framework.observe(self.kafka.on.topic_entity_created, self._on_entity_created)
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
 
         # OpenSearch
@@ -97,9 +118,12 @@ class IntegratorCharm(CharmBase):
             self,
             relation_name=OPENSEARCH,
             index=self.index_name or "",
+            entity_type=self.entity_type or "",
             extra_user_roles=self.extra_user_roles or "",
+            extra_group_roles=self.extra_group_roles or "",
         )
         self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
+        self.framework.observe(self.opensearch.on.index_entity_created, self._on_entity_created)
         self.framework.observe(self.on[OPENSEARCH].relation_broken, self._on_relation_broken)
 
         # etcd
@@ -117,6 +141,34 @@ class IntegratorCharm(CharmBase):
         """Handle relation broken event."""
         # update peer databag to trigger the charm status update
         self._update_relation_status(event, Statuses.BROKEN.name)
+
+    def _changes_role_info(self) -> bool:
+        """Return whether any of the role config options changed."""
+        # Cache values to speed up comparison
+        active_type = self.entity_type_active
+        active_user_roles = self.extra_user_roles_active
+        active_group_roles = self.extra_group_roles_active
+
+        return any([
+            active_type and active_type != self.entity_type,
+            active_user_roles and active_user_roles != self.extra_user_roles,
+            active_group_roles and active_group_roles != self.extra_group_roles,
+        ])
+
+    def _get_active_value(self, key: str) -> Optional[str]:
+        """Return the active value for a given relation databag key."""
+        for requirer in self.databases.values():
+            if not requirer.relations:
+                continue
+            if relation := requirer.relations[0]:
+                return requirer.fetch_relation_field(relation.id, key)
+
+        if relation := self.kafka_relation:
+            return self.kafka.fetch_relation_field(relation.id, key)
+        if relation := self.opensearch_relation:
+            return self.opensearch.fetch_relation_field(relation.id, key)
+        if relation := self.etcd_relation:
+            return self.etcd.fetch_my_relation_field(relation.id, key)
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
@@ -136,6 +188,9 @@ class IntegratorCharm(CharmBase):
             self.is_etcd_related,
         ]):
             return BlockedStatus("Please relate the data-integrator with the desired product")
+
+        if self._changes_role_info():
+            return BlockedStatus("To change role info, please remove relation and add it again")
 
         if self.is_kafka_related and self.topic_active != self.topic_name:
             logger.error(
@@ -186,56 +241,83 @@ class IntegratorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        # update relation databag
-        # if a relation has been created before configuring the topic or database name
-        # update the relation databag with the proper value
-        if not self.databases_active and self.database_name:
+        # Update relation databag
+        if self.database_name and not self.databases_active:
+            self._on_config_changed_database()
+        if self.topic_name and not self.topic_active:
+            self._on_config_changed_topic()
+        if self.index_name and not self.index_active:
+            self._on_config_changed_index()
+        if self.prefix and (not self.prefix_active or self.mtls_client_cert):
+            self._on_config_changed_prefix()
+
+    def _on_config_changed_database(self) -> None:
+        """Handle on config changed database event."""
+        if self.entity_type:
+            database_relation_data = {
+                "database": self.database_name,
+                "entity-type": self.entity_type,
+                "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
+            }
+        else:
             database_relation_data = {
                 "database": self.database_name,
                 "extra-user-roles": self.extra_user_roles or "",
             }
-            self._update_database_relations(database_relation_data)
 
-        if (
-            not self.topic_active
-            and self.topic_name
-            and KafkaRequires.is_topic_value_acceptable(self.topic_name)
-        ):
-            for rel in self.kafka.relations:
-                self.kafka.update_relation_data(
-                    rel.id,
-                    {
-                        "topic": self.topic_name,
-                        "extra-user-roles": self.extra_user_roles or "",
-                        "consumer-group-prefix": self.consumer_group_prefix or "",
-                    },
-                )
+        for db_name, rel in self.database_relations.items():
+            self.databases[db_name].update_relation_data(rel.id, database_relation_data)
 
-        if not self.index_active and self.index_name:
-            for rel in self.opensearch.relations:
-                self.opensearch.update_relation_data(
-                    rel.id,
-                    {
-                        "index": self.index_name or "",
-                        "extra-user-roles": self.extra_user_roles or "",
-                    },
-                )
-        if self.prefix and (not self.prefix_active or self.mtls_client_cert):
-            for rel in self.etcd.relations:
-                if not self.prefix_active:
-                    self.etcd.update_relation_data(
-                        rel.id,
-                        {
-                            "prefix": self.prefix,
-                        },
-                    )
-                self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
+    def _on_config_changed_topic(self) -> None:
+        """Handle on config changed topic event."""
+        if not KafkaRequires.is_topic_value_acceptable(self.topic_name):
+            return
 
-    def _update_database_relations(self, database_relation_data: Dict[str, str]):
-        """Update the relation data of the related databases."""
-        for db_name, relation in self.database_relations.items():
-            logger.debug(f"Updating databag for database: {db_name}")
-            self.databases[db_name].update_relation_data(relation.id, database_relation_data)
+        if self.entity_type:
+            topic_relation_data = {
+                "topic": self.topic_name,
+                "entity-type": self.entity_type,
+                "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
+            }
+        else:
+            topic_relation_data = {
+                "topic": self.topic_name,
+                "extra-user-roles": self.extra_user_roles or "",
+                "consumer-group-prefix": self.consumer_group_prefix or "",
+            }
+
+        for rel in self.kafka.relations:
+            self.kafka.update_relation_data(rel.id, topic_relation_data)
+
+    def _on_config_changed_index(self) -> None:
+        """Handle on config changed index event."""
+        if self.entity_type:
+            index_relation_data = {
+                "index": self.index_name,
+                "entity-type": self.entity_type,
+                "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
+            }
+        else:
+            index_relation_data = {
+                "index": self.index_name,
+                "extra-user-roles": self.extra_user_roles or "",
+            }
+
+        for rel in self.opensearch.relations:
+            self.opensearch.update_relation_data(rel.id, index_relation_data)
+
+    def _on_config_changed_prefix(self) -> None:
+        """Handle on config changed prefix event."""
+        prefix_relation_data = {
+            "prefix": self.prefix,
+        }
+
+        for rel in self.etcd.relations:
+            self.etcd.update_relation_data(rel.id, prefix_relation_data)
+            self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
 
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
@@ -300,6 +382,13 @@ class IntegratorCharm(CharmBase):
         # update status of the relations in the peer-databag
         self._update_relation_status(event, Statuses.ACTIVE.name)
 
+    def _on_entity_created(self, event: EntityCreatedEvents) -> None:
+        """Event triggered when an entity is created for this application."""
+        logger.debug(f"Entity credentials are received: {event.entity_name}")
+        self._on_config_changed(event)
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event, Statuses.ACTIVE.name)
+
     def _on_etcd_ready(self, event: EtcdReadyEvent) -> None:
         """Event triggered when the etcd relation is ready."""
         logger.debug("etcd ready received")
@@ -348,9 +437,19 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("index-name", None)
 
     @property
+    def entity_type(self) -> Optional[str]:
+        """Return the configured role type."""
+        return self.model.config.get("entity-type", None)
+
+    @property
     def extra_user_roles(self) -> Optional[str]:
         """Return the configured extra user roles."""
         return self.model.config.get("extra-user-roles", None)
+
+    @property
+    def extra_group_roles(self) -> Optional[str]:
+        """Return the configured extra group roles."""
+        return self.model.config.get("extra-group-roles", None)
 
     @property
     def consumer_group_prefix(self) -> Optional[str]:
@@ -429,13 +528,19 @@ class IntegratorCharm(CharmBase):
             return self.etcd.fetch_my_relation_field(relation.id, "prefix")
 
     @property
+    def entity_type_active(self) -> Optional[str]:
+        """Return the configured entity-type parameter."""
+        return self._get_active_value("entity-type")
+
+    @property
     def extra_user_roles_active(self) -> Optional[str]:
         """Return the configured user-extra-roles parameter."""
-        return (
-            self.kafka.fetch_relation_field(relation.id, "extra-user-roles")
-            if (relation := self.kafka_relation)
-            else None
-        )
+        return self._get_active_value("extra-user-roles")
+
+    @property
+    def extra_group_roles_active(self) -> Optional[str]:
+        """Return the configured group-extra-roles parameter."""
+        return self._get_active_value("extra-group-roles")
 
     @property
     def is_database_related(self) -> bool:
@@ -450,10 +555,17 @@ class IntegratorCharm(CharmBase):
     def _check_for_credentials(requirer: RequirerData) -> bool:
         """Check if credentials are present in the relation databag."""
         for relation in requirer.relations:
-            if requirer.fetch_relation_field(
-                relation.id, "username"
-            ) and requirer.fetch_relation_field(relation.id, "password"):
+            data = requirer.fetch_relation_data(
+                [relation.id],
+                ["username", "password", "entity-name", "entity-password"],
+            ).get(relation.id, {})
+
+            if any([
+                all(data.get(field) for field in ("username", "password")),
+                all(data.get(field) for field in ("entity-name",)),
+            ]):
                 return True
+
         return False
 
     @property

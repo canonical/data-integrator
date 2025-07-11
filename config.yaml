@@ -18,7 +18,15 @@ options:
     type: string
     default:
     description: The prefix for which the access is granted (this parameter is needed for etcd).
+  entity-type:
+    type: string
+    default:
+    description: Type of entity to create upon integration. Possible values are USER or GROUP.
   extra-user-roles:
+    type: string
+    default:
+    description: a comma-separated list of values that contains the required extra roles, e.g. `admin` in case of a database or `producer`, `consumer` in case of Kafka.
+  extra-group-roles:
     type: string
     default:
     description: a comma-separated list of values that contains the required extra roles, e.g. `admin` in case of a database or `producer`, `consumer` in case of Kafka.
