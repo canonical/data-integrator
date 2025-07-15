@@ -67,9 +67,9 @@ jobs:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.51  # renovate: juju-agent-pin-minor
+          - agent: 2.9.52  # renovate: juju-agent-pin-minor
             libjuju: ^2
-          - agent: 3.6.7  # renovate: juju-agent-pin-minor
+          - agent: 3.6.8  # renovate: juju-agent-pin-minor
         cloud:
           - lxd
           - microk8s
