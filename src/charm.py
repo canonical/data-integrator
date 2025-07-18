@@ -63,6 +63,7 @@ class IntegratorCharm(CharmBase):
             relation_name=relation_name,
             database_name=self.database_name or "",
             entity_type=self.entity_type or "",
+            entity_permissions=self.entity_permissions or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
             external_node_connectivity=True,
@@ -105,6 +106,7 @@ class IntegratorCharm(CharmBase):
                 else ""
             ),
             entity_type=self.entity_type or "",
+            entity_permissions=self.entity_permissions or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
             consumer_group_prefix=self.consumer_group_prefix or "",
@@ -119,6 +121,7 @@ class IntegratorCharm(CharmBase):
             relation_name=OPENSEARCH,
             index=self.index_name or "",
             entity_type=self.entity_type or "",
+            entity_permissions=self.entity_permissions or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
         )
@@ -257,6 +260,7 @@ class IntegratorCharm(CharmBase):
             database_relation_data = {
                 "database": self.database_name,
                 "entity-type": self.entity_type,
+                "entity-permissions": self.entity_permissions or "",
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
@@ -278,6 +282,7 @@ class IntegratorCharm(CharmBase):
             topic_relation_data = {
                 "topic": self.topic_name,
                 "entity-type": self.entity_type,
+                "entity-permissions": self.entity_permissions or "",
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
@@ -297,6 +302,7 @@ class IntegratorCharm(CharmBase):
             index_relation_data = {
                 "index": self.index_name,
                 "entity-type": self.entity_type,
+                "entity-permissions": self.entity_permissions or "",
                 "extra-user-roles": self.extra_user_roles or "",
                 "extra-group-roles": self.extra_group_roles or "",
             }
@@ -442,6 +448,11 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("entity-type", None)
 
     @property
+    def entity_permissions(self) -> Optional[str]:
+        """Return the configured entity type permissions."""
+        return self.model.config.get("entity-permissions", None)
+
+    @property
     def extra_user_roles(self) -> Optional[str]:
         """Return the configured extra user roles."""
         return self.model.config.get("extra-user-roles", None)
@@ -531,6 +542,11 @@ class IntegratorCharm(CharmBase):
     def entity_type_active(self) -> Optional[str]:
         """Return the configured entity-type parameter."""
         return self._get_active_value("entity-type")
+
+    @property
+    def entity_permissions_active(self) -> Optional[str]:
+        """Return the configured entity-permissions parameter."""
+        return self._get_active_value("entity-permissions")
 
     @property
     def extra_user_roles_active(self) -> Optional[str]:
