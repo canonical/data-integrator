@@ -22,6 +22,10 @@ options:
     type: string
     default:
     description: Type of entity to create upon integration. Possible values are USER or GROUP.
+  entity-permissions:
+    type: string
+    default:
+    description: List of permissions to assigned to the custom entity, in JSON format.
   extra-user-roles:
     type: string
     default:

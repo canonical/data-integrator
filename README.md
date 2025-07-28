@@ -29,18 +29,20 @@ index-name - `string`; The index name for which the access is granted. [OPENSEAR
 
 entity-type - `string`; The type of entity to create when integrated.
 
+entity-permissions - `string`; List of permissions to assigned to the custom entity, in JSON format.
+
 extra-user-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 extra-group-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 
-| Product    | database-name      | topic-name         | index-name         | entity-type         | extra-user-roles   | extra-group-roles  |
-|------------|--------------------|--------------------|--------------------|---------------------|--------------------|--------------------|
-| MySQL      | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: |
-| PostgreSQL | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: |
-| MongoDB    | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: |
-| Kafka      |                    | :heavy_check_mark: |                    | :white_check_mark:  | :heavy_check_mark: | :white_check_mark: |
-| OpenSearch |                    |                    | :heavy_check_mark: | :white_check_mark:  | :white_check_mark: | :white_check_mark: |
+| Product    | database-name      | topic-name         | index-name         | entity-type        | entity-permissions | extra-user-roles   | extra-group-roles  |
+|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: |                    | :white_check_mark: | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
+| OpenSearch |                    |                    | :heavy_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
@@ -79,6 +81,10 @@ In addition:
 - Optional field `entity-type` can be specified.
 ```shell
 juju config data-integrator database-name=test-database entity-type=GROUP
+
+- Optional fields `entity-type` and `entity-permissions` can be specified.
+```shell
+juju config data-integrator database-name=test-database entity-type=GROUP entity-permissions=@permissions.json
 ```
 
 - Optional fields `extra-user-roles` or `extra-group-roles` can be specified.
