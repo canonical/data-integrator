@@ -463,6 +463,11 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("extra-group-roles", None)
 
     @property
+    def requested_entities_secret(self) -> Optional[str]:
+        """Return the configured requested entities secret."""
+        return self.model.config.get("requested-entities-secret", None)
+
+    @property
     def consumer_group_prefix(self) -> Optional[str]:
         """Return the configured consumer group prefix."""
         return self.model.config.get("consumer-group-prefix", None)
@@ -557,6 +562,11 @@ class IntegratorCharm(CharmBase):
     def extra_group_roles_active(self) -> Optional[str]:
         """Return the configured group-extra-roles parameter."""
         return self._get_active_value("extra-group-roles")
+
+    @property
+    def requested_entities_secret_active(self) -> Optional[str]:
+        """Return the configured requested entities secret."""
+        return self._get_active_value("requested-entities-secret", None)
 
     @property
     def is_database_related(self) -> bool:
