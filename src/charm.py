@@ -179,12 +179,12 @@ class IntegratorCharm(CharmBase):
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
-        if (
-            self.model.config.get("requested-entities-secret", None)
-            and (entity_name := self.requested_entities_secret_content)
-            and not entity_name[0]
-        ):
-            return BlockedStatus("Unable to access requested-entities-secret")
+        if self.model.config.get("requested-entities-secret", None):
+            if not self.model.juju_version.has_secrets:
+                return BlockedStatus("Cannot use requested-entities-secret without secrets")
+            if (entity_name := self.requested_entities_secret_content) and not entity_name[0]:
+                return BlockedStatus("Unable to access requested-entities-secret")
+
         if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
             return BlockedStatus("Please specify either topic, index, database name, or prefix")
 
@@ -205,41 +205,42 @@ class IntegratorCharm(CharmBase):
         if self._changes_role_info():
             return BlockedStatus("To change role info, please remove relation and add it again")
 
-        if self.is_kafka_related and self.topic_active != self.topic_name:
-            logger.error(
-                f"Trying to change Kafka configuration for existing relation : To change topic: {self.topic_active}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change topic: {self.topic_active}, please remove relation and add it again"
-            )
-
-        if self.is_opensearch_related and self.index_active != self.index_name:
-            logger.error(
-                f"Trying to change OpenSearch configuration for existing relation : To change index name: {self.index_active}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change index name: {self.index_active}, please remove relation and add it again"
-            )
-
-        if self.is_etcd_related and self.prefix_active != self.prefix:
-            logger.error(
-                f"Trying to change etcd configuration for existing relation : To change prefix: {self.prefix_active}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change prefix name: {self.prefix_active}, please remove relation and add it again"
-            )
-
-        if self.is_database_related and any(
-            database != self.database_name for database in self.databases_active.values()
+        for mismatch, product_name, name_type, active_name in (
+            (
+                self.is_kafka_related and self.topic_active != self.topic_name,
+                "Kafka",
+                "topic",
+                self.topic_active,
+            ),
+            (
+                self.is_opensearch_related and self.index_active != self.index_name,
+                "OpenSearch",
+                "index",
+                self.index_active,
+            ),
+            (
+                self.is_etcd_related and self.prefix_active != self.prefix,
+                "etcd",
+                "prefix",
+                self.prefix_active,
+            ),
+            (
+                self.is_database_related
+                and any(
+                    database != self.database_name for database in self.databases_active.values()
+                ),
+                "database-name",
+                "database name",
+                list(self.databases_active.values())[0] if self.databases_active else None,
+            ),
         ):
-            current_database = list(self.databases_active.values())[0]
-            logger.error(
-                f"Trying to change database-name configuration for existing relation. To change database name: {current_database}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change database name: {current_database}, please remove relation and add it again"
-            )
-
+            if mismatch:
+                logger.error(
+                    f"Trying to change {product_name} configuration for existing relation : To change {name_type}: {active_name}, please remove relation and add it again"
+                )
+                return BlockedStatus(
+                    f"To change {name_type}: {active_name}, please remove relation and add it again"
+                )
         return ActiveStatus()
 
     def _on_update_status(self, _: EventBase) -> None:

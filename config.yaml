@@ -45,3 +45,4 @@ options:
   requested-entities-secret:
     type: string
     default:
+    description: Secret URI containing a mapping of requested entity name to password. Password value of None, requests random password. Requires secrets support.
