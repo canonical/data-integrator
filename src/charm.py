@@ -12,7 +12,7 @@ import base64
 import logging
 import re
 from enum import Enum
-from typing import Dict, MutableMapping, Optional, Union
+from typing import Dict, MutableMapping, Optional, Tuple, Union
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -34,6 +34,7 @@ from ops import (
     BlockedStatus,
     CharmBase,
     EventBase,
+    ModelError,
     Relation,
     RelationBrokenEvent,
     RelationEvent,
@@ -58,6 +59,7 @@ class IntegratorCharm(CharmBase):
 
     def _setup_database_requirer(self, relation_name: str) -> DatabaseRequires:
         """Handle the creation of relations and listeners."""
+        entity_name, password = self.requested_entities_secret_content
         database_requirer = DatabaseRequires(
             self,
             relation_name=relation_name,
@@ -66,6 +68,8 @@ class IntegratorCharm(CharmBase):
             entity_permissions=self.entity_permissions or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
+            requested_entity_name=entity_name,
+            requested_entity_password=password,
             external_node_connectivity=True,
         )
         self.framework.observe(
@@ -175,6 +179,12 @@ class IntegratorCharm(CharmBase):
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
+        if (
+            self.model.config.get("requested-entities-secret", None)
+            and (entity_name := self.requested_entities_secret_content)
+            and not entity_name[0]
+        ):
+            return BlockedStatus("Unable to access requested-entities-secret")
         if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
             return BlockedStatus("Please specify either topic, index, database name, or prefix")
 
@@ -463,9 +473,17 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("extra-group-roles", None)
 
     @property
-    def requested_entities_secret(self) -> Optional[str]:
+    def requested_entities_secret_content(self) -> Tuple[Optional[str], Optional[str]]:
         """Return the configured requested entities secret."""
-        return self.model.config.get("requested-entities-secret", None)
+        try:
+            if secret_uri := self.model.config.get("requested-entities-secret", None):
+                secret = self.framework.model.get_secret(id=secret_uri)
+                content = secret.get_content(refresh=True)
+                for key, val in content.items():
+                    return key, val
+        except ModelError:
+            logger.warning("Unable to access requested-entities-secret")
+        return None, None
 
     @property
     def consumer_group_prefix(self) -> Optional[str]:
