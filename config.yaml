@@ -43,5 +43,5 @@ options:
     default:
     description: The client certificate for which the access is granted (this parameter is needed for etcd).
   requested-entities-secret:
-    type: secret
+    type: string
     default:
