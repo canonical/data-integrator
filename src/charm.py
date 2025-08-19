@@ -481,7 +481,7 @@ class IntegratorCharm(CharmBase):
                 secret = self.framework.model.get_secret(id=secret_uri)
                 content = secret.get_content(refresh=True)
                 for key, val in content.items():
-                    return key, val
+                    return key, None if val == "None" else val
         except ModelError:
             logger.warning("Unable to access requested-entities-secret")
         return None, None
