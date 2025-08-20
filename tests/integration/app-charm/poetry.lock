@@ -224,18 +224,18 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.40.10"
+version = "1.40.12"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "boto3-1.40.10-py3-none-any.whl", hash = "sha256:222b44ee4d6e4e8a9a2a4bada4c683c38f37481e545f7997aee7bc40a7fb4489"},
-    {file = "boto3-1.40.10.tar.gz", hash = "sha256:ed64d63cb24721ff603547caf099f3abf82783472910a3650ce8764c78396e7a"},
+    {file = "boto3-1.40.12-py3-none-any.whl", hash = "sha256:3c3d6731390b5b11f5e489d5d9daa57f0c3e171efb63ac8f47203df9c71812b3"},
+    {file = "boto3-1.40.12.tar.gz", hash = "sha256:c6b32aee193fbd2eb84696d2b5b2410dcda9fb4a385e1926cff908377d222247"},
 ]
 
 [package.dependencies]
-botocore = ">=1.40.10,<1.41.0"
+botocore = ">=1.40.12,<1.41.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.13.0,<0.14.0"
 
@@ -244,14 +244,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.40.10"
+version = "1.40.12"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "botocore-1.40.10-py3-none-any.whl", hash = "sha256:22aff400250a0125be92e0d43011eb42414a64f999d5215827af91d8584b4476"},
-    {file = "botocore-1.40.10.tar.gz", hash = "sha256:db3b14043bc90fe4220edbc2e89e8f5af1d2d4aacc16bab3c30dacd98b0073e3"},
+    {file = "botocore-1.40.12-py3-none-any.whl", hash = "sha256:84e96004a8b426c5508f6b5600312d6271364269466a3a957dc377ad8effc438"},
+    {file = "botocore-1.40.12.tar.gz", hash = "sha256:c6560578e799b47b762b7e555bd9c5dd5c29c5d23bd778a8a72e98c979b3c727"},
 ]
 
 [package.dependencies]
@@ -260,7 +260,7 @@ python-dateutil = ">=2.1,<3.0.0"
 urllib3 = {version = ">=1.25.4,<2.2.0 || >2.2.0,<3", markers = "python_version >= \"3.10\""}
 
 [package.extras]
-crt = ["awscrt (==0.23.8)"]
+crt = ["awscrt (==0.27.6)"]
 
 [[package]]
 name = "certifi"
@@ -1418,14 +1418,14 @@ files = [
 
 [[package]]
 name = "requests"
-version = "2.32.4"
+version = "2.32.5"
 description = "Python HTTP for Humans."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "requests-2.32.4-py3-none-any.whl", hash = "sha256:27babd3cda2a6d50b30443204ee89830707d396671944c998b5975b031ac2b2c"},
-    {file = "requests-2.32.4.tar.gz", hash = "sha256:27d0316682c8a29834d3264820024b62a36942083d52caf2f14c0591336d3422"},
+    {file = "requests-2.32.5-py3-none-any.whl", hash = "sha256:2462f94637a34fd532264295e186976db0f5d453d1cdd31473c85a6a161affb6"},
+    {file = "requests-2.32.5.tar.gz", hash = "sha256:dbba0bac56e100853db0ea71b82b4dfd5fe2bf6d3754a8893c3af500cec7d7cf"},
 ]
 
 [package.dependencies]
@@ -1502,20 +1502,21 @@ spark8t = ">=0.0.10"
 
 [[package]]
 name = "spark8t"
-version = "1.0.0"
+version = "1.1.0"
 description = "This project provides some utilities function and CLI commands to run Spark on K8s."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "spark8t-1.0.0-py3-none-any.whl", hash = "sha256:2595428d9eaecb46ffb897a3300ac662d0c28f758e9cda3a4e6801dadf2d1934"},
-    {file = "spark8t-1.0.0.tar.gz", hash = "sha256:75fa9131f733430628a94ee0ae879c3feb927293ead1ce918e3b64cb117a5e83"},
+    {file = "spark8t-1.1.0-py3-none-any.whl", hash = "sha256:99dcfa46afed9cccf7c7a3c07fc43f805ff4c9fd41b48de79950e3565534ee3f"},
+    {file = "spark8t-1.1.0.tar.gz", hash = "sha256:2f61232f3c4b328b05affab5872fedc28ae5b7a0fe225aadab3cec24f590fc42"},
 ]
 
 [package.dependencies]
 envyaml = ">=1.10.211231"
 jinja2 = ">=3.1.2"
 lightkube = ">=0.11"
+typing-extensions = ">=4.14.1,<5.0.0"
 
 [[package]]
 name = "tenacity"
@@ -1697,4 +1698,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "cdd87e60239228abe52f35e6662a02094b9f94c99d956ee0dab0aeae81bd2017"
+content-hash = "58b825ae33e106d7fe532d08cdf564c8f967c9b10b7bb610ad429cbbe6ac68b6"
