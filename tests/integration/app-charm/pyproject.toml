@@ -17,7 +17,7 @@ kafka-python = "^2.2.15"
 kazoo = "^2.10.0"
 psycopg2 = "^2.9.10"
 mysql-connector-python = "^9.4.0"
-requests = "^2.32.4"
+requests = "^2.32.5"
 pyhive = { extras = ["hive_pure_sasl"], version = "^0.7.0" }
 spark-k8s-test = "^0.0.4"
 [tool.poetry.group.charm-libs.dependencies]
