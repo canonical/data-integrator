@@ -12,7 +12,7 @@ import base64
 import logging
 import re
 from enum import Enum
-from typing import Dict, MutableMapping, Optional, Union
+from typing import Dict, MutableMapping, Optional, Tuple, Union
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -34,6 +34,7 @@ from ops import (
     BlockedStatus,
     CharmBase,
     EventBase,
+    ModelError,
     Relation,
     RelationBrokenEvent,
     RelationEvent,
@@ -58,6 +59,7 @@ class IntegratorCharm(CharmBase):
 
     def _setup_database_requirer(self, relation_name: str) -> DatabaseRequires:
         """Handle the creation of relations and listeners."""
+        entity_name, password = self.requested_entities_secret_content
         database_requirer = DatabaseRequires(
             self,
             relation_name=relation_name,
@@ -66,6 +68,8 @@ class IntegratorCharm(CharmBase):
             entity_permissions=self.entity_permissions or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
+            requested_entity_name=entity_name,
+            requested_entity_password=password,
             external_node_connectivity=True,
         )
         self.framework.observe(
@@ -175,6 +179,12 @@ class IntegratorCharm(CharmBase):
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
+        if self.model.config.get("requested-entities-secret", None):
+            if not self.model.juju_version.has_secrets:
+                return BlockedStatus("Cannot use requested-entities-secret without secrets")
+            if (entity_name := self.requested_entities_secret_content) and not entity_name[0]:
+                return BlockedStatus("Unable to access requested-entities-secret")
+
         if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
             return BlockedStatus("Please specify either topic, index, database name, or prefix")
 
@@ -195,41 +205,42 @@ class IntegratorCharm(CharmBase):
         if self._changes_role_info():
             return BlockedStatus("To change role info, please remove relation and add it again")
 
-        if self.is_kafka_related and self.topic_active != self.topic_name:
-            logger.error(
-                f"Trying to change Kafka configuration for existing relation : To change topic: {self.topic_active}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change topic: {self.topic_active}, please remove relation and add it again"
-            )
-
-        if self.is_opensearch_related and self.index_active != self.index_name:
-            logger.error(
-                f"Trying to change OpenSearch configuration for existing relation : To change index name: {self.index_active}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change index name: {self.index_active}, please remove relation and add it again"
-            )
-
-        if self.is_etcd_related and self.prefix_active != self.prefix:
-            logger.error(
-                f"Trying to change etcd configuration for existing relation : To change prefix: {self.prefix_active}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change prefix name: {self.prefix_active}, please remove relation and add it again"
-            )
-
-        if self.is_database_related and any(
-            database != self.database_name for database in self.databases_active.values()
+        for mismatch, product_name, name_type, active_name in (
+            (
+                self.is_kafka_related and self.topic_active != self.topic_name,
+                "Kafka",
+                "topic",
+                self.topic_active,
+            ),
+            (
+                self.is_opensearch_related and self.index_active != self.index_name,
+                "OpenSearch",
+                "index",
+                self.index_active,
+            ),
+            (
+                self.is_etcd_related and self.prefix_active != self.prefix,
+                "etcd",
+                "prefix",
+                self.prefix_active,
+            ),
+            (
+                self.is_database_related
+                and any(
+                    database != self.database_name for database in self.databases_active.values()
+                ),
+                "database-name",
+                "database name",
+                list(self.databases_active.values())[0] if self.databases_active else None,
+            ),
         ):
-            current_database = list(self.databases_active.values())[0]
-            logger.error(
-                f"Trying to change database-name configuration for existing relation. To change database name: {current_database}, please remove relation and add it again"
-            )
-            return BlockedStatus(
-                f"To change database name: {current_database}, please remove relation and add it again"
-            )
-
+            if mismatch:
+                logger.error(
+                    f"Trying to change {product_name} configuration for existing relation : To change {name_type}: {active_name}, please remove relation and add it again"
+                )
+                return BlockedStatus(
+                    f"To change {name_type}: {active_name}, please remove relation and add it again"
+                )
         return ActiveStatus()
 
     def _on_update_status(self, _: EventBase) -> None:
@@ -463,6 +474,19 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("extra-group-roles", None)
 
     @property
+    def requested_entities_secret_content(self) -> Tuple[Optional[str], Optional[str]]:
+        """Return the configured requested entities secret."""
+        try:
+            if secret_uri := self.model.config.get("requested-entities-secret", None):
+                secret = self.framework.model.get_secret(id=secret_uri)
+                content = secret.get_content(refresh=True)
+                for key, val in content.items():
+                    return key, None if val == "None" else val
+        except ModelError:
+            logger.warning("Unable to access requested-entities-secret")
+        return None, None
+
+    @property
     def consumer_group_prefix(self) -> Optional[str]:
         """Return the configured consumer group prefix."""
         return self.model.config.get("consumer-group-prefix", None)
@@ -557,6 +581,11 @@ class IntegratorCharm(CharmBase):
     def extra_group_roles_active(self) -> Optional[str]:
         """Return the configured group-extra-roles parameter."""
         return self._get_active_value("extra-group-roles")
+
+    @property
+    def requested_entities_secret_active(self) -> Optional[str]:
+        """Return the configured requested entities secret."""
+        return self._get_active_value("requested-entities-secret", None)
 
     @property
     def is_database_related(self) -> bool:
