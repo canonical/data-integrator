@@ -1744,8 +1744,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v32.2.3"
-resolved_reference = "21ba440480504fa5029792507da8bb533ccbf2df"
+reference = "v35.0.2"
+resolved_reference = "afe8dfc4ece44f05a81f4a8c2ff21d6bea173e6d"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
@@ -1765,8 +1765,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v32.2.3"
-resolved_reference = "21ba440480504fa5029792507da8bb533ccbf2df"
+reference = "v35.0.2"
+resolved_reference = "afe8dfc4ece44f05a81f4a8c2ff21d6bea173e6d"
 subdirectory = "python/pytest_plugins/microceph"
 
 [[package]]
@@ -1805,8 +1805,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v32.2.3"
-resolved_reference = "21ba440480504fa5029792507da8bb533ccbf2df"
+reference = "v35.0.2"
+resolved_reference = "afe8dfc4ece44f05a81f4a8c2ff21d6bea173e6d"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -1825,8 +1825,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v32.2.3"
-resolved_reference = "21ba440480504fa5029792507da8bb533ccbf2df"
+reference = "v35.0.2"
+resolved_reference = "afe8dfc4ece44f05a81f4a8c2ff21d6bea173e6d"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2389,4 +2389,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "0430329a5cc1bfa999563e0757689f8615baeb6717aef05d216061e06cc4712a"
+content-hash = "6977b25fe1aa98c1558d201ae182e972540674cbd835fe70e17b40ceef8e476c"
