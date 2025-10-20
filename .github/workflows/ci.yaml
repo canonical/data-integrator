@@ -79,7 +79,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: akram09/data-platform-workflows/.github/workflows/integration_test_charm.yaml@main
+    uses: akram09/data-platform-workflows/.github/workflows/integration_test_charm.yaml@35.0.2
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       cloud: ${{ matrix.cloud }}
