@@ -237,17 +237,10 @@ jobs:
           python3 -m pip install --user pipx
           python3 -m pipx ensurepath
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      - name: Get workflow version
-        timeout-minutes: 2
-        id: workflow-version
-        uses: canonical/get-workflow-version-action@v1
-        with:
-          repository-name: canonical/data-platform-workflows
-          file-name: integration_test_charm.yaml
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # Adding implicit workflow version reference, current version v36.0.0
       - name: Install CLI
         timeout-minutes: 2
-        run: pipx install git+https://github.com/canonical/data-platform-workflows@'${{ steps.workflow-version.outputs.sha }}'#subdirectory=_cli
+        run: pipx install git+https://github.com/canonical/data-platform-workflows@c2ca169ebf3ccfc0656ab094f9403fb1d7ce13e8#subdirectory=_cli
       - name: Redact secrets from log
         timeout-minutes: 1
         run: redact-secrets
