@@ -6,17 +6,17 @@ package-mode = false
 requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
-cryptography = "==46.0.1"
-pydantic = "==2.11.9"
+cryptography = "==46.0.3"
+pydantic = "==2.12.3"
 tenacity = "*"
 
 python = "^3.10"
-ops = "^3.2.0"
-pymongo = "^4.15.1"
+ops = "^3.3.1"
+pymongo = "^4.15.3"
 kafka-python = "^2.2.15"
 kazoo = "^2.10.0"
-psycopg2 = "^2.9.10"
-mysql-connector-python = "^9.4.0"
+psycopg2 = "^2.9.11"
+mysql-connector-python = "^9.5.0"
 requests = "^2.32.5"
 pyhive = { extras = ["hive_pure_sasl"], version = "^0.7.0" }
 spark-k8s-test = "^0.0.4"
