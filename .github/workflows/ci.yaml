@@ -20,7 +20,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v36.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v37.0.0
 
   unit-test:
     name: Unit tests
@@ -58,7 +58,7 @@ jobs:
           - .
           - tests/integration/app-charm
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v36.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v37.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
 
