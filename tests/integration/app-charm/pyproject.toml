@@ -7,7 +7,7 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 cryptography = "==46.0.3"
-pydantic = "==2.12.3"
+pydantic = "==2.12.4"
 tenacity = "*"
 
 python = "^3.10"
