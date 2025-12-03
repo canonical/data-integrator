@@ -35,7 +35,7 @@ async def data_integrator_charm(ops_test: OpsTest) -> Path:
 async def app_charm(ops_test: OpsTest):
     """Build the application charm."""
     charm_path = "tests/integration/app-charm"
-    try:    
+    try:
         charm = await ops_test.build_charm(charm_path)
     except Exception as e:
         logger.error(e)

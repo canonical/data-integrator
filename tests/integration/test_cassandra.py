@@ -12,12 +12,15 @@ from pytest_operator.plugin import OpsTest
 
 from .constants import (
     APP,
-    DATA_INTEGRATOR,
-    CASSANDRA_EXTRA_USER_ROLES,
     CASSANDRA,
+    CASSANDRA_EXTRA_USER_ROLES,
+    DATA_INTEGRATOR,
     KEYSPACE_NAME,
 )
-from .helpers import check_logs, fetch_action_database, fetch_action_get_credentials, fetch_action_kafka
+from .helpers import (
+    fetch_action_database,
+    fetch_action_get_credentials,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +73,11 @@ async def test_deploy_and_relate_cassandra(ops_test: OpsTest, cloud_name: str):
         status="active",
     )
 
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_data_read_write_on_cassandra(ops_test: OpsTest, cloud_name: str):
-    """Test the database accessibility."""    
+    """Test the database accessibility."""
     # get credential for Cassandra
     credentials = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
@@ -87,7 +91,7 @@ async def test_data_read_write_on_cassandra(ops_test: OpsTest, cloud_name: str):
         json.dumps(credentials),
         KEYSPACE_NAME,
     )
-    assert result["ok"]    
+    assert result["ok"]
 
     logger.info(f"Insert rows to table on {CASSANDRA}")
     result = await fetch_action_database(
@@ -123,7 +127,7 @@ async def test_data_read_write_on_cassandra(ops_test: OpsTest, cloud_name: str):
 
     # test that different credentials are provided
     assert credentials != new_credentials
-    
+
     logger.info(f"Check assessibility of inserted data on {CASSANDRA} with new credentials")
     result = await fetch_action_database(
         ops_test.model.applications[APP].units[0],

@@ -4,13 +4,15 @@
 
 import subprocess
 import tempfile
+from contextlib import contextmanager
 from datetime import timedelta
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Dict
-from contextlib import contextmanager
-from typing import Generator, Optional
+from ssl import CERT_NONE, PROTOCOL_TLS_CLIENT, SSLContext
+from typing import Dict, Generator
 
+import psycopg2
+import requests
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import (
     EXEC_PROFILE_DEFAULT,
@@ -18,12 +20,7 @@ from cassandra.cluster import (
     ExecutionProfile,
     Session,
 )
-from ssl import CERT_NONE, PROTOCOL_TLS_CLIENT, SSLContext
-
 from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
-
-import psycopg2
-import requests
 from charms.kafka.v0.client import KafkaClient
 from charms.tls_certificates_interface.v4.tls_certificates import (
     generate_ca,
@@ -560,6 +557,7 @@ def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) ->
         return False
     return output.decode().strip().split("\n") == [f"{database_name}/foo", "bar"]
 
+
 def create_table_cassandra(credentials: Dict[str, str], keyspace_name: str) -> bool:
     """Create a table in a Postgresql database."""
     cql = f"""
@@ -567,17 +565,20 @@ def create_table_cassandra(credentials: Dict[str, str], keyspace_name: str) -> b
         id UUID PRIMARY KEY
     )
     """
-    
+
     with _cqlsh_session(
-            hosts=credentials["endpoints"].split(","),
-            auth_provider=PlainTextAuthProvider(username=credentials["username"], password=credentials["password"]),
-            tls_ca=credentials["tls_ca"],
+        hosts=credentials["endpoints"].split(","),
+        auth_provider=PlainTextAuthProvider(
+            username=credentials["username"], password=credentials["password"]
+        ),
+        tls_ca=credentials["tls_ca"],
     ) as session:
         try:
             session.execute(cql)
         except Exception:
-            return False 
+            return False
     return True
+
 
 def insert_data_cassandra(credentials: Dict[str, str], keyspace_name: str) -> bool:
     """Insert specific testing data into a Cassandra table."""
@@ -617,17 +618,18 @@ def check_inserted_data_cassandra(credentials: Dict[str, str], keyspace_name: st
             tls_ca=credentials["tls_ca"],
         ) as session:
             rows = session.execute(f"SELECT name, value FROM {keyspace_name}.{TABLE_NAME};")
-            rows_set = set((r.name, r.value) for r in rows)
+            rows_set = {(r.name, r.value) for r in rows}
             return expected_values.issubset(rows_set)
     except Exception:
         return False
 
+
 @contextmanager
 def _cqlsh_session(
-        auth_provider: PlainTextAuthProvider,
-        hosts: list[str],
-        keyspace: str | None = None,
-        tls_ca: str | None = None,
+    auth_provider: PlainTextAuthProvider,
+    hosts: list[str],
+    keyspace: str | None = None,
+    tls_ca: str | None = None,
 ) -> Generator[Session, None, None]:
     ssl_context = SSLContext(PROTOCOL_TLS_CLIENT)
 
@@ -637,14 +639,16 @@ def _cqlsh_session(
         ssl_context.load_verify_locations(cadata=tls_ca)
     else:
         ssl_context = None
-        
+
     cluster = Cluster(
         auth_provider=auth_provider,
         contact_points=hosts,
         protocol_version=5,
-        execution_profiles={EXEC_PROFILE_DEFAULT: ExecutionProfile(
-            load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy())
-        )},
+        execution_profiles={
+            EXEC_PROFILE_DEFAULT: ExecutionProfile(
+                load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy())
+            )
+        },
         ssl_context=ssl_context,
     )
     session = cluster.connect()
