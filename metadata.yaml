@@ -22,6 +22,10 @@ website:
 maintainers:
   - Data Platform Team <data-platform@lists.launchpad.net>
 
+charm-libs:
+  - lib: data_platform_libs.data_interfaces
+    version: "1"
+
 peers:
   data-integrator-peers:
     interface: data-integrator-peers
@@ -51,6 +55,9 @@ requires:
   etcd:
     interface: etcd_client
     limit: 1
+  cassandra:
+    interface: cassandra_client
+    limit: 1    
 
 # subordinate charm integrations
 provides:

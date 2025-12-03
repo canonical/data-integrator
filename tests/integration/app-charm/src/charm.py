@@ -32,12 +32,15 @@ from helpers import (
     POSTGRESQL_K8S,
     ZOOKEEPER,
     ZOOKEEPER_K8S,
+    CASSANDRA,
+    check_inserted_data_cassandra,
     check_inserted_data_etcd,
     check_inserted_data_kyuubi,
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
     check_inserted_data_zookeeper,
+    create_table_cassandra,
     create_table_kyuubi,
     create_table_mongodb,
     create_table_mysql,
@@ -46,6 +49,7 @@ from helpers import (
     create_topic,
     generate_cert,
     http_request,
+    insert_data_cassandra,
     insert_data_etcd,
     insert_data_kyuubi,
     insert_data_mongodb,
@@ -140,6 +144,9 @@ class ApplicationCharm(CharmBase):
         elif product == KYUUBI:
             executed = create_table_kyuubi(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == CASSANDRA:
+            executed = create_table_cassandra(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 
@@ -180,6 +187,9 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == ETCD:
             executed = insert_data_etcd(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+        elif product == CASSANDRA:
+            executed = insert_data_cassandra(credentials, database_name)
             event.set_results({"ok": True if executed else False})
 
         else:
@@ -222,6 +232,9 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == ETCD:
             executed = check_inserted_data_etcd(credentials, database_name)
+            event.set_results({"ok": True if executed else False})
+        elif product == CASSANDRA:
+            executed = check_inserted_data_cassandra(credentials, database_name)
             event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()

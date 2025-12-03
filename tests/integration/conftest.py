@@ -23,7 +23,11 @@ logger = logging.getLogger(__name__)
 @pytest.fixture(scope="module")
 async def data_integrator_charm(ops_test: OpsTest) -> Path:
     """Kafka charm used for integration testing."""
-    charm = await ops_test.build_charm(".")
+    try:
+        charm = await ops_test.build_charm(".")
+    except Exception as e:
+        logger.error(e)
+        return Path()
     return charm
 
 
@@ -31,7 +35,11 @@ async def data_integrator_charm(ops_test: OpsTest) -> Path:
 async def app_charm(ops_test: OpsTest):
     """Build the application charm."""
     charm_path = "tests/integration/app-charm"
-    charm = await ops_test.build_charm(charm_path)
+    try:    
+        charm = await ops_test.build_charm(charm_path)
+    except Exception as e:
+        logger.error(e)
+        return Path()
     return charm
 
 

@@ -13,7 +13,7 @@ from pytest_operator.plugin import OpsTest
 from .constants import (
     APP,
     DATA_INTEGRATOR,
-    EXTRA_USER_ROLES,
+    KAFKA_EXTRA_USER_ROLES,
     KAFKA,
     TOPIC_NAME,
     ZOOKEEPER,
@@ -35,7 +35,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP], idle_period=30)
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
-    config = {"topic-name": TOPIC_NAME, "extra-user-roles": EXTRA_USER_ROLES}
+    config = {"topic-name": TOPIC_NAME, "extra-user-roles": KAFKA_EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # test the active/blocked status for relation

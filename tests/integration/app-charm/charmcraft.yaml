@@ -53,11 +53,12 @@ parts:
     poetry-export-extra-args: ['--only', 'main,charm-libs']
     # Unable to build mysql-connector-python from source because of
     # https://bugs.mysql.com/bug.php?id=113396
-    poetry-pip-extra-args: ['--only-binary', 'mysql-connector-python']
+    poetry-pip-extra-args: ['--only-binary', 'cassandra-driver,mysql-connector-python']
     build-packages:
       - libffi-dev  # Needed to build Python dependencies with Rust from source
       - libssl-dev  # Needed to build Python dependencies with Rust from source
       - pkg-config  # Needed to build Python dependencies with Rust from source
+      - libev-dev      
     override-build: |
       # Workaround for https://github.com/canonical/charmcraft/issues/2068
       # rustup used to install rustc and cargo, which are needed to build Python dependencies with Rust from source

@@ -20,4 +20,6 @@ mysql-connector-python = "^9.5.0"
 requests = "^2.32.5"
 pyhive = { extras = ["hive_pure_sasl"], version = "^0.7.0" }
 spark-k8s-test = "^0.0.4"
+cassandra-driver = "^3.29.2"
+charmlibs-pathops = "^1.0.1"
 [tool.poetry.group.charm-libs.dependencies]
