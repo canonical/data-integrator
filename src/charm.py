@@ -431,6 +431,7 @@ class IntegratorCharm(CharmBase):
                     "username": req.entity_name,
                     "password": req.entity_password,
                     "tls-ca": req.tls_ca,
+                    "endpoints": req.endpoints,
                 }
 
         return None
@@ -763,10 +764,9 @@ class IntegratorCharm(CharmBase):
     @property
     def is_cassandra_related(self) -> bool:
         """Return if a relation with cassandra is present."""
-        for rel in self.cassandra.relations:
-            if not self.cassandra.are_all_resources_created(rel.id):
-                return False
-        return True
+        return bool(self.cassandra.relations) and all(
+            self.cassandra.are_all_resources_created(rel.id) for rel in self.cassandra.relations
+        )
 
     @property
     def is_etcd_related(self) -> bool:

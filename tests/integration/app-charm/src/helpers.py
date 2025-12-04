@@ -571,7 +571,7 @@ def create_table_cassandra(credentials: Dict[str, str], keyspace_name: str) -> b
         auth_provider=PlainTextAuthProvider(
             username=credentials["username"], password=credentials["password"]
         ),
-        tls_ca=credentials["tls_ca"],
+        tls_ca=credentials.get("tls-ca", ""),
     ) as session:
         try:
             session.execute(cql)
@@ -591,7 +591,7 @@ def insert_data_cassandra(credentials: Dict[str, str], keyspace_name: str) -> bo
                 username=credentials["username"],
                 password=credentials["password"],
             ),
-            tls_ca=credentials["tls_ca"],
+            tls_ca=credentials.get("tls-ca", ""),
         ) as session:
             for row in values:
                 cql = f"""
@@ -615,7 +615,7 @@ def check_inserted_data_cassandra(credentials: Dict[str, str], keyspace_name: st
                 username=credentials["username"],
                 password=credentials["password"],
             ),
-            tls_ca=credentials["tls_ca"],
+            tls_ca=credentials.get("tls-ca", ""),
         ) as session:
             rows = session.execute(f"SELECT name, value FROM {keyspace_name}.{TABLE_NAME};")
             rows_set = {(r.name, r.value) for r in rows}
