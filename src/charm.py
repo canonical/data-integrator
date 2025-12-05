@@ -266,15 +266,13 @@ class IntegratorCharm(CharmBase):
                 self.keyspace_active,
             ),
         ):
-            if mismatch and active_name:
+            if mismatch:
                 logger.error(
                     f"Trying to change {product_name} configuration for existing relation : To change {name_type}: {active_name}, please remove relation and add it again"
                 )
                 return BlockedStatus(
                     f"To change {name_type}: {active_name}, please remove relation and add it again"
                 )
-            elif mismatch and not active_name:
-                return BlockedStatus("Waiting for relation to be added")
 
     def get_status(self) -> StatusBase:
         """Return the current application status."""
@@ -446,7 +444,7 @@ class IntegratorCharm(CharmBase):
             self.keyspace_name,
         ]):
             event.fail(
-                "The database name, topic name, index name, or prefix is not specified in the config."
+                "The database name, topic name, index name, keyspace name, or prefix is not specified in the config."
             )
             event.set_results({"ok": False})
             return
@@ -683,6 +681,7 @@ class IntegratorCharm(CharmBase):
 
             return resource if resource != "" else None
 
+    @property
     def topic_active(self) -> Optional[str]:
         """Return the configured topic name."""
         if relation := self.kafka_relation:
