@@ -16,7 +16,7 @@ DATABASE_NAME = "test_database"
 KAFKA = {"localhost": "kafka", "microk8s": "kafka-k8s"}
 ZOOKEEPER = {"localhost": "zookeeper", "microk8s": "zookeeper-k8s"}
 TOPIC_NAME = "test_topic"
-EXTRA_USER_ROLES = "producer,consumer,admin"
+KAFKA_EXTRA_USER_ROLES = "producer,consumer,admin"
 
 OPENSEARCH = {"localhost": "opensearch"}
 INDEX_NAME = "albums"
@@ -25,3 +25,7 @@ OPENSEARCH_EXTRA_USER_ROLES = "default"
 KYUUBI = {"microk8s": "kyuubi-k8s"}
 ETCD = {"localhost": "charmed-etcd"}
 APP = "app"
+
+CASSANDRA = {"localhost": "cassandra"}
+KEYSPACE_NAME = "test_ks"
+CASSANDRA_EXTRA_USER_ROLES = "ALTER,AUTHORIZE,DROP,MODIFY,SELECT,CREATE"

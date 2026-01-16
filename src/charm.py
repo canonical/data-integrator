@@ -9,10 +9,11 @@ of the libraries in this repository.
 """
 
 import base64
+import json
 import logging
 import re
 from enum import Enum
-from typing import Dict, MutableMapping, Optional, Tuple, Union
+from typing import Dict, Literal, MutableMapping, Optional, Tuple, Union, cast
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -28,6 +29,14 @@ from charms.data_platform_libs.v0.data_interfaces import (
     TopicCreatedEvent,
     TopicEntityCreatedEvent,
 )
+from charms.data_platform_libs.v1.data_interfaces import (
+    EntityPermissionModel,
+    RequirerCommonModel,
+    ResourceCreatedEvent,
+    ResourceEntityCreatedEvent,
+    ResourceProviderModel,
+    ResourceRequirerEventHandler,
+)
 from ops import (
     ActionEvent,
     ActiveStatus,
@@ -42,7 +51,7 @@ from ops import (
     main,
 )
 
-from literals import DATABASES, ETCD, KAFKA, OPENSEARCH, PEER
+from literals import CASSANDRA, DATABASES, ETCD, KAFKA, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +106,36 @@ class IntegratorCharm(CharmBase):
             name: self._setup_database_requirer(name) for name in DATABASES
         }
 
+        # Cassandra
+        self.cassandra = ResourceRequirerEventHandler(
+            self,
+            relation_name=CASSANDRA,
+            requests=[
+                RequirerCommonModel(resource=self.keyspace_name or ""),
+                RequirerCommonModel(
+                    resource=self.keyspace_name or "",
+                    entity_type=cast(Literal["USER", "GROUP"], self.entity_type or "USER"),
+                    entity_permissions=self.resource_entity_permisions,
+                    extra_user_roles=self.extra_user_roles or "",
+                    extra_group_roles=self.extra_group_roles or "",
+                    external_node_connectivity=True,
+                ),
+            ],
+            response_model=ResourceProviderModel,
+        )
+
+        self.framework.observe(
+            self.cassandra.on.resource_created,
+            self._on_resource_created,
+        )
+
+        self.framework.observe(
+            self.cassandra.on.resource_entity_created,
+            self._on_resource_entity_created,
+        )
+
+        self.framework.observe(self.on[CASSANDRA].relation_broken, self._on_relation_broken)
+
         # Kafka
         self.kafka = KafkaRequires(
             self,
@@ -144,10 +183,24 @@ class IntegratorCharm(CharmBase):
             self.framework.observe(self.etcd.on.etcd_ready, self._on_etcd_ready)
             self.framework.observe(self.on[ETCD].relation_broken, self._on_relation_broken)
 
+    def _on_resource_created(self, event: ResourceCreatedEvent[ResourceProviderModel]) -> None:
+        """Event triggered when a resource was created for this application."""
+        logger.debug(f"Cassandra credentials are received: {event.response.username}")
+        self._on_config_changed(event)
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
+
+    def _on_resource_entity_created(self, event: ResourceEntityCreatedEvent) -> None:
+        """Event triggered when a resource entity was created for this application."""
+        logger.debug(f"Cassandra entity credentials are received: {event.response.entity_name}")
+        self._on_config_changed(event)
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
+
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
         # update peer databag to trigger the charm status update
-        self._update_relation_status(event, Statuses.BROKEN.name)
+        self._update_relation_status(event.relation, Statuses.BROKEN.name)
 
     def _changes_role_info(self) -> bool:
         """Return whether any of the role config options changed."""
@@ -177,34 +230,7 @@ class IntegratorCharm(CharmBase):
         if relation := self.etcd_relation:
             return self.etcd.fetch_my_relation_field(relation.id, key)
 
-    def get_status(self) -> StatusBase:
-        """Return the current application status."""
-        if self.model.config.get("requested-entities-secret", None):
-            if not self.model.juju_version.has_secrets:
-                return BlockedStatus("Cannot use requested-entities-secret without secrets")
-            if (entity_name := self.requested_entities_secret_content) and not entity_name[0]:
-                return BlockedStatus("Unable to access requested-entities-secret")
-
-        if not any([self.topic_name, self.database_name, self.index_name, self.prefix]):
-            return BlockedStatus("Please specify either topic, index, database name, or prefix")
-
-        if self.topic_name and not KafkaRequires.is_topic_value_acceptable(self.topic_name):
-            logger.error(
-                f"Trying to pass an invalid topic value: {self.topic_name}, please pass an acceptable value instead"
-            )
-            return BlockedStatus("Please pass an acceptable topic value")
-
-        if not any([
-            self.is_database_related,
-            self.is_kafka_related,
-            self.is_opensearch_related,
-            self.is_etcd_related,
-        ]):
-            return BlockedStatus("Please relate the data-integrator with the desired product")
-
-        if self._changes_role_info():
-            return BlockedStatus("To change role info, please remove relation and add it again")
-
+    def _check_missmatch(self) -> StatusBase:
         for mismatch, product_name, name_type, active_name in (
             (
                 self.is_kafka_related and self.topic_active != self.topic_name,
@@ -233,6 +259,12 @@ class IntegratorCharm(CharmBase):
                 "database name",
                 list(self.databases_active.values())[0] if self.databases_active else None,
             ),
+            (
+                self.is_cassandra_related and self.keyspace_active != self.keyspace_name,
+                "Cassandra",
+                "keyspace",
+                self.keyspace_active,
+            ),
         ):
             if mismatch:
                 logger.error(
@@ -241,6 +273,47 @@ class IntegratorCharm(CharmBase):
                 return BlockedStatus(
                     f"To change {name_type}: {active_name}, please remove relation and add it again"
                 )
+
+    def get_status(self) -> StatusBase:
+        """Return the current application status."""
+        if self.model.config.get("requested-entities-secret", None):
+            if not self.model.juju_version.has_secrets:
+                return BlockedStatus("Cannot use requested-entities-secret without secrets")
+            if (entity_name := self.requested_entities_secret_content) and not entity_name[0]:
+                return BlockedStatus("Unable to access requested-entities-secret")
+
+        if not any([
+            self.topic_name,
+            self.database_name,
+            self.index_name,
+            self.prefix,
+            self.keyspace_name,
+        ]):
+            return BlockedStatus(
+                "Please specify either topic, index, database name, keyspace name, or prefix"
+            )
+
+        if self.topic_name and not KafkaRequires.is_topic_value_acceptable(self.topic_name):
+            logger.error(
+                f"Trying to pass an invalid topic value: {self.topic_name}, please pass an acceptable value instead"
+            )
+            return BlockedStatus("Please pass an acceptable topic value")
+
+        if not any([
+            self.is_database_related,
+            self.is_kafka_related,
+            self.is_opensearch_related,
+            self.is_etcd_related,
+            self.is_cassandra_related,
+        ]):
+            return BlockedStatus("Please relate the data-integrator with the desired product")
+
+        if self._changes_role_info():
+            return BlockedStatus("To change role info, please remove relation and add it again")
+
+        if blocked := self._check_missmatch():
+            return blocked
+
         return ActiveStatus()
 
     def _on_update_status(self, _: EventBase) -> None:
@@ -336,11 +409,42 @@ class IntegratorCharm(CharmBase):
             self.etcd.update_relation_data(rel.id, prefix_relation_data)
             self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
 
+    def _get_cassandra_credentials(self) -> dict | None:
+        """Extract Cassandra credentials if relation and resources are present."""
+        relation = self.cassandra_relation
+        if not relation:
+            return None
+
+        if not self.cassandra.are_all_resources_created(relation.id):
+            return None
+
+        model = self.cassandra.interface.build_model(
+            relation_id=relation.id,
+            component=relation.app,
+        )
+
+        for req in model.requests:
+            if req.entity_name:
+                return {
+                    "username": req.entity_name,
+                    "password": req.entity_password,
+                    "tls-ca": req.tls_ca,
+                    "endpoints": req.endpoints,
+                }
+
+        return None
+
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
-        if not any([self.database_name, self.topic_name, self.index_name, self.prefix]):
+        if not any([
+            self.database_name,
+            self.topic_name,
+            self.index_name,
+            self.prefix,
+            self.keyspace_name,
+        ]):
             event.fail(
-                "The database name, topic name, index name, or prefix is not specified in the config."
+                "The database name, topic name, index name, keyspace name, or prefix is not specified in the config."
             )
             event.set_results({"ok": False})
             return
@@ -350,6 +454,7 @@ class IntegratorCharm(CharmBase):
             self.is_kafka_related,
             self.is_opensearch_related,
             self.is_etcd_related,
+            self.is_cassandra_related,
         ]):
             event.fail("The action can be run only after relation is created.")
             event.set_results({"ok": False})
@@ -365,6 +470,10 @@ class IntegratorCharm(CharmBase):
 
         if self.is_opensearch_related:
             result[OPENSEARCH] = list(self.opensearch.fetch_relation_data().values())[0]
+
+        cassandra_creds = self._get_cassandra_credentials()
+        if cassandra_creds:
+            result[CASSANDRA] = cassandra_creds
 
         if self.is_etcd_related:
             result[ETCD] = {
@@ -383,41 +492,41 @@ class IntegratorCharm(CharmBase):
         logger.debug(f"Database credentials are received: {event.username}")
         self._on_config_changed(event)
         # update values in the databag
-        self._update_relation_status(event, Statuses.ACTIVE.name)
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
 
     def _on_topic_created(self, event: TopicCreatedEvent) -> None:
         """Event triggered when a topic was created for this application."""
         logger.debug(f"Kafka credentials are received: {event.username}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
-        self._update_relation_status(event, Statuses.ACTIVE.name)
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
 
     def _on_index_created(self, event: IndexCreatedEvent) -> None:
         """Event triggered when an index is created for this application."""
         logger.debug(f"OpenSearch credentials are received: {event.username}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
-        self._update_relation_status(event, Statuses.ACTIVE.name)
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
 
     def _on_entity_created(self, event: EntityCreatedEvents) -> None:
         """Event triggered when an entity is created for this application."""
         logger.debug(f"Entity credentials are received: {event.entity_name}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
-        self._update_relation_status(event, Statuses.ACTIVE.name)
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
 
     def _on_etcd_ready(self, event: EtcdReadyEvent) -> None:
         """Event triggered when the etcd relation is ready."""
         logger.debug("etcd ready received")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
-        self._update_relation_status(event, Statuses.ACTIVE.name)
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
 
-    def _update_relation_status(self, event: RelationEvent, status: str) -> None:
+    def _update_relation_status(self, relation: Relation, status: str) -> None:
         """Update the relation status in the peer-relation databag."""
         if not self.unit.is_leader():
             return
-        self.set_secret("app", event.relation.name, status)
+        self.set_secret("app", relation.name, status)
 
     def _on_peer_relation_changed(self, _: RelationEvent) -> None:
         """Handle the peer relation changed event."""
@@ -442,6 +551,11 @@ class IntegratorCharm(CharmBase):
     def database_name(self) -> Optional[str]:
         """Return the configured database name."""
         return self.model.config.get("database-name", None)
+
+    @property
+    def keyspace_name(self) -> Optional[str]:
+        """Return the configured database name."""
+        return self.model.config.get("keyspace-name", None)
 
     @property
     def topic_name(self) -> Optional[str]:
@@ -521,6 +635,11 @@ class IntegratorCharm(CharmBase):
         return self.opensearch.relations[0] if len(self.opensearch.relations) else None
 
     @property
+    def cassandra_relation(self) -> Optional[Relation]:
+        """Return the opensearch relation if present."""
+        return self.cassandra.relations[0] if len(self.cassandra.relations) else None
+
+    @property
     def kafka_relation(self) -> Optional[Relation]:
         """Return the kafka relation if present."""
         return self.kafka.relations[0] if len(self.kafka.relations) else None
@@ -543,6 +662,24 @@ class IntegratorCharm(CharmBase):
             if requirer.relations
             and requirer.fetch_relation_field(requirer.relations[0].id, "database")
         }
+
+    @property
+    def keyspace_active(self) -> Optional[str]:
+        """Return the configured keyspace name."""
+        if relation := self.cassandra_relation:
+            if not self.cassandra.are_all_resources_created(relation.id):
+                return None
+
+            model = self.cassandra.interface.build_model(
+                relation_id=relation.id, component=relation.app
+            )
+
+            if not model.requests:
+                return None
+
+            resource = model.requests[0].resource
+
+            return resource if resource != "" else None
 
     @property
     def topic_active(self) -> Optional[str]:
@@ -624,6 +761,13 @@ class IntegratorCharm(CharmBase):
         return self._check_for_credentials(self.opensearch)
 
     @property
+    def is_cassandra_related(self) -> bool:
+        """Return if a relation with cassandra is present."""
+        return bool(self.cassandra.relations) and all(
+            self.cassandra.are_all_resources_created(rel.id) for rel in self.cassandra.relations
+        )
+
+    @property
     def is_etcd_related(self) -> bool:
         """Return if a relation with etcd is present."""
         return (
@@ -652,6 +796,20 @@ class IntegratorCharm(CharmBase):
             return {}
 
         return relation.data[self.unit]
+
+    @property
+    def resource_entity_permisions(self) -> list[EntityPermissionModel]:
+        """Return the configured entity type permissions v1."""
+        if not self.entity_permissions:
+            return []
+
+        return [
+            EntityPermissionModel(
+                resource_name=self.keyspace_name or "",
+                resource_type="keyspace",
+                privileges=json.loads(self.entity_permissions),
+            )
+        ]
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
