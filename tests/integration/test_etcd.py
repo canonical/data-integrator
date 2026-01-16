@@ -41,7 +41,7 @@ async def test_deploy(
     await asyncio.gather(
         ops_test.model.deploy(
             ETCD[cloud_name],
-            channel="3.5/edge",
+            channel="3.6/edge",
             application_name=ETCD[cloud_name],
             num_units=3,
         ),
