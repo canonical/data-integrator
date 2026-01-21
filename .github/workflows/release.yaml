@@ -12,6 +12,7 @@ jobs:
     name: Tests
     uses: ./.github/workflows/ci.yaml
     secrets: inherit
+    permissions: {}
 
   release:
     name: Release charm
