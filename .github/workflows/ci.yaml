@@ -9,7 +9,7 @@ concurrency:
 on:
   pull_request:
   schedule:
-    - cron: '53 0 * * *'  # Daily at 00:53 UTC
+    - cron: "53 0 * * *" # Daily at 00:53 UTC
   # Triggered on push to branch "main" by .github/workflows/release.yaml
   workflow_call:
     outputs:
@@ -47,15 +47,16 @@ jobs:
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v41.1.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
+      cache: false
 
   integration-test:
     strategy:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.52  # renovate: juju-agent-pin-minor
+          - agent: 2.9.52 # renovate: juju-agent-pin-minor
             libjuju: ^2
-          - agent: 3.6.9  # renovate: juju-agent-pin-minor
+          - agent: 3.6.9 # renovate: juju-agent-pin-minor
         cloud:
           - lxd
           - microk8s
@@ -70,4 +71,4 @@ jobs:
       cloud: ${{ matrix.cloud }}
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
-      microk8s-snap-channel: 1.35-strict/stable  # renovate: latest microk8s
+      microk8s-snap-channel: 1.35-strict/stable # renovate: latest microk8s
