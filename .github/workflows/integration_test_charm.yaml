@@ -17,7 +17,7 @@ on:
         # Keep description synchronized with "Parse architecture input" step
         description: |
           Processor architecture
-          
+
           Must be one of "amd64", "arm64"
         default: amd64
         type: string
@@ -75,10 +75,10 @@ on:
       _beta_allure_report:
         description: |
           (BETA) Enable Allure Report
-          
+
           Subject to breaking changes without major version bump.
           Not currently a public interface—only for testing
-          
+
           If this workflow is called with a matrix, this value can only be `true` for one
           combination in the matrix
         default: false
@@ -129,7 +129,7 @@ jobs:
         run: |
           import json
           import os
-          
+
           DEFAULT_RUNNERS = {
               "amd64": "ubuntu-latest",
               "arm64": "ubuntu-24.04-arm",
@@ -202,7 +202,7 @@ jobs:
     needs:
       - collect-integration-tests
     runs-on: ${{ matrix.groups.runner || fromJSON(needs.collect-integration-tests.outputs.default_runner) }}
-    timeout-minutes: 299  # Sum of steps `timeout-minutes` + 5
+    timeout-minutes: 299 # Sum of steps `timeout-minutes` + 5
     steps:
       - name: Deprecation notice
         timeout-minutes: 1
@@ -212,7 +212,7 @@ jobs:
       # This is an additional step that is considered to add more storage since the current storage is not enough
       # for OpenSearch integration tests to pass.
       # The /mnt is a mounted ephemeral device that is used in github hosted runners.
-      - name: (Github hosted) Mount /mnt to have more storage 
+      - name: (Github hosted) Mount /mnt to have more storage
         if: ${{ !matrix.groups.is_hosted }}
         run: |
           sudo mkdir -p /mnt/lxd/storage-pools
@@ -228,9 +228,8 @@ jobs:
         run: |
           sudo apt-get update
           # python3-pip recommends build-essential—a relatively large package we don't need
-          sudo apt-get install python3-pip python3-venv -y --no-install-recommends
-          python3 -m pip install --user pipx
-          python3 -m pipx ensurepath
+          sudo apt-get install python3-pip python3-venv pipx -y --no-install-recommends
+          pipx ensurepath
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       # Adding implicit workflow version reference, current version v36.0.0
       - name: Install CLI
