@@ -38,14 +38,14 @@ test = ["astroid (>=2,<5)", "pytest (<9.0)", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "azure-core"
-version = "1.38.1"
+version = "1.38.2"
 description = "Microsoft Azure Core Library for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["integration"]
 files = [
-    {file = "azure_core-1.38.1-py3-none-any.whl", hash = "sha256:69f08ee3d55136071b7100de5b198994fc1c5f89d2b91f2f43156d20fcf200a4"},
-    {file = "azure_core-1.38.1.tar.gz", hash = "sha256:9317db1d838e39877eb94a2240ce92fa607db68adf821817b723f0d679facbf6"},
+    {file = "azure_core-1.38.2-py3-none-any.whl", hash = "sha256:074806c75cf239ea284a33a66827695ef7aeddac0b4e19dda266a93e4665ead9"},
+    {file = "azure_core-1.38.2.tar.gz", hash = "sha256:67562857cb979217e48dc60980243b61ea115b77326fa93d83b729e7ff0482e7"},
 ]
 
 [package.dependencies]
@@ -2225,20 +2225,20 @@ spark8t = ">=0.0.10"
 
 [[package]]
 name = "spark8t"
-version = "1.2.0"
+version = "1.3.0"
 description = "This project provides some utilities function and CLI commands to run Spark on K8s."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["integration"]
 files = [
-    {file = "spark8t-1.2.0-py3-none-any.whl", hash = "sha256:7fb530531a48f310d8daf4c47ad9483938c0fbb4aaf23fbf76471fa5ec521b92"},
-    {file = "spark8t-1.2.0.tar.gz", hash = "sha256:01dd24d26460545cdf59578b69eb2ec41a02f93a262364fd092f58fd4ff9960d"},
+    {file = "spark8t-1.3.0-py3-none-any.whl", hash = "sha256:4081639a67043b57d721e8fa0bd0034eff268f9e1799089ce7379a656fc20396"},
+    {file = "spark8t-1.3.0.tar.gz", hash = "sha256:cb5471c04e966887eca8f8308ffae84f59fd495c2a1614d4b0ac067f6d18949c"},
 ]
 
 [package.dependencies]
 envyaml = ">=1.10.211231"
 jinja2 = ">=3.1.6"
-lightkube = ">=0.18.0"
+lightkube = ">=0.19.1"
 typing-extensions = ">=4.15.0,<5.0.0"
 
 [[package]]
