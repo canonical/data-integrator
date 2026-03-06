@@ -12,6 +12,7 @@ ops = "^3.6.0"
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
 ops = ">=2.0.0"
+pydantic = ">= 1.0"
 
 [tool.poetry.group.format]
 optional = true
@@ -29,6 +30,8 @@ codespell = "^2.4.1"
 coverage = {extras = ["toml"], version = "^7.13.4"}
 pytest = "^9.0.2"
 pytest-asyncio = "*"
+pydantic = ">= 1.0"
+
 
 [tool.poetry.group.integration.dependencies]
 pytest = "^9.0.2"
