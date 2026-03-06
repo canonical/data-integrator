@@ -37,7 +37,7 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP], idle_period=30)
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
-    config = {"topic-name": KEYSPACE_NAME, "extra-user-roles": CASSANDRA_EXTRA_USER_ROLES}
+    config = {"keyspace-name": KEYSPACE_NAME, "extra-user-roles": CASSANDRA_EXTRA_USER_ROLES}
     await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # test the active/blocked status for relation
@@ -79,9 +79,11 @@ async def test_deploy_and_relate_cassandra(ops_test: OpsTest, cloud_name: str):
 async def test_data_read_write_on_cassandra(ops_test: OpsTest, cloud_name: str):
     """Test the database accessibility."""
     # get credential for Cassandra
-    credentials = await fetch_action_get_credentials(
+    result = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
+
+    credentials = result[CASSANDRA[cloud_name]]
 
     logger.info(f"Create table on {CASSANDRA}")
     result = await fetch_action_database(
@@ -121,9 +123,11 @@ async def test_data_read_write_on_cassandra(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.add_relation(DATA_INTEGRATOR, CASSANDRA[cloud_name])
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, CASSANDRA[cloud_name]])
 
-    new_credentials = await fetch_action_get_credentials(
+    result = await fetch_action_get_credentials(
         ops_test.model.applications[DATA_INTEGRATOR].units[0]
     )
+
+    new_credentials = result[CASSANDRA[cloud_name]]
 
     # test that different credentials are provided
     assert credentials != new_credentials
