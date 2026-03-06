@@ -15,20 +15,6 @@ import json
 from enum import Enum
 from typing import Dict, MutableMapping, Optional, Tuple, Union
 
-from ops import (
-    ActionEvent,
-    ActiveStatus,
-    BlockedStatus,
-    CharmBase,
-    EventBase,
-    ModelError,
-    Relation,
-    RelationBrokenEvent,
-    RelationEvent,
-    StatusBase,
-    main,
-)
-
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
     DatabaseEntityCreatedEvent,
@@ -53,6 +39,21 @@ from charms.data_platform_libs.v1.data_interfaces import (
     ResourceEntityCreatedEvent,
     RequirerDataContractV1
 )
+
+from ops import (
+    ActionEvent,
+    ActiveStatus,
+    BlockedStatus,
+    CharmBase,
+    EventBase,
+    ModelError,
+    Relation,
+    RelationBrokenEvent,
+    RelationEvent,
+    StatusBase,
+    main,
+)
+
 
 from typing import cast, Literal
 
