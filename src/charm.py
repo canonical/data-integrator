@@ -13,7 +13,7 @@ import json
 import logging
 import re
 from enum import Enum
-from typing import Dict, Literal, MutableMapping, Optional, Tuple, Union, cast
+from typing import Dict, MutableMapping, Optional, Tuple, Union
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseCreatedEvent,
@@ -114,8 +114,8 @@ class IntegratorCharm(CharmBase):
                 RequirerCommonModel(resource=self.keyspace_name or ""),
                 RequirerCommonModel(
                     resource=self.keyspace_name or "",
-                    entity_type=cast(Literal["USER", "GROUP"], self.entity_type or "USER"),
-                    entity_permissions=self.resource_entity_permisions,
+                    entity_type=self.entity_type or "USER",
+                    entity_permissions=self.cassandra_entity_permisions,
                     extra_user_roles=self.extra_user_roles or "",
                     extra_group_roles=self.extra_group_roles or "",
                     external_node_connectivity=True,
@@ -185,14 +185,14 @@ class IntegratorCharm(CharmBase):
 
     def _on_resource_created(self, event: ResourceCreatedEvent[ResourceProviderModel]) -> None:
         """Event triggered when a resource was created for this application."""
-        logger.debug(f"Cassandra credentials are received: {event.response.username}")
+        logger.debug(f"Credentials are received: {event.response.username}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
         self._update_relation_status(event.relation, Statuses.ACTIVE.name)
 
     def _on_resource_entity_created(self, event: ResourceEntityCreatedEvent) -> None:
         """Event triggered when a resource entity was created for this application."""
-        logger.debug(f"Cassandra entity credentials are received: {event.response.entity_name}")
+        logger.debug(f"Entity credentials are received: {event.response.entity_name}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
         self._update_relation_status(event.relation, Statuses.ACTIVE.name)
@@ -798,8 +798,8 @@ class IntegratorCharm(CharmBase):
         return relation.data[self.unit]
 
     @property
-    def resource_entity_permisions(self) -> list[EntityPermissionModel]:
-        """Return the configured entity type permissions v1."""
+    def cassandra_entity_permisions(self) -> list[EntityPermissionModel]:
+        """Return the configured entity type permissions v1 for Cassandra."""
         if not self.entity_permissions:
             return []
 
