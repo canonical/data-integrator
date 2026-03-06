@@ -13,8 +13,8 @@ from pytest_operator.plugin import OpsTest
 from .constants import (
     APP,
     DATA_INTEGRATOR,
-    KAFKA_EXTRA_USER_ROLES,
     KAFKA,
+    KAFKA_EXTRA_USER_ROLES,
     TOPIC_NAME,
     ZOOKEEPER,
 )

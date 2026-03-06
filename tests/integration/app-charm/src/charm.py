@@ -15,6 +15,7 @@ from pathlib import Path
 
 from charms.operator_libs_linux.v2 import snap
 from helpers import (
+    CASSANDRA,
     ETCD,
     ETCD_CERTS_DIR,
     KAFKA,
@@ -32,7 +33,6 @@ from helpers import (
     POSTGRESQL_K8S,
     ZOOKEEPER,
     ZOOKEEPER_K8S,
-    CASSANDRA,
     check_inserted_data_cassandra,
     check_inserted_data_etcd,
     check_inserted_data_kyuubi,
