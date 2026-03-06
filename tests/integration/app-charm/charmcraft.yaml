@@ -51,7 +51,11 @@ parts:
     after:
       - poetry-deps
     poetry-export-extra-args: ['--only', 'main,charm-libs']
+    # Unable to build mysql-connector-python from source because of
+    # https://bugs.mysql.com/bug.php?id=113396
+    poetry-pip-extra-args: ['--only-binary', 'cassandra-driver']
     build-packages:
+      - libev-dev
       - libffi-dev  # Needed to build Python dependencies with Rust from source
       - libssl-dev  # Needed to build Python dependencies with Rust from source
       - pkg-config  # Needed to build Python dependencies with Rust from source

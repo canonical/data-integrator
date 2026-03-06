@@ -14,4 +14,5 @@ ZOOKEEPER = "zookeeper"
 OPENSEARCH = "opensearch"
 KYUUBI = "kyuubi"
 ETCD = "etcd"
+CASSANDRA = "cassandra"
 DATABASES = [MYSQL, MONGODB, POSTGRESQL, MONGOS, ZOOKEEPER, KYUUBI]

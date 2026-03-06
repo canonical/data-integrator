@@ -4,13 +4,23 @@
 
 import subprocess
 import tempfile
+from contextlib import contextmanager
 from datetime import timedelta
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Dict
+from ssl import CERT_NONE, PROTOCOL_TLS_CLIENT, SSLContext
+from typing import Dict, Generator
 
 import psycopg2
 import requests
+from cassandra.auth import PlainTextAuthProvider
+from cassandra.cluster import (
+    EXEC_PROFILE_DEFAULT,
+    Cluster,
+    ExecutionProfile,
+    Session,
+)
+from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
 from charms.kafka.v0.client import KafkaClient
 from charms.tls_certificates_interface.v4.tls_certificates import (
     generate_ca,
@@ -48,6 +58,8 @@ ETCD = "etcd"
 TABLE_SCHEMA = [("name", str), ("score", int)]
 ETCD_SNAP_DIR = "/var/snap/charmed-etcd/common"
 ETCD_CERTS_DIR = f"{ETCD_SNAP_DIR}/certificates"
+
+CASSANDRA = "cassandra"
 
 TABLE_NAME = "test_table"
 
@@ -544,3 +556,106 @@ def check_inserted_data_etcd(credentials: Dict[str, str], database_name: str) ->
     except subprocess.CalledProcessError:
         return False
     return output.decode().strip().split("\n") == [f"{database_name}/foo", "bar"]
+
+
+def create_table_cassandra(credentials: Dict[str, str], keyspace_name: str) -> bool:
+    """Create a table in a Postgresql database."""
+    cql = f"""
+    CREATE TABLE IF NOT EXISTS {keyspace_name}.{TABLE_NAME} (
+        id UUID PRIMARY KEY
+    )
+    """
+
+    with _cqlsh_session(
+        hosts=credentials["endpoints"].split(","),
+        auth_provider=PlainTextAuthProvider(
+            username=credentials["username"], password=credentials["password"]
+        ),
+        tls_ca=credentials.get("tls-ca", ""),
+    ) as session:
+        try:
+            session.execute(cql)
+        except Exception:
+            return False
+    return True
+
+
+def insert_data_cassandra(credentials: Dict[str, str], keyspace_name: str) -> bool:
+    """Insert specific testing data into a Cassandra table."""
+    values = [("foo", 1), ("bar", 2)]
+
+    try:
+        with _cqlsh_session(
+            hosts=credentials["endpoints"].split(","),
+            auth_provider=PlainTextAuthProvider(
+                username=credentials["username"],
+                password=credentials["password"],
+            ),
+            tls_ca=credentials.get("tls-ca", ""),
+        ) as session:
+            for row in values:
+                cql = f"""
+                INSERT INTO {keyspace_name}.{TABLE_NAME} (name, value)
+                VALUES ({row[0]!r}, {row[1]!r});
+                """
+                session.execute(cql)
+        return True
+    except Exception:
+        return False
+
+
+def check_inserted_data_cassandra(credentials: Dict[str, str], keyspace_name: str) -> bool:
+    """Check that specific data are present in the Cassandra table."""
+    expected_values = {("foo", 1), ("bar", 2)}
+
+    try:
+        with _cqlsh_session(
+            hosts=credentials["endpoints"].split(","),
+            auth_provider=PlainTextAuthProvider(
+                username=credentials["username"],
+                password=credentials["password"],
+            ),
+            tls_ca=credentials.get("tls-ca", ""),
+        ) as session:
+            rows = session.execute(f"SELECT name, value FROM {keyspace_name}.{TABLE_NAME};")
+            rows_set = {(r.name, r.value) for r in rows}
+            return expected_values.issubset(rows_set)
+    except Exception:
+        return False
+
+
+@contextmanager
+def _cqlsh_session(
+    auth_provider: PlainTextAuthProvider,
+    hosts: list[str],
+    keyspace: str | None = None,
+    tls_ca: str | None = None,
+) -> Generator[Session, None, None]:
+    ssl_context = SSLContext(PROTOCOL_TLS_CLIENT)
+
+    if tls_ca:
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = CERT_NONE
+        ssl_context.load_verify_locations(cadata=tls_ca)
+    else:
+        ssl_context = None
+
+    cluster = Cluster(
+        auth_provider=auth_provider,
+        contact_points=hosts,
+        protocol_version=5,
+        execution_profiles={
+            EXEC_PROFILE_DEFAULT: ExecutionProfile(
+                load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy())
+            )
+        },
+        ssl_context=ssl_context,
+    )
+    session = cluster.connect()
+    if keyspace:
+        session.set_keyspace(keyspace)
+    try:
+        yield session
+    finally:
+        session.shutdown()
+        cluster.shutdown()
