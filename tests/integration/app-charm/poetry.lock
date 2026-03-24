@@ -991,24 +991,24 @@ zstd = ["zstandard"]
 
 [[package]]
 name = "kazoo"
-version = "2.10.0"
+version = "2.11.0"
 description = "\"Higher Level Zookeeper Client\""
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "kazoo-2.10.0-py2.py3-none-any.whl", hash = "sha256:de2d69168de432ff66b457a26c727a5bf7ff53af5806653fd1df7f04b6a5483c"},
-    {file = "kazoo-2.10.0.tar.gz", hash = "sha256:905796ae4f4c12bd4e4ae92e6e5d018439e6b56c8cfbb24825362e79b230dab1"},
+    {file = "kazoo-2.11.0-py2.py3-none-any.whl", hash = "sha256:aa6be17159540dae4087661b8d4e24c7b58d4dc26170a2d5b8468b06712d84a9"},
+    {file = "kazoo-2.11.0.tar.gz", hash = "sha256:57e7e6f69295c8f922511488eeb79680729e14bb8eb382d5cad83aa11345c36c"},
 ]
 
 [package.extras]
-alldeps = ["Sphinx (>=1.2.2)", "eventlet (>=0.17.1)", "flake8", "gevent (>=1.2)", "mypy (>=0.991)", "pure-sasl (>=0.5.1)", "sphinx-autodoc-typehints (>=1)"]
+alldeps = ["Sphinx (>=1.2.2)", "eventlet (>=0.17.1)", "flake8", "gevent (>=1.2)", "mypy (>=0.991)", "pure_sasl (>=0.5.1)", "sphinx-autodoc-typehints (>=1)"]
 dev = ["flake8"]
 docs = ["Sphinx (>=1.2.2)", "sphinx-autodoc-typehints (>=1)"]
 eventlet = ["eventlet (>=0.17.1)"]
 gevent = ["gevent (>=1.2)"]
-sasl = ["pure-sasl (>=0.5.1)"]
-test = ["eventlet (>=0.17.1) ; implementation_name != \"pypy\"", "gevent (>=1.2) ; implementation_name != \"pypy\"", "objgraph", "pyjks", "pyopenssl", "pytest", "pytest-cov"]
+sasl = ["pure_sasl (>=0.5.1)"]
+test = ["eventlet (>=0.17.1) ; implementation_name != \"pypy\"", "gevent (>=1.2) ; implementation_name != \"pypy\"", "objgraph", "pyjks", "pyopenssl", "pytest", "pytest-cov", "pytest-timeout"]
 typing = ["mypy (>=0.991)"]
 
 [[package]]
@@ -1993,4 +1993,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "04a283d73bae5a137424b2a92d29b0d54c94c3fcfaa14a2114e477c3445c4b5d"
+content-hash = "5d7b937f3c8d3251a46985fa4418c0e8f4c483bd2869ecea068116b1d01d4863"
