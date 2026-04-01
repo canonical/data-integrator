@@ -115,7 +115,7 @@ jobs:
     # (In the UI, when this workflow is called with a matrix, GitHub will separate each matrix
     # combination and preserve job ordering within a matrix combination.)
     name: (deprecated) ${{ inputs.juju-agent-version || inputs.juju-snap-channel }} | ${{ inputs.architecture }} | Collect integration test groups
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
       - name: Deprecation notice
@@ -131,8 +131,8 @@ jobs:
           import os
 
           DEFAULT_RUNNERS = {
-              "amd64": "ubuntu-latest",
-              "arm64": "ubuntu-24.04-arm",
+              "amd64": "ubuntu-22.04",
+              "arm64": "ubuntu-22.04-arm",
           }
           ARCHITECTURE = "${{ inputs.architecture }}"
           try:
