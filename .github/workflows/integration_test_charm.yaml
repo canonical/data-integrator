@@ -220,12 +220,15 @@ jobs:
           sudo mount --bind /mnt/lxd/storage-pools /var/snap/lxd/common/lxd/storage-pools
       - name: (Github hosted) Install Python 3.12
         if: ${{ !matrix.groups.is_hosted }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: (Github hosted) Install pipx
+        if: ${{ !matrix.groups.is_hosted }}
         run: |
-          sudo add-apt-repository ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install python3.12 python3.12-venv python3.12-dev -y
-          sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1
-          pip3 install pipx
+          python3 -m pip install --user pipx
+          python3 -m pipx ensurepath
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: (IS hosted) Disk usage
         timeout-minutes: 1
         if: ${{ matrix.groups.is_hosted }}
