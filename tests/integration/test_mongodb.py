@@ -21,7 +21,6 @@ from .markers import only_with_juju_secrets
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.group(1)
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
 async def test_deploy(
@@ -52,7 +51,6 @@ async def test_deploy(
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.group(1)
 @only_with_juju_secrets
 async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MongoDB and database accessibility."""

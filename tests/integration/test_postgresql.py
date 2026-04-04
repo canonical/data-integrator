@@ -21,7 +21,6 @@ from .helpers import (
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
     await asyncio.gather(
@@ -43,7 +42,6 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.group(1)
 async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     """Test the relation with PostgreSQL and database accessibility."""
     await asyncio.gather(
@@ -142,7 +140,6 @@ async def test_deploy_and_relate_postgresql(ops_test: OpsTest, cloud_name: str):
     sleep(3)
 
 
-@pytest.mark.group(1)
 async def test_deploy_and_relate_pgbouncer(ops_test: OpsTest, cloud_name: str):
     """Test the relation with PgBouncer and database accessibility."""
     logger.info(f"Test the relation with {PGBOUNCER[cloud_name]}.")
