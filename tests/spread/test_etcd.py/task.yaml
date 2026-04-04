@@ -1,0 +1,5 @@
+summary: test_etcd.py
+environment:
+  TEST_MODULE: test_etcd.py
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --controller "$CONTROLLER_NAME" --model testing
