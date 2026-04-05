@@ -61,6 +61,7 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
             application_name=MONGODB[cloud_name],
             num_units=1,
             series="jammy",
+            trust=True,
         )
     )
     await ops_test.model.wait_for_idle(apps=[MONGODB[cloud_name]], wait_for_active=True)
