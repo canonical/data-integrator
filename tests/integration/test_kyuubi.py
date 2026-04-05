@@ -75,7 +75,7 @@ async def test_deploy_kyuubi_setup(
     kyuubi_deploy_args = {
         "application_name": KYUUBI_APP_NAME,
         "num_units": 1,
-        "channel": "latest/edge",
+        "channel": "3.5/edge",
         "series": "jammy",
         "trust": True,
     }
@@ -131,7 +131,7 @@ async def test_deploy_kyuubi_setup(
     # Deploy the integration hub charm and wait
     hub_deploy_args = {
         "application_name": INTEGRATION_HUB_APP_NAME,
-        "channel": "latest/edge",
+        "channel": "3/edge",
         "series": "jammy",
         "trust": True,
     }
