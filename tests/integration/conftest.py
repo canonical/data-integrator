@@ -9,13 +9,14 @@ import socket
 import subprocess
 import time
 import uuid
-from pathlib import Path
 
 import boto3
 import botocore
 import pytest
 from pytest_operator.plugin import OpsTest
 from spark_test.core.s3 import Credentials
+
+from .architecture import architecture
 
 TEST_BUCKET_NAME = "kyuubi-test"
 TEST_PATH_NAME = "spark-events/"
@@ -27,26 +28,15 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="module")
-async def data_integrator_charm(ops_test: OpsTest) -> Path:
+async def data_integrator_charm(ops_test: OpsTest) -> str:
     """Kafka charm used for integration testing."""
-    try:
-        charm = await ops_test.build_charm(".")
-    except Exception as e:
-        logger.error(e)
-        return Path()
-    return charm
+    return f"./data-integrator_ubuntu@22.04-{architecture}.charm"
 
 
 @pytest.fixture(scope="module")
-async def app_charm(ops_test: OpsTest):
+async def app_charm(ops_test: OpsTest) -> str:
     """Build the application charm."""
-    charm_path = "tests/integration/app-charm"
-    try:
-        charm = await ops_test.build_charm(charm_path)
-    except Exception as e:
-        logger.error(e)
-        return Path()
-    return charm
+    return f"./tests/integration/app-charm/application_ubuntu@22.04-{architecture}.charm"
 
 
 @pytest.fixture()

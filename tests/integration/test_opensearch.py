@@ -54,7 +54,6 @@ async def run_request(
     return result.results
 
 
-@pytest.mark.group(1)
 @only_on_localhost
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
@@ -135,7 +134,6 @@ async def test_deploy(
     )
 
 
-@pytest.mark.group(1)
 @only_on_localhost
 @only_with_juju_secrets
 async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: str):
@@ -191,7 +189,6 @@ async def test_sending_requests_using_opensearch(ops_test: OpsTest, cloud_name: 
     assert set(artists) == {"Vulfpeck"}
 
 
-@pytest.mark.group(1)
 @only_on_localhost
 @only_with_juju_secrets
 async def test_recycle_credentials(ops_test: OpsTest, cloud_name: str):

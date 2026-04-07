@@ -26,7 +26,6 @@ from .markers import only_on_localhost, only_with_juju_secrets
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.group(1)
 @only_on_localhost
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
@@ -53,7 +52,6 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@pytest.mark.group(1)
 @only_on_localhost
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
@@ -79,7 +77,6 @@ async def test_deploy_and_relate_cassandra(ops_test: OpsTest, cloud_name: str):
     )
 
 
-@pytest.mark.group(1)
 @only_on_localhost
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
