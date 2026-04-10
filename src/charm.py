@@ -36,6 +36,7 @@ from dpcharmlibs.interfaces import (
     ResourceEntityCreatedEvent,
     ResourceProviderModel,
     ResourceRequirerEventHandler,
+    ValkeyResponseModel,
 )
 from ops import (
     ActionEvent,
@@ -51,7 +52,7 @@ from ops import (
     main,
 )
 
-from literals import CASSANDRA, DATABASES, ETCD, KAFKA, OPENSEARCH, PEER
+from literals import CASSANDRA, DATABASES, ETCD, KAFKA, OPENSEARCH, PEER, VALKEY
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +184,19 @@ class IntegratorCharm(CharmBase):
             self.framework.observe(self.etcd.on.etcd_ready, self._on_etcd_ready)
             self.framework.observe(self.on[ETCD].relation_broken, self._on_relation_broken)
 
+        # Valkey
+        self.valkey = ResourceRequirerEventHandler(
+            charm=self,
+            relation_name=VALKEY,
+            requests=[
+                RequirerCommonModel(resource=self.prefix or ""),
+            ],
+            response_model=ValkeyResponseModel,
+        )
+
+        self.framework.observe(self.valkey.on.resource_created, self._on_resource_created)
+        self.framework.observe(self.on[VALKEY].relation_broken, self._on_relation_broken)
+
     def _on_resource_created(self, event: ResourceCreatedEvent[ResourceProviderModel]) -> None:
         """Event triggered when a resource was created for this application."""
         logger.debug(f"Credentials are received: {event.response.username}")
@@ -265,6 +279,12 @@ class IntegratorCharm(CharmBase):
                 "keyspace",
                 self.keyspace_active,
             ),
+            (
+                self.is_valkey_related and self.prefix_active != self.prefix,
+                "Valkey",
+                "prefix",
+                self.prefix_active,
+            ),
         ):
             if mismatch:
                 logger.error(
@@ -305,6 +325,7 @@ class IntegratorCharm(CharmBase):
             self.is_opensearch_related,
             self.is_etcd_related,
             self.is_cassandra_related,
+            self.is_valkey_related,
         ]):
             return BlockedStatus("Please relate the data-integrator with the desired product")
 
@@ -434,6 +455,35 @@ class IntegratorCharm(CharmBase):
 
         return None
 
+    def _get_valkey_credentials(self) -> dict | None:
+        """Extract Valkey credentials if relation and resources are present."""
+        relation = self.valkey_relation
+        if not relation:
+            return None
+
+        if not self.valkey.are_all_resources_created(relation.id):
+            return None
+
+        model = self.valkey.interface.build_model(
+            relation_id=relation.id,
+            component=relation.app,
+        )
+
+        for req in model.requests:
+            return {
+                "prefix": req.resource,
+                "username": req.username,
+                "password": req.password,
+                "tls": req.tls,
+                "tls-ca": req.tls_ca,
+                "endpoints": req.endpoints,
+                "read-only-endpoints": req.read_only_endpoints,
+                "sentinel-endpoints": req.sentinel_endpoints,
+                "mode": req.mode,
+            }
+
+        return None
+
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
         if not any([
@@ -455,6 +505,7 @@ class IntegratorCharm(CharmBase):
             self.is_opensearch_related,
             self.is_etcd_related,
             self.is_cassandra_related,
+            self.is_valkey_related,
         ]):
             event.fail("The action can be run only after relation is created.")
             event.set_results({"ok": False})
@@ -484,6 +535,9 @@ class IntegratorCharm(CharmBase):
                 "tls-ca": self.etcd.fetch_relation_field(self.etcd_relation.id, "tls-ca"),
                 "version": self.etcd.fetch_relation_field(self.etcd_relation.id, "version"),
             }
+
+        if valkey_credentials := self._get_valkey_credentials():
+            result[VALKEY] = valkey_credentials
 
         event.set_results(result)
 
@@ -654,6 +708,11 @@ class IntegratorCharm(CharmBase):
         )
 
     @property
+    def valkey_relation(self) -> Optional[Relation]:
+        """Return the Valkey relation if present."""
+        return self.valkey.relations[0] if len(self.valkey.relations) else None
+
+    @property
     def databases_active(self) -> Dict[str, str]:
         """Return the configured database name."""
         return {
@@ -698,6 +757,20 @@ class IntegratorCharm(CharmBase):
         """Return the configured prefix."""
         if relation := self.etcd_relation:
             return self.etcd.fetch_my_relation_field(relation.id, "prefix")
+
+        if relation := self.valkey_relation:
+            if not self.valkey.are_all_resources_created(relation.id):
+                return None
+
+            model = self.valkey.interface.build_model(
+                relation_id=relation.id, component=relation.app
+            )
+
+            if not model.requests:
+                return None
+
+            resource = model.requests[0].resource
+            return resource if resource != "" else None
 
     @property
     def entity_type_active(self) -> Optional[str]:
@@ -765,6 +838,13 @@ class IntegratorCharm(CharmBase):
         """Return if a relation with cassandra is present."""
         return bool(self.cassandra.relations) and all(
             self.cassandra.are_all_resources_created(rel.id) for rel in self.cassandra.relations
+        )
+
+    @property
+    def is_valkey_related(self) -> bool:
+        """Return if a relation with Valkey is present."""
+        return bool(self.valkey.relations) and all(
+            self.valkey.are_all_resources_created(rel.id) for rel in self.valkey.relations
         )
 
     @property
