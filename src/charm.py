@@ -29,7 +29,7 @@ from charms.data_platform_libs.v0.data_interfaces import (
     TopicCreatedEvent,
     TopicEntityCreatedEvent,
 )
-from charms.data_platform_libs.v1.data_interfaces import (
+from dpcharmlibs.interfaces import (
     EntityPermissionModel,
     RequirerCommonModel,
     ResourceCreatedEvent,

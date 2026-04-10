@@ -8,6 +8,7 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 python = "^3.10"
 ops = "^3.7.0"
+dpcharmlibs-interfaces = ">=1.0.2"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
