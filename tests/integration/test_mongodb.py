@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-import asyncio
 import json
 import logging
 from pathlib import PosixPath
 
-import pytest
-from pytest_operator.plugin import OpsTest
+from jubilant_adapters import JujuFixture, gather
 
 from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME, MONGODB
 from .helpers import (
@@ -22,40 +19,39 @@ logger = logging.getLogger(__name__)
 
 
 @only_with_juju_secrets
-@pytest.mark.abort_on_fail
-async def test_deploy(
-    ops_test: OpsTest,
+def test_deploy(
+    juju: JujuFixture,
     app_charm: PosixPath,
     data_integrator_charm: PosixPath,
     cloud_name: str,
 ):
-    await asyncio.gather(
-        ops_test.model.deploy(
+    gather(
+        juju.ext.model.deploy(
             data_integrator_charm,
             application_name="data-integrator",
             num_units=1,
             series="jammy",
         ),
-        ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
+        juju.ext.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
+    juju.ext.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
+    assert juju.ext.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # config database name
 
     config = {"database-name": DATABASE_NAME}
-    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+    juju.ext.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # test the active/waiting status for relation
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
+    juju.ext.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    assert juju.ext.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
 @only_with_juju_secrets
-async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
+def test_deploy_and_relate_mongodb(juju: JujuFixture, cloud_name: str):
     """Test the relation with MongoDB and database accessibility."""
-    await asyncio.gather(
-        ops_test.model.deploy(
+    gather(
+        juju.ext.model.deploy(
             MONGODB[cloud_name],
             channel="6/edge",
             application_name=MONGODB[cloud_name],
@@ -64,26 +60,26 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
             trust=True,
         )
     )
-    await ops_test.model.wait_for_idle(apps=[MONGODB[cloud_name]], wait_for_active=True)
-    assert ops_test.model.applications[MONGODB[cloud_name]].status == "active"
-    integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB[cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB[cloud_name]])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+    juju.ext.model.wait_for_idle(apps=[MONGODB[cloud_name]], wait_for_active=True)
+    assert juju.ext.model.applications[MONGODB[cloud_name]].status == "active"
+    integrator_relation = juju.ext.model.add_relation(DATA_INTEGRATOR, MONGODB[cloud_name])
+    juju.ext.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB[cloud_name]])
+    assert juju.ext.model.applications[DATA_INTEGRATOR].status == "active"
 
     # check if secrets are used on Juju3
-    assert await check_secrets_usage_matching_juju_version(
-        ops_test,
-        ops_test.model.applications[DATA_INTEGRATOR].units[0].name,
+    assert check_secrets_usage_matching_juju_version(
+        juju,
+        juju.ext.model.applications[DATA_INTEGRATOR].units[0].name,
         integrator_relation.id,
     )
 
     # get credential for MongoDB
-    credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    credentials = fetch_action_get_credentials(
+        juju.ext.model.applications[DATA_INTEGRATOR].units[0]
     )
     logger.info(f"Create table on {MONGODB[cloud_name]}")
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "create-table",
         MONGODB[cloud_name],
         json.dumps(credentials),
@@ -91,8 +87,8 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
     logger.info(f"Insert data in the table on {MONGODB[cloud_name]}")
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "insert-data",
         MONGODB[cloud_name],
         json.dumps(credentials),
@@ -100,8 +96,8 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
     logger.info(f"Check assessibility of inserted data on {MONGODB[cloud_name]}")
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "check-inserted-data",
         MONGODB[cloud_name],
         json.dumps(credentials),
@@ -110,16 +106,16 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     assert result["ok"]
 
     # drop relation and get new credential for the same collection
-    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+    juju.ext.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB[cloud_name]}:database"
     )
 
-    await ops_test.model.wait_for_idle(apps=[MONGODB[cloud_name], DATA_INTEGRATOR])
-    await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB[cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB[cloud_name]])
+    juju.ext.model.wait_for_idle(apps=[MONGODB[cloud_name], DATA_INTEGRATOR])
+    juju.ext.model.add_relation(DATA_INTEGRATOR, MONGODB[cloud_name])
+    juju.ext.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB[cloud_name]])
 
-    new_credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    new_credentials = fetch_action_get_credentials(
+        juju.ext.model.applications[DATA_INTEGRATOR].units[0]
     )
 
     # test that different credentials are provided
@@ -128,8 +124,8 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     logger.info(
         f"Check assessibility of inserted data on {MONGODB[cloud_name]} with new credentials"
     )
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "check-inserted-data",
         MONGODB[cloud_name],
         json.dumps(new_credentials),
@@ -137,8 +133,8 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
 
-    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+    juju.ext.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:mongodb", f"{MONGODB[cloud_name]}:database"
     )
 
-    await ops_test.model.wait_for_idle(apps=[MONGODB[cloud_name], DATA_INTEGRATOR])
+    juju.ext.model.wait_for_idle(apps=[MONGODB[cloud_name], DATA_INTEGRATOR])
