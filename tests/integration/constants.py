@@ -29,3 +29,6 @@ APP = "app"
 CASSANDRA = {"localhost": "cassandra"}
 KEYSPACE_NAME = "test_ks"
 CASSANDRA_EXTRA_USER_ROLES = "ALTER,AUTHORIZE,DROP,MODIFY,SELECT,CREATE"
+
+VALKEY = "valkey"
+VALKEY_KEY_PREFIX = "client_application:"

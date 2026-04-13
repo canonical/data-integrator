@@ -39,6 +39,12 @@ async def app_charm(ops_test: OpsTest) -> str:
     return f"./tests/integration/app-charm/application_ubuntu@22.04-{architecture}.charm"
 
 
+@pytest.fixture(scope="module")
+async def valkey_charm(ops_test: OpsTest) -> str:
+    """Valkey charm used for integration testing."""
+    return f"./valkey_ubuntu@24.04-{architecture}.charm"
+
+
 @pytest.fixture()
 async def cloud_name(ops_test: OpsTest, request):
     """Checks the cloud."""

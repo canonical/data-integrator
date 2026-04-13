@@ -31,6 +31,7 @@ from helpers import (
     PGBOUNCER_K8S,
     POSTGRESQL,
     POSTGRESQL_K8S,
+    VALKEY,
     ZOOKEEPER,
     ZOOKEEPER_K8S,
     check_inserted_data_cassandra,
@@ -39,6 +40,7 @@ from helpers import (
     check_inserted_data_mongodb,
     check_inserted_data_mysql,
     check_inserted_data_postgresql,
+    check_inserted_data_valkey,
     check_inserted_data_zookeeper,
     create_table_cassandra,
     create_table_kyuubi,
@@ -55,6 +57,7 @@ from helpers import (
     insert_data_mongodb,
     insert_data_mysql,
     insert_data_postgresql,
+    insert_data_valkey,
     insert_data_zookeeper,
     produce_messages,
 )
@@ -191,6 +194,9 @@ class ApplicationCharm(CharmBase):
         elif product == CASSANDRA:
             executed = insert_data_cassandra(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == VALKEY:
+            executed = insert_data_valkey(credentials, database_name)
+            event.set_result({"ok": True if executed else False})
 
         else:
             raise ValueError()
@@ -236,6 +242,9 @@ class ApplicationCharm(CharmBase):
         elif product == CASSANDRA:
             executed = check_inserted_data_cassandra(credentials, database_name)
             event.set_results({"ok": True if executed else False})
+        elif product == VALKEY:
+            executed = check_inserted_data_valkey(credentials, database_name)
+            event.set_result({"ok": True if executed else False})
         else:
             raise ValueError()
 
