@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-import asyncio
 import json
 import logging
 from pathlib import PosixPath
 
-import pytest
-from pytest_operator.plugin import OpsTest
+from jubilant_adapters import JujuFixture, gather
 
 from .constants import APP, DATA_INTEGRATOR, DATABASE_NAME, ZOOKEEPER
 from .helpers import (
@@ -20,33 +17,32 @@ from .helpers import (
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.abort_on_fail
-async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath):
-    await asyncio.gather(
-        ops_test.model.deploy(
+def test_deploy(juju: JujuFixture, app_charm: PosixPath, data_integrator_charm: PosixPath):
+    gather(
+        juju.ext.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
-        ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
+        juju.ext.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
+    juju.ext.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
+    assert juju.ext.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # config database name
 
     config = {"database-name": f"/{DATABASE_NAME}"}
-    await ops_test.model.applications[DATA_INTEGRATOR].set_config(config)
+    juju.ext.model.applications[DATA_INTEGRATOR].set_config(config)
 
     # test the active/waiting status for relation
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
+    juju.ext.model.wait_for_idle(apps=[DATA_INTEGRATOR])
+    assert juju.ext.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
+def test_deploy_and_relate_zookeeper(juju: JujuFixture, cloud_name: str):
     """Test the relation with ZooKeeper and database accessibility."""
     provider_name = ZOOKEEPER[cloud_name]
 
-    await asyncio.gather(
-        ops_test.model.deploy(
+    gather(
+        juju.ext.model.deploy(
             provider_name,
             channel="3/edge",
             application_name=provider_name,
@@ -55,31 +51,31 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
             trust=True,
         )
     )
-    await ops_test.model.wait_for_idle(apps=[provider_name], wait_for_active=True)
-    assert ops_test.model.applications[provider_name].status == "active"
-    integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, provider_name)
+    juju.ext.model.wait_for_idle(apps=[provider_name], wait_for_active=True)
+    assert juju.ext.model.applications[provider_name].status == "active"
+    integrator_relation = juju.ext.model.add_relation(DATA_INTEGRATOR, provider_name)
 
-    async with ops_test.fast_forward(fast_interval="30s"):
-        await ops_test.model.wait_for_idle(
+    with juju.ext.fast_forward(fast_interval="30s"):
+        juju.ext.model.wait_for_idle(
             apps=[DATA_INTEGRATOR, provider_name], wait_for_active=True, idle_period=15
         )
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+    assert juju.ext.model.applications[DATA_INTEGRATOR].status == "active"
 
     # check if secrets are used on Juju3
-    assert await check_secrets_usage_matching_juju_version(
-        ops_test,
-        ops_test.model.applications[DATA_INTEGRATOR].units[0].name,
+    assert check_secrets_usage_matching_juju_version(
+        juju,
+        juju.ext.model.applications[DATA_INTEGRATOR].units[0].name,
         integrator_relation.id,
     )
 
     # get credential for ZooKeeper
-    credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    credentials = fetch_action_get_credentials(
+        juju.ext.model.applications[DATA_INTEGRATOR].units[0]
     )
 
     logger.info(f"Create zNode on {ZOOKEEPER[cloud_name]}")
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "create-table",
         ZOOKEEPER[cloud_name],
         json.dumps(credentials),
@@ -87,8 +83,8 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
     logger.info(f"Insert zNode on {ZOOKEEPER[cloud_name]}")
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "insert-data",
         ZOOKEEPER[cloud_name],
         json.dumps(credentials),
@@ -96,8 +92,8 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
     logger.info(f"Check assessibility of inserted data on {ZOOKEEPER[cloud_name]}")
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "check-inserted-data",
         ZOOKEEPER[cloud_name],
         json.dumps(credentials),
@@ -105,29 +101,29 @@ async def test_deploy_and_relate_zookeeper(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
     #  remove relation and test connection again
-    await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
+    juju.ext.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:zookeeper", f"{ZOOKEEPER[cloud_name]}:zookeeper"
     )
 
-    await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name], DATA_INTEGRATOR])
-    await ops_test.model.add_relation(DATA_INTEGRATOR, ZOOKEEPER[cloud_name])
+    juju.ext.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name], DATA_INTEGRATOR])
+    juju.ext.model.add_relation(DATA_INTEGRATOR, ZOOKEEPER[cloud_name])
 
-    async with ops_test.fast_forward(fast_interval="30s"):
-        await ops_test.model.wait_for_idle(
+    with juju.ext.fast_forward(fast_interval="30s"):
+        juju.ext.model.wait_for_idle(
             apps=[DATA_INTEGRATOR, ZOOKEEPER[cloud_name]], wait_for_active=True, idle_period=15
         )
 
     # join with another relation and check the accessibility of the previously created database
-    new_credentials = await fetch_action_get_credentials(
-        ops_test.model.applications[DATA_INTEGRATOR].units[0]
+    new_credentials = fetch_action_get_credentials(
+        juju.ext.model.applications[DATA_INTEGRATOR].units[0]
     )
 
     assert credentials != new_credentials
     logger.info(
         f"Check assessibility of inserted data on {ZOOKEEPER[cloud_name]} with new credentials"
     )
-    result = await fetch_action_database(
-        ops_test.model.applications[APP].units[0],
+    result = fetch_action_database(
+        juju.ext.model.applications[APP].units[0],
         "check-inserted-data",
         ZOOKEEPER[cloud_name],
         json.dumps(new_credentials),

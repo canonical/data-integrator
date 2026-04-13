@@ -13,7 +13,7 @@ import uuid
 import boto3
 import botocore
 import pytest
-from pytest_operator.plugin import OpsTest
+from jubilant_adapters import JujuFixture, temp_model_fixture
 from spark_test.core.s3 import Credentials
 
 from .architecture import architecture
@@ -27,26 +27,78 @@ _BUCKET = "testbucket"
 logger = logging.getLogger(__name__)
 
 
+def pytest_addoption(parser):
+    """Defines pytest parsers."""
+    parser.addoption(
+        "--model",
+        action="store",
+        help="Juju model to use; if not provided, a new model "
+        "will be created for each test which requires one",
+    )
+    parser.addoption(
+        "--keep-models",
+        action="store_true",
+        help="Keep models handled by opstest, can be overridden in track_model",
+    )
+
+
 @pytest.fixture(scope="module")
-async def data_integrator_charm(ops_test: OpsTest) -> str:
+def juju(request: pytest.FixtureRequest):
+    """Pytest fixture that wraps :meth:`jubilant.with_model`.
+
+    This adds command line parameter ``--keep-models`` (see help for details).
+    """
+    model = request.config.getoption("--model")
+    keep_models = bool(request.config.getoption("--keep-models"))
+
+    if model:
+        try:
+            JujuFixture().add_model(model, config={"update-status-hook-interval": "60s"})
+        except Exception as e:
+            if "already exists" not in str(e):
+                raise e
+            # Keep model anyway if it already exists.
+            keep_models = True
+        logger.warning(f"Model{model} already exists, reusing")
+        juju = JujuFixture(model=model)
+        yield juju
+    else:
+        with temp_model_fixture(keep=keep_models) as juju:
+            yield juju
+
+
+@pytest.fixture(scope="module", autouse=True)
+def setup_juju(juju: JujuFixture):
+    if not juju.model:
+        return
+
+    juju.wait_timeout = 600.0
+    juju.cli("switch", juju.model, include_model=False)
+
+
+@pytest.fixture(scope="module")
+def data_integrator_charm() -> str:
     """Kafka charm used for integration testing."""
     return f"./data-integrator_ubuntu@22.04-{architecture}.charm"
 
 
 @pytest.fixture(scope="module")
-async def app_charm(ops_test: OpsTest) -> str:
+def app_charm() -> str:
     """Build the application charm."""
     return f"./tests/integration/app-charm/application_ubuntu@22.04-{architecture}.charm"
 
 
 @pytest.fixture()
-async def cloud_name(ops_test: OpsTest, request):
+def cloud_name(juju: JujuFixture, request):
     """Checks the cloud."""
     if request.node.parent:
         marks = [m.name for m in request.node.iter_markers()]
     else:
         marks = []
-    if ops_test.model.info.provider_type == "kubernetes":
+    models_raw = juju.cli("models", "--format", "json", include_model=False)
+    models_json = json.loads(models_raw)
+    type_ = models_json["models"][0]["type"]
+    if type_ == "kubernetes":
         if "only_on_localhost" in marks:
             pytest.skip("Does not run on k8s")
             return
