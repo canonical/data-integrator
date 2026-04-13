@@ -7,17 +7,17 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 cryptography = "==46.0.7"
-pydantic = "==2.12.5"
+pydantic = "==2.13.0"
 tenacity = "*"
 
 python = "^3.10"
-ops = "^3.6.0"
+ops = "^3.7.0"
 pymongo = "^4.16.0"
-kafka-python = "^2.3.0"
-kazoo = "^2.10.0"
+kafka-python = "^2.3.1"
+kazoo = "^2.11.0"
 psycopg2 = "^2.9.11"
 mysql-connector-python = "^9.6.0"
-requests = "^2.32.5"
+requests = "^2.33.1"
 pyhive = { extras = ["hive_pure_sasl"], version = "^0.7.0" }
 spark-k8s-test = "^0.0.4"
 cassandra-driver = "^3.29.3"
