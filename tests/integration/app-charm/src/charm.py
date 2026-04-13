@@ -196,7 +196,7 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == VALKEY:
             executed = insert_data_valkey(credentials, database_name)
-            event.set_result({"ok": True if executed else False})
+            event.set_results({"ok": True if executed else False})
 
         else:
             raise ValueError()
@@ -244,7 +244,7 @@ class ApplicationCharm(CharmBase):
             event.set_results({"ok": True if executed else False})
         elif product == VALKEY:
             executed = check_inserted_data_valkey(credentials, database_name)
-            event.set_result({"ok": True if executed else False})
+            event.set_results({"ok": True if executed else False})
         else:
             raise ValueError()
 

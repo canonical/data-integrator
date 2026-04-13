@@ -19,6 +19,8 @@ from .markers import only_with_juju_secrets
 
 logger = logging.getLogger(__name__)
 
+IMAGE_RESOURCE = {"valkey-image": "ghcr.io/canonical/valkey:9.0.1-26.04-edge"}
+
 
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
@@ -35,8 +37,10 @@ async def test_deploy(
         ops_test.model.deploy(
             valkey_charm,
             # channel="3.6/edge",
+            resources=IMAGE_RESOURCE,
             application_name=VALKEY,
             num_units=3,
+            trust=True,
         ),
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
