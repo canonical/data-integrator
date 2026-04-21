@@ -11,6 +11,9 @@ This charm allows a user to automatically create and manage product credentials 
 * [PostgreSQL](https://github.com/canonical/postgresql-operator)
 * [Kafka](https://github.com/canonical/kafka-operator)
 * [OpenSearch](https://github.com/canonical/opensearch-operator)
+* [etcd](https://github.com/canonical/charmed-etcd-operator)
+* [Cassandra](https://github.com/canonical/cassandra-operator)
+* [Valkey](https://github.com/canonical/valkey-operator)
 
 It grants access to several charmed applications developed by the data-platform by handling the management of their credentials. In particular, a user can request access to a database (MySQL, PostgreSQL and MongoDB), a topic (Kafka), or an index (OpenSearch). Moreover, a user can require additional privileges by specifying extra-user-roles.
 
@@ -27,6 +30,10 @@ topic-name - `string`; The topic name for which the access is granted.
 
 index-name - `string`; The index name for which the access is granted. [OPENSEARCH ONLY]
 
+prefix-name - `string`; The prefix for which the access is granted.
+
+keyspace-name - `string`; The keyspace name for which the access is granted.
+
 entity-type - `string`; The type of entity to create when integrated.
 
 entity-permissions - `string`; List of permissions to assigned to the custom entity, in JSON format.
@@ -36,13 +43,16 @@ extra-user-roles - `string`; a comma-separated list of values that contains the 
 extra-group-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 
-| Product    | database-name      | topic-name         | index-name         | entity-type        | entity-permissions | extra-user-roles   | extra-group-roles  |
-|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
-| MySQL      | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| PostgreSQL | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| MongoDB    | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kafka      |                    | :heavy_check_mark: |                    | :white_check_mark: | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
-| OpenSearch |                    |                    | :heavy_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Product    | database-name      | topic-name         | index-name         | prefix-name        | keyspace-name      | entity-type        | entity-permissions | extra-user-roles   | extra-group-roles  |
+|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: |                    |                    |                    | :white_check_mark: | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
+| OpenSearch |                    |                    | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| etcd       |                    |                    |                    | :heavy_check_mark: |                    |                    |                    |                    |                    |
+| Cassandra  |                    |                    |                    |                    | :heavy_check_mark: | :white_check_mark: | :white_check_mark: |                    |                    |
+| Valkey     |                    |                    |                    | :heavy_check_mark: |                    |                    |                    |                    |                    |
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
@@ -105,6 +115,11 @@ juju config data-integrator topic-name=test-topic extra-user-roles=producer,cons
 For OpenSearch, please configure the desired `index-name` and `extra-user-roles`:
 ```shell
 juju config data-integrator index-name=test-topic extra-user-roles=admin
+```
+
+For etcd or Valkey, please configure the desired `prefix-name`:
+```shell
+juju config data-integrator prefix-name="*"
 ```
 
 #### Relation with desired application

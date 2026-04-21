@@ -32,6 +32,7 @@ from connector import MysqlConnector, get_zookeeper_client
 from kafka.admin import NewTopic
 from pymongo import MongoClient
 from spark_test.core.kyuubi import KyuubiClient
+from valkey import Valkey
 
 MYSQL = "mysql"
 MYSQL_ROUTER = "mysql-router"
@@ -60,6 +61,7 @@ ETCD_SNAP_DIR = "/var/snap/charmed-etcd/common"
 ETCD_CERTS_DIR = f"{ETCD_SNAP_DIR}/certificates"
 
 CASSANDRA = "cassandra"
+VALKEY = "valkey"
 
 TABLE_NAME = "test_table"
 
@@ -659,3 +661,41 @@ def _cqlsh_session(
     finally:
         session.shutdown()
         cluster.shutdown()
+
+
+def insert_data_valkey(credentials: Dict[str, str], key_prefix: str) -> bool:
+    """Insert specific testing data into Valkey."""
+    test_key = f"{key_prefix}:test_key"
+    test_value = "test_value"
+
+    try:
+        client = Valkey(
+            host=credentials["endpoints"].split(":")[0],
+            port=credentials["endpoints"].split(":")[1],
+            username=credentials["username"],
+            password=credentials["password"],
+            decode_responses=True,
+        )
+        client.set(test_key, test_value)
+        return True
+    except Exception:
+        return False
+
+
+def check_inserted_data_valkey(credentials: Dict[str, str], key_prefix: str) -> bool:
+    """Check that specific data are present in Valkey."""
+    test_key = f"{key_prefix}:test_key"
+    test_value = "test_value"
+
+    try:
+        client = Valkey(
+            host=credentials["endpoints"].split(":")[0],
+            port=credentials["endpoints"].split(":")[1],
+            username=credentials["username"],
+            password=credentials["password"],
+            decode_responses=True,
+        )
+        result = client.get(test_key)
+        return result == test_value
+    except Exception:
+        return False

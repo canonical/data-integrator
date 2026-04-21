@@ -17,7 +17,7 @@ options:
   prefix-name:
     type: string
     default:
-    description: The prefix for which the access is granted (this parameter is needed for etcd).
+    description: The prefix for which the access is granted (this parameter is needed for etcd, Valkey).
   keyspace-name:
     type: string
     default:

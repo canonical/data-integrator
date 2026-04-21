@@ -15,4 +15,5 @@ OPENSEARCH = "opensearch"
 KYUUBI = "kyuubi"
 ETCD = "etcd"
 CASSANDRA = "cassandra"
+VALKEY = "valkey"
 DATABASES = [MYSQL, MONGODB, POSTGRESQL, MONGOS, ZOOKEEPER, KYUUBI]

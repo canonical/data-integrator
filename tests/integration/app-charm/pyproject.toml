@@ -22,4 +22,5 @@ pyhive = { extras = ["hive_pure_sasl"], version = "^0.7.0" }
 spark-k8s-test = "^0.0.4"
 cassandra-driver = "^3.29.3"
 charmlibs-pathops = "^1.2.1"
+valkey = "^6.1.1"
 [tool.poetry.group.charm-libs.dependencies]
