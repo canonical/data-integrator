@@ -84,7 +84,7 @@ def test_deploy_kyuubi_setup(
 
     # Set Kyuubi config options and wait
     logger.info("Setting configuration for kyuubi-k8s charm...")
-    namespace = juju.ext.model.name
+    namespace = juju.model_constraints
     username = "kyuubi-spark-engine"
     juju.ext.model.applications[KYUUBI_APP_NAME].set_config({
         "namespace": namespace,

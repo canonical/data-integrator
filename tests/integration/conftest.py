@@ -68,7 +68,7 @@ def juju(request: pytest.FixtureRequest):
                 raise e
             # Keep model anyway if it already exists.
             keep_models = True
-        logger.warning(f"Model{model} already exists, reusing")
+        logger.warning(f"Model {model} already exists, reusing")
         juju = JujuFixture(model=model)
         yield juju
     else:
