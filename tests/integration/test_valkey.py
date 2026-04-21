@@ -19,13 +19,11 @@ from .markers import only_with_juju_secrets
 
 logger = logging.getLogger(__name__)
 
-IMAGE_RESOURCE = {"valkey-image": "ghcr.io/canonical/valkey:9.0.1-26.04-edge"}
-
 
 @only_with_juju_secrets
 @pytest.mark.abort_on_fail
 async def test_deploy(
-    ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath, cloud_name: str, valkey_charm: PosixPath
+    ops_test: OpsTest, app_charm: PosixPath, data_integrator_charm: PosixPath, cloud_name: str
 ):
     """Deploys charms for testing."""
     model_config = {
@@ -35,9 +33,8 @@ async def test_deploy(
 
     await asyncio.gather(
         ops_test.model.deploy(
-            valkey_charm,
-            # channel="3.6/edge",
-            resources=IMAGE_RESOURCE,
+            VALKEY,
+            channel="9/edge",
             application_name=VALKEY,
             num_units=3,
             trust=True,
