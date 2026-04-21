@@ -40,6 +40,11 @@ def pytest_addoption(parser):
         action="store_true",
         help="Keep models handled by opstest, can be overridden in track_model",
     )
+    parser.addoption(
+        "--controller",
+        action="store",
+        help="Juju controller to use; if not provided, uses current controller",
+    )
 
 
 @pytest.fixture(scope="module")
@@ -50,6 +55,10 @@ def juju(request: pytest.FixtureRequest):
     """
     model = request.config.getoption("--model")
     keep_models = bool(request.config.getoption("--keep-models"))
+    controller = request.config.getoption("--controller", None)
+
+    if controller:
+        os.system(f"juju switch {controller}")
 
     if model:
         try:
