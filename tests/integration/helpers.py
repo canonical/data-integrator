@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-
 import json
 import logging
 from importlib.metadata import version
 from subprocess import PIPE, check_output
 from typing import Dict, Optional
 
+from jubilant_adapters import JujuFixture
 from juju.unit import Unit
-from pytest_operator.plugin import OpsTest
 
 from .constants import DATABASE_NAME, POSTGRESQL
 
 logger = logging.getLogger(__name__)
 
 
-async def fetch_action_get_credentials(unit: Unit) -> Dict:
+def fetch_action_get_credentials(unit: Unit) -> Dict:
     """Helper to run an action to fetch connection info.
 
     Args:
@@ -24,8 +23,8 @@ async def fetch_action_get_credentials(unit: Unit) -> Dict:
     Returns:
         A dictionary with the username, password and access info for the service
     """
-    action = await unit.run_action(action_name="get-credentials")
-    result = await action.wait()
+    action = unit.run_action(action_name="get-credentials")
+    result = action.wait()
     return result.results
 
 
@@ -42,7 +41,7 @@ def build_postgresql_connection_string(credentials: Dict[str, str]) -> str:
     )
 
 
-async def fetch_action_database(
+def fetch_action_database(
     unit: Unit, action_name: str, product: str, credentials: str, database_name: str
 ) -> Dict:
     """Helper to run an action to execute commands with databases.
@@ -57,12 +56,12 @@ async def fetch_action_database(
         The result of the action
     """
     parameters = {"product": product, "credentials": credentials, "database-name": database_name}
-    action = await unit.run_action(action_name=action_name, **parameters)
-    result = await action.wait()
+    action = unit.run_action(action_name=action_name, **parameters)
+    result = action.wait()
     return result.results
 
 
-async def fetch_action_kafka(
+def fetch_action_kafka(
     unit: Unit, action_name: str, product: str, credentials: str, topic_name: str
 ) -> Dict:
     """Helper to run an action to test Kafka.
@@ -77,8 +76,8 @@ async def fetch_action_kafka(
         The result of the action
     """
     parameters = {"product": product, "credentials": credentials, "topic-name": topic_name}
-    action = await unit.run_action(action_name=action_name, **parameters)
-    result = await action.wait()
+    action = unit.run_action(action_name=action_name, **parameters)
+    result = action.wait()
     return result.results
 
 
@@ -118,26 +117,24 @@ def check_logs(model_full_name: str, kafka_unit_name: str, topic: str) -> None:
     assert passed, "logs not found"
 
 
-async def get_relation_data(ops_test: OpsTest, unit: str) -> Dict[str, str]:
+def get_relation_data(juju: JujuFixture, unit: str) -> Dict[str, str]:
     args = ["show-unit", unit, "--format", "json"]
-    relation_data_raw = await ops_test.juju(*args)
+    relation_data_raw = juju.juju(*args)
     return json.loads(relation_data_raw[1])
 
 
-async def get_databag_field(
-    ops_test: OpsTest, unit: str, relation_id, field: str
-) -> Optional[str]:
-    relation_data = await get_relation_data(ops_test, unit)
+def get_databag_field(juju: JujuFixture, unit: str, relation_id, field: str) -> Optional[str]:
+    relation_data = get_relation_data(juju, unit)
     for relation_info in relation_data[unit]["relation-info"]:
         if relation_info["relation-id"] == relation_id:
             return relation_info["application-data"].get(field)
 
 
-async def check_secrets_usage_matching_juju_version(
-    ops_test: OpsTest, unit: str, relation_id: str
+def check_secrets_usage_matching_juju_version(
+    juju: JujuFixture, unit: str, relation_id: str
 ) -> bool:
     juju_version = version("juju")
 
     if juju_version > "3":
-        return bool(await get_databag_field(ops_test, unit, relation_id, "secret-user"))
+        return bool(get_databag_field(juju, unit, relation_id, "secret-user"))
     return True
