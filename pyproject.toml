@@ -19,7 +19,7 @@ pydantic = ">= 1.0"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.15.9"
+ruff = "^0.15.13"
 
 [tool.poetry.group.lint]
 optional = true
@@ -28,22 +28,22 @@ optional = true
 codespell = "^2.4.2"
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.13.5"}
-pytest = "^9.0.2"
+coverage = {extras = ["toml"], version = "^7.14.0"}
+pytest = "^9.0.3"
 pytest-asyncio = "*"
-pydantic = ">=1.10.26"
+pydantic = ">=2.13.4"
 
 
 [tool.poetry.group.integration.dependencies]
-pytest = "^9.0.2"
+pytest = "^9.0.3"
 pytest-operator = "^0.43.2"
 juju = "^3.5.2.0"
-boto3 = ">=1.42.70"
-botocore = "<1.42.71"
+boto3 = ">=1.43.11"
+botocore = "<1.43.12"
 spark-k8s-test = "^0.0.4"
 
 [build-system]
-requires = ["poetry-core>=2.3.2"]
+requires = ["poetry-core>=2.4.0"]
 build-backend = "poetry.core.masonry.api"
 
 # Testing tools configuration
