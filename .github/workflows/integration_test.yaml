@@ -9,7 +9,6 @@ on:
         required: true
         type: string
 
-permissions: {}
 jobs:
   collect-integration-tests:
     name: Collect integration test spread jobs
@@ -18,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Set up environment
         run: |
           sudo snap install go --classic
@@ -68,6 +69,7 @@ jobs:
               file.write(output)
     outputs:
       jobs: ${{ steps.collect-jobs.outputs.jobs }}
+    permissions: {}
 
   integration-test:
     strategy:
@@ -79,10 +81,15 @@ jobs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
     timeout-minutes: 213  # Sum of steps `timeout-minutes` + 5
+    environment:
+      name: integration-test
+      deployment: false
     steps:
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Set up environment
         timeout-minutes: 5
         run: sudo snap install charmcraft --classic
@@ -102,7 +109,9 @@ jobs:
         id: spread
         # TODO: replace with `charmcraft test` when
         # https://github.com/canonical/charmcraft/issues/2105 fixed
-        run: ~/go/bin/spread -vv '${{ matrix.job.spread_job }}'
+        run: ~/go/bin/spread -vv -artifacts=artifacts "${VAR_SPREAD_JOB}"
+        env:
+          VAR_SPREAD_JOB: ${{ matrix.job.spread_job }}
       - timeout-minutes: 1
         if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: snap list
