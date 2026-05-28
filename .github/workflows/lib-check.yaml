@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.7.0
         with:

@@ -11,7 +11,6 @@ jobs:
   ci-tests:
     name: Tests
     uses: ./.github/workflows/ci.yaml
-    secrets: inherit
     permissions:
       actions: read  # Needed for GitHub API call to get workflow version
       contents: write  # Needed to create git tags
