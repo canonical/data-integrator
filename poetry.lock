@@ -385,34 +385,34 @@ files = [
 
 [[package]]
 name = "boto3"
-version = "1.43.14"
+version = "1.43.31"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.10"
 groups = ["integration"]
 files = [
-    {file = "boto3-1.43.14-py3-none-any.whl", hash = "sha256:574335744656cfed0b362a0a0467aaf2eb2bf15526edcd02d31d3c661f4b09e4"},
-    {file = "boto3-1.43.14.tar.gz", hash = "sha256:5c0a994b3182061ee101812e721100717a4d664f9f4ceaf4a86b6d032ce9fc2d"},
+    {file = "boto3-1.43.31-py3-none-any.whl", hash = "sha256:69c5521ad864f33d4d53b0e18a3927697f4558210693b1cb4dd97da959d1f7b9"},
+    {file = "boto3-1.43.31.tar.gz", hash = "sha256:8165b79c02955affbe4b4e9aa7c560684d0d4d86b4b9de66a37b45eb79fc4b69"},
 ]
 
 [package.dependencies]
-botocore = ">=1.43.14,<1.44.0"
+botocore = ">=1.43.31,<1.44.0"
 jmespath = ">=0.7.1,<2.0.0"
-s3transfer = ">=0.17.0,<0.18.0"
+s3transfer = ">=0.19.0,<0.20.0"
 
 [package.extras]
 crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.43.14"
+version = "1.43.31"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.10"
 groups = ["integration"]
 files = [
-    {file = "botocore-1.43.14-py3-none-any.whl", hash = "sha256:1f4a2a95ea78c10398e78431e98c1fe47adb54a7b10a32975144c1f541186658"},
-    {file = "botocore-1.43.14.tar.gz", hash = "sha256:b9e500737e43d2f147c9d4e23b54360335e77d4c0ba90a318f51b65e06cb8516"},
+    {file = "botocore-1.43.31-py3-none-any.whl", hash = "sha256:4c51c63f39515fc1a2b8e3e2c29e452009c988ba55ad489251658fdd3aedad6e"},
+    {file = "botocore-1.43.31.tar.gz", hash = "sha256:c249625faaa353c5b4004043706a394a4f3bcd3643e242f6b01fff6dc70e988b"},
 ]
 
 [package.dependencies]
@@ -441,7 +441,7 @@ version = "2.0.0"
 description = "Foreign Function Interface for Python calling C code."
 optional = false
 python-versions = ">=3.9"
-groups = ["integration"]
+groups = ["main", "integration"]
 markers = "platform_python_implementation != \"PyPy\""
 files = [
     {file = "cffi-2.0.0-cp310-cp310-macosx_10_13_x86_64.whl", hash = "sha256:0cf2d91ecc3fcc0625c2c530fe004f82c110405f101548512cce44322fa8ac44"},
@@ -831,7 +831,7 @@ version = "49.0.0"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
 optional = false
 python-versions = "!=3.9.0,!=3.9.1,>=3.9"
-groups = ["integration"]
+groups = ["main", "integration"]
 files = [
     {file = "cryptography-49.0.0-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:966fe0e9c67490071f14c0d2b1cb2dfb3023c5ce39457343931415f08382f2db"},
     {file = "cryptography-49.0.0-cp311-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:36d1709f992593689b45bda411498d62c6e365f2ca00b84657d4dadd24de16db"},
@@ -902,17 +902,18 @@ files = [
 
 [[package]]
 name = "dpcharmlibs-interfaces"
-version = "1.0.2"
+version = "1.1.0"
 description = "The dpcharmlibs.interfaces package."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "dpcharmlibs_interfaces-1.0.2-py3-none-any.whl", hash = "sha256:1fa1005e55a0fa000bcf340831ab33ff7e7f6225678d6d07ca1383c36a658326"},
-    {file = "dpcharmlibs_interfaces-1.0.2.tar.gz", hash = "sha256:5cc88791d4844c1d485188e10c04fbc6651de16b841fe2fb09da5643bf3af981"},
+    {file = "dpcharmlibs_interfaces-1.1.0-py3-none-any.whl", hash = "sha256:9f74df4a9e254237d2614e1a1efb342492fcb5b2da066d6d5633e72838ed4d57"},
+    {file = "dpcharmlibs_interfaces-1.1.0.tar.gz", hash = "sha256:a8a4644b8eadebf8cb1da933022cf81ed7c697eda86b5fbfffafc5e8c769d02d"},
 ]
 
 [package.dependencies]
+cryptography = ">=48.0.0"
 ops = ">=3,<4"
 pydantic = ">=2.11,<3"
 
@@ -1786,7 +1787,7 @@ version = "3.0"
 description = "C parser in Python"
 optional = false
 python-versions = ">=3.10"
-groups = ["integration"]
+groups = ["main", "integration"]
 markers = "platform_python_implementation != \"PyPy\" and implementation_name != \"PyPy\""
 files = [
     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
@@ -2280,14 +2281,14 @@ files = [
 
 [[package]]
 name = "s3transfer"
-version = "0.17.1"
+version = "0.19.0"
 description = "An Amazon S3 Transfer Manager"
 optional = false
 python-versions = ">=3.10"
 groups = ["integration"]
 files = [
-    {file = "s3transfer-0.17.1-py3-none-any.whl", hash = "sha256:5b9827d1044159bbb01b86ef8902760ea39281927f5de31de75e1d657177bf4c"},
-    {file = "s3transfer-0.17.1.tar.gz", hash = "sha256:042dd5e3b1b512355e35a23f0223e426b7042e80b97830ea2680ddce327fc45e"},
+    {file = "s3transfer-0.19.0-py3-none-any.whl", hash = "sha256:777cc2415536f1debadb5c2ef7779275d0fc0fe0e042411cdd6caebeb2685262"},
+    {file = "s3transfer-0.19.0.tar.gz", hash = "sha256:ce436931687addc4c1712d52d40b32f53e88315723f107ffa20ba82b05a0f685"},
 ]
 
 [package.dependencies]
@@ -2667,4 +2668,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "b50de7401ab565047ff0d46c239ed96b67e7f884cf667869d0a14c7cdab2ade3"
+content-hash = "081d839dee6fcface3ca848d0f7618a5327b34743b111be123954c1618520afa"
