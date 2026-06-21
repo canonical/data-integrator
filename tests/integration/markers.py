@@ -15,4 +15,4 @@ only_with_juju_3 = pytest.mark.skipif(not juju_.is_juju_3, reason="Requires juju
 
 # Skipped in the cloud_name fixture
 only_on_localhost = pytest.mark.only_on_localhost
-only_on_microk8s = pytest.mark.only_on_microk8s
+only_on_k8s = pytest.mark.only_on_k8s

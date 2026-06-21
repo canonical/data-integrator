@@ -18,7 +18,7 @@ from .helpers import (
     fetch_action_database,
     fetch_action_get_credentials,
 )
-from .markers import only_on_microk8s, only_with_juju_3
+from .markers import only_on_k8s, only_with_juju_3
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ INTEGRATION_HUB_APP_NAME = "spark-integration-hub-k8s"
 POSTGRESQL_APP_NAME = "postgresql-k8s"
 
 
-@only_on_microk8s
+@only_on_k8s
 @only_with_juju_3
 @pytest.mark.abort_on_fail
 async def test_deploy_data_integrator(
@@ -63,7 +63,7 @@ async def test_deploy_data_integrator(
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
 
-@only_on_microk8s
+@only_on_k8s
 @only_with_juju_3
 @pytest.mark.abort_on_fail
 async def test_deploy_kyuubi_setup(
@@ -193,7 +193,7 @@ async def test_deploy_kyuubi_setup(
     logger.info("Successfully deployed minimal working Kyuubi setup.")
 
 
-@only_on_microk8s
+@only_on_k8s
 @only_with_juju_3
 async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest, cloud_name: str):
     """Test the relation with ZooKeeper and database accessibility."""
@@ -215,7 +215,7 @@ async def test_relate_kyuubi_with_data_integrator(ops_test: OpsTest, cloud_name:
 
 
 @only_with_juju_3
-@only_on_microk8s
+@only_on_k8s
 async def test_data_read_write_on_kyuubi(ops_test: OpsTest, cloud_name: str):
     """Test the relation with ZooKeeper and database accessibility."""
     # get credential for Kyuubi

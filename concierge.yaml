@@ -5,13 +5,11 @@ providers:
   lxd:
     enable: true
     bootstrap: true
-  microk8s:
+  k8s:
     enable: true
     bootstrap: true
-    addons:
-      - dns
-      - hostpath-storage
-      - rbac
+    bootstrap-constraints:
+      root-disk: 5G
 host:
   snaps:
     jhack:

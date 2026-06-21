@@ -50,9 +50,9 @@ async def cloud_name(ops_test: OpsTest, request):
         if "only_on_localhost" in marks:
             pytest.skip("Does not run on k8s")
             return
-        return "microk8s"
+        return "k8s"
     else:
-        if "only_on_microk8s" in marks:
+        if "only_on_k8s" in marks:
             pytest.skip("Does not run on vm")
             return
         return "localhost"
