@@ -24,7 +24,7 @@ jobs:
     if: ${{ github.event.pull_request.head.repo.full_name == 'canonical/data-integrator' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Check libs
