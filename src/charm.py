@@ -160,6 +160,7 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
 
         # OpenSearch
+        _entity_name, _entity_password = self.requested_entities_secret_content
         self.opensearch = OpenSearchRequires(
             self,
             relation_name=OPENSEARCH,
@@ -168,6 +169,8 @@ class IntegratorCharm(CharmBase):
             entity_permissions=self.entity_permissions or "",
             extra_user_roles=self.extra_user_roles or "",
             extra_group_roles=self.extra_group_roles or "",
+            requested_entity_name=_entity_name,
+            requested_entity_password=_entity_password,
         )
         self.framework.observe(self.opensearch.on.index_created, self._on_index_created)
         self.framework.observe(self.opensearch.on.index_entity_created, self._on_entity_created)
