@@ -6,15 +6,15 @@ DATA_INTEGRATOR = "data-integrator"
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
 
-MYSQL = {"localhost": "mysql", "microk8s": "mysql-k8s"}
-MYSQL_ROUTER = {"localhost": "mysql-router", "microk8s": "mysql-router-k8s"}
-POSTGRESQL = {"localhost": "postgresql", "microk8s": "postgresql-k8s"}
-PGBOUNCER = {"localhost": "pgbouncer", "microk8s": "pgbouncer-k8s"}
-MONGODB = {"localhost": "mongodb", "microk8s": "mongodb-k8s"}
+MYSQL = {"localhost": "mysql", "k8s": "mysql-k8s"}
+MYSQL_ROUTER = {"localhost": "mysql-router", "k8s": "mysql-router-k8s"}
+POSTGRESQL = {"localhost": "postgresql", "k8s": "postgresql-k8s"}
+PGBOUNCER = {"localhost": "pgbouncer", "k8s": "pgbouncer-k8s"}
+MONGODB = {"localhost": "mongodb", "k8s": "mongodb-k8s"}
 DATABASE_NAME = "test_database"
 
-KAFKA = {"localhost": "kafka", "microk8s": "kafka-k8s"}
-ZOOKEEPER = {"localhost": "zookeeper", "microk8s": "zookeeper-k8s"}
+KAFKA = {"localhost": "kafka", "k8s": "kafka-k8s"}
+ZOOKEEPER = {"localhost": "zookeeper", "k8s": "zookeeper-k8s"}
 TOPIC_NAME = "test_topic"
 KAFKA_EXTRA_USER_ROLES = "producer,consumer,admin"
 
@@ -22,7 +22,7 @@ OPENSEARCH = {"localhost": "opensearch"}
 INDEX_NAME = "albums"
 OPENSEARCH_EXTRA_USER_ROLES = "default"
 
-KYUUBI = {"microk8s": "kyuubi-k8s"}
+KYUUBI = {"k8s": "kyuubi-k8s"}
 ETCD = {"localhost": "charmed-etcd"}
 APP = "app"
 

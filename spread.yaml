@@ -102,13 +102,13 @@ kill-timeout: 3h
 environment:
   PATH: $PATH:$(pipx environment --value PIPX_BIN_DIR)
   CONCIERGE_JUJU_CHANNEL/juju36_lxd: 3.6/stable
-  CONCIERGE_JUJU_CHANNEL/juju36_microk8s: 3.6/stable
+  CONCIERGE_JUJU_CHANNEL/juju36_k8s: 3.6/stable
   CONCIERGE_JUJU_CHANNEL/juju29_lxd: 2.9/stable
-  CONCIERGE_JUJU_CHANNEL/juju29_microk8s: 2.9/stable
+  CONCIERGE_JUJU_CHANNEL/juju29_k8s: 2.9/stable
   CONTROLLER_NAME/juju36_lxd: concierge-lxd
-  CONTROLLER_NAME/juju36_microk8s: concierge-microk8s
+  CONTROLLER_NAME/juju36_k8s: concierge-k8s
   CONTROLLER_NAME/juju29_lxd: concierge-lxd
-  CONTROLLER_NAME/juju29_microk8s: concierge-microk8s
+  CONTROLLER_NAME/juju29_k8s: concierge-k8s
 prepare: |
   snap refresh --hold
   chown -R root:root "$SPREAD_PATH"
