@@ -43,16 +43,16 @@ extra-user-roles - `string`; a comma-separated list of values that contains the 
 extra-group-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 
-| Product    | database-name      | topic-name         | index-name         | prefix-name        | keyspace-name      | entity-type        | entity-permissions | extra-user-roles   | extra-group-roles  |
-|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|
-| MySQL      | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| PostgreSQL | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| MongoDB    | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kafka      |                    | :heavy_check_mark: |                    |                    |                    | :white_check_mark: | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
-| OpenSearch |                    |                    | :heavy_check_mark: |                    |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| etcd       |                    |                    |                    | :heavy_check_mark: |                    |                    |                    |                    |                    |
-| Cassandra  |                    |                    |                    |                    | :heavy_check_mark: | :white_check_mark: | :white_check_mark: |                    |                    |
-| Valkey     |                    |                    |                    | :heavy_check_mark: |                    |                    |                    |                    |                    |
+| Product    | database-name      | topic-name         | index-name         | prefix-name        | keyspace-name      | entity-type         | entity-permissions | extra-user-roles   | extra-group-roles  |
+|------------|--------------------|--------------------|--------------------|--------------------|--------------------|---------------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
+| OpenSearch |                    |                    | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| etcd       |                    |                    |                    | :heavy_check_mark: |                    |                     |                    |                    |                    |
+| Cassandra  |                    |                    |                    |                    | :heavy_check_mark: | :white_check_mark:  | :white_check_mark: |                    |                    |
+| Valkey     |                    |                    |                    | :heavy_check_mark: |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
