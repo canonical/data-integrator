@@ -189,7 +189,11 @@ class IntegratorCharm(CharmBase):
             charm=self,
             relation_name=VALKEY,
             requests=[
-                RequirerCommonModel(resource=self.prefix or ""),
+                RequirerCommonModel(
+                    resource=self.prefix or "",
+                    entity_type="GROUP",
+                    entity_permissions=self.entity_permissions_loaded,
+                ),
             ],
             response_model=ValkeyResponseModel,
         )
@@ -890,6 +894,29 @@ class IntegratorCharm(CharmBase):
                 privileges=json.loads(self.entity_permissions),
             )
         ]
+
+    @property
+    def entity_permissions_loaded(self) -> list[EntityPermissionModel]:
+        """Return the configured entity type permissions v1, loaded from configured JSON."""
+        if not self.entity_permissions:
+            return []
+
+        try:
+            entity_permissions_config = json.loads(self.entity_permissions)
+        except json.JSONDecodeError:
+            return []
+
+        entity_permissions = []
+        for permission in entity_permissions_config:
+            entity_permissions.append(
+                EntityPermissionModel(
+                    resource_name=permission.get("resource_name"),
+                    resource_type=permission.get("resource_type"),
+                    privileges=permission.get("privileges"),
+                )
+            )
+
+        return entity_permissions
 
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
