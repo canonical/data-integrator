@@ -69,7 +69,6 @@ jobs:
     with:
       path-to-charm-directory: ${{ matrix.path }}
     permissions:
-      actions: read  # Needed for GitHub API call to get workflow version
       contents: read
 
   integration-test:
