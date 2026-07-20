@@ -22,9 +22,22 @@ variable "channel" {
 }
 
 variable "config" {
-  description = "Map for configuration options."
-  type        = map(string)
-  default     = {}
+  description = "Data Integrator charm configuration options."
+  type = object({
+    consumer-group-prefix     = optional(string)
+    database-name             = optional(string)
+    entity-permissions        = optional(string)
+    entity-type               = optional(string)
+    extra-group-roles         = optional(string)
+    extra-user-roles          = optional(string)
+    index-name                = optional(string)
+    keyspace-name             = optional(string)
+    mtls-cert                 = optional(string)
+    prefix-name               = optional(string)
+    requested-entities-secret = optional(string)
+    topic-name                = optional(string)
+  })
+  default = {}
 }
 
 variable "constraints" {
