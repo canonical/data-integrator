@@ -53,7 +53,9 @@ parts:
     poetry-export-extra-args: ['--only', 'main,charm-libs']
     # Unable to build mysql-connector-python from source because of
     # https://bugs.mysql.com/bug.php?id=113396
-    poetry-pip-extra-args: ['--only-binary', 'cassandra-driver']
+    # Also, impyla 0.20.0 bootstraps an obsolete setuptools release.
+    poetry-pip-extra-args: ['--only-binary', 'cassandra-driver,impyla']
+
     build-packages:
       - libev-dev
       - libffi-dev  # Needed to build Python dependencies with Rust from source
