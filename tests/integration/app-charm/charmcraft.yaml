@@ -51,10 +51,8 @@ parts:
     after:
       - poetry-deps
     poetry-export-extra-args: ['--only', 'main,charm-libs']
-    # Unable to build mysql-connector-python from source because of
-    # https://bugs.mysql.com/bug.php?id=113396
     # Also, impyla 0.20.0 bootstraps an obsolete setuptools release.
-    poetry-pip-extra-args: ['--only-binary', 'cassandra-driver,impyla']
+    poetry-pip-extra-args: ['--only-binary', 'impyla']
 
     build-packages:
       - libev-dev

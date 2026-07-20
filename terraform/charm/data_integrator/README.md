@@ -7,13 +7,13 @@ This is a Terraform module facilitating the deployment of the Data Integrator ch
 | Name | Version |
 |------|---------|
 | `Terraform` | >= 1.6 |
-| `Juju provider` | ~> 2.0  |
+| `Juju provider` | >= 1.0 |
 
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| `juju` | ~> 2.0 |
+| `juju` | >= 1.0 |
 
 ## Modules
 
