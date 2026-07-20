@@ -41,6 +41,27 @@ jobs:
         run: tox run -e lint
     permissions: {}
 
+  terraform-lint:
+    name: Terraform - Lint / format / validate modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install terraform snap
+        run: |
+          sudo snap install terraform --channel=latest/stable --classic
+
+      - name: Install tox
+        run: pipx install tox
+
+      - name: Lint / format / validate TF modules
+        run: tox run -e terraform-lint
+
   unit-test:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -61,13 +82,16 @@ jobs:
   build:
     strategy:
       matrix:
-        path:
-          - .
-          - tests/integration/app-charm
+        include:
+          - path: .
+            cache: true
+          - path: tests/integration/app-charm
+            cache: false
     name: Build charm | ${{ matrix.path }}
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
+      cache: ${{ matrix.cache }}
     permissions:
       contents: read
 
