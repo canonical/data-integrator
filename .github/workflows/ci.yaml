@@ -84,7 +84,7 @@ jobs:
       matrix:
         include:
           - path: .
-            cache: true
+            cache: false  # TODO: revert when PR merged + charmcraft-hub cache built
           - path: tests/integration/app-charm
             cache: false
     name: Build charm | ${{ matrix.path }}
