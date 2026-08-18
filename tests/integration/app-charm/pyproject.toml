@@ -16,7 +16,7 @@ pymongo = "^4.17.0"
 kafka-python = "^3.0.9"
 kazoo = "^2.11.0"
 psycopg2 = "^2.9.12"
-mysql-connector-python = "^9.7.0"
+mysql-connector-python = "^26.7.0"
 requests = "^2.34.2"
 pyhive = { extras = ["hive_pure_sasl"], version = "^0.7.0" }
 spark-k8s-test = "^0.0.4"
