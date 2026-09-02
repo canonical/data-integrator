@@ -88,7 +88,7 @@ jobs:
           - path: tests/integration/app-charm
             cache: false
     name: Build charm | ${{ matrix.path }}
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.2.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v52.0.0
     with:
       path-to-charm-directory: ${{ matrix.path }}
       cache: ${{ matrix.cache }}
