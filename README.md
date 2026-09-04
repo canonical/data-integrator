@@ -2,7 +2,7 @@
 [![Charmhub](https://charmhub.io/data-integrator/badge.svg)](https://charmhub.io/data-integrator)
 [![Release](https://github.com/canonical/data-integrator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/data-integrator/actions/workflows/release.yaml)
 [![Tests](https://github.com/canonical/data-integrator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/data-integrator/actions/workflows/ci.yaml)
-[![Scan](https://github.com/canonical/postgresql-test-app/actions/workflows/tiobe_scan.yaml/badge.svg?branch=main)](https://github.com/canonical/data-integrator/actions/workflows/tiobe_scan.yaml)
+[![Scan](https://github.com/canonical/data-integrator/actions/workflows/tiobe_scan.yaml/badge.svg?branch=main)](https://github.com/canonical/data-integrator/actions/workflows/tiobe_scan.yaml)
 
 ## Overview
 
