@@ -22,6 +22,7 @@ jobs:
     with:
       track: latest
       artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
+      charmcraft-snap-revision: "8022"
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
