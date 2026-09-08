@@ -6,13 +6,13 @@ package-mode = false
 requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
-cryptography = "==50.0.0"
-pydantic = "==2.13.4"
+cryptography = "==50.0.1"
+pydantic = "==2.13.5"
 tenacity = "*"
 
 python = "^3.10"
-ops = "^3.8.1"
-pymongo = "^4.17.0"
+ops = "^3.8.2"
+pymongo = "^4.18.0"
 kafka-python = "^3.0.11"
 kazoo = "^2.11.0"
 psycopg2 = "^2.9.12"
