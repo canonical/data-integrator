@@ -333,7 +333,7 @@ class IntegratorCharm(CharmBase):
                     f"To change {name_type}: {active_name}, please remove relation and add it again"
                 )
 
-    def get_status(self) -> StatusBase:
+    def get_status(self) -> StatusBase:  # noqa: C901
         """Return the current application status."""
         if self.model.config.get("requested-entities-secret", None):
             if not self.model.juju_version.has_secrets:
