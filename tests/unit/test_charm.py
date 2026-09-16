@@ -11,7 +11,7 @@ from charm import IntegratorCharm
 
 BLOCKED_STATUS_INVALID_KF_TOPIC = BlockedStatus("Please pass an acceptable topic value")
 BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
-    "Please specify either topic, index, database name, keyspace name, or prefix",
+    "Please specify either topic, index, database name, keyspace name, entity name, or prefix",
 )
 BLOCKED_STATUS_RELATE = BlockedStatus(
     "Please relate the data-integrator with the desired product",
@@ -55,7 +55,7 @@ class TestCharm(unittest.TestCase):
             action_event.fail.call_args,
             [
                 (
-                    "The database name, topic name, index name, keyspace name, or prefix is not specified in the config.",
+                    "The database name, topic name, index name, keyspace name, entity name, or prefix is not specified in the config.",
                 )
             ],
         )
@@ -119,6 +119,94 @@ class TestCharm(unittest.TestCase):
             BLOCKED_STATUS_RELATE,
         )
         self.assertEqual(self.harness.charm.config["extra-group-roles"], "custom_role_1")
+
+    def test_config_changed_mlflow(self):
+        entity_name = "my-username"
+        entity_permissions = '{"my-workspace": "edit"}'
+        self.harness.set_leader(True)
+
+        self.harness.update_config(
+            {
+                "entity-name": entity_name,
+                "entity-permissions": entity_permissions,
+            }
+        )
+        self.harness.charm._on_config_changed(Mock())
+
+        self.assertEqual(
+            self.harness.model.unit.status,
+            BLOCKED_STATUS_RELATE,
+        )
+        self.assertEqual(self.harness.charm.config["entity-name"], entity_name)
+        self.assertEqual(self.harness.charm.config["entity-permissions"], entity_permissions)
+        self.assertEqual(self.harness.charm.entity_name, entity_name)
+
+    def test_action_failure_mlflow_not_related(self):
+        entity_name = "my-username"
+        entity_permissions = '{"my-workspace": "edit"}'
+        self.harness.set_leader(True)
+        action_event = Mock()
+
+        self.harness.update_config(
+            {
+                "entity-name": entity_name,
+                "entity-permissions": entity_permissions,
+            }
+        )
+        self.harness.charm._on_get_credentials_action(action_event)
+
+        self.assertEqual(
+            action_event.fail.call_args,
+            [("The action can be run only after relation is created.",)],
+        )
+
+    def test_mlflow_entity_permissions_workspace_map(self):
+        self.harness.update_config(
+            {"entity-permissions": '{"ws-a": "admin", "ws-b": "read-only"}'}
+        )
+        permissions = {
+            (p.resource_type, p.resource_name, tuple(p.privileges))
+            for p in self.harness.charm.mlflow_entity_permissions
+        }
+        self.assertEqual(
+            permissions,
+            {
+                ("workspace", "ws-a", ("admin",)),
+                ("workspace", "ws-b", ("read-only",)),
+            },
+        )
+
+    def test_mlflow_entity_permissions_super_admin(self):
+        self.harness.update_config({"entity-permissions": "super-admin"})
+        permissions = self.harness.charm.mlflow_entity_permissions
+        self.assertEqual(len(permissions), 1)
+        self.assertEqual(permissions[0].resource_type, "super-admin")
+        self.assertEqual(permissions[0].resource_name, "*")
+        self.assertEqual(permissions[0].privileges, [])
+
+    def test_mlflow_entity_permissions_invalid_json(self):
+        self.harness.update_config({"entity-permissions": "{not-valid"})
+        self.assertEqual(self.harness.charm.mlflow_entity_permissions, [])
+
+    def test_mlflow_entity_permissions_non_mapping(self):
+        self.harness.update_config({"entity-permissions": '["a", "b"]'})
+        self.assertEqual(self.harness.charm.mlflow_entity_permissions, [])
+
+    def test_mlflow_grants_render_workspace_map(self):
+        self.harness.update_config(
+            {"entity-permissions": '{"ws-b": "read-only", "ws-a": "admin"}'}
+        )
+        rendered = self.harness.charm._render_mlflow_grants(
+            self.harness.charm.mlflow_entity_permissions
+        )
+        self.assertEqual(rendered, '{"ws-a": "admin", "ws-b": "read-only"}')
+
+    def test_mlflow_grants_render_super_admin(self):
+        self.harness.update_config({"entity-permissions": "super-admin"})
+        rendered = self.harness.charm._render_mlflow_grants(
+            self.harness.charm.mlflow_entity_permissions
+        )
+        self.assertEqual(rendered, "super-admin")
 
     def test_get_unit_status(self):
         self.harness.set_leader(True)

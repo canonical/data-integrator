@@ -1,0 +1,7 @@
+summary: test_mlflow.py
+environment:
+  TEST_MODULE: test_mlflow.py
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --controller "$CONTROLLER_NAME" --model testing
+variants:
+  - -juju36_k8s

@@ -26,10 +26,14 @@ options:
     type: string
     default:
     description: Type of entity to create upon integration. Possible values are USER or GROUP.
+  entity-name:
+    type: string
+    default:
+    description: The name of the entity (user or group) to create upon integration, in place of an auto-generated one (this parameter is needed for MLflow, whose users are externally authenticated and therefore need no password, unlike with requested-entities-secret).
   entity-permissions:
     type: string
     default:
-    description: List of permissions to assigned to the custom entity, in JSON format.
+    description: "List of permissions to assign to the custom entity. For most products, a JSON list. For MLflow, either a JSON object mapping each `<workspace>` to a `<tier>` (with each tier being one of `read-only`, `member`, `edit`, `admin`) for workspace grants, or the literal, non-JSON `super-admin` keyword for a cross-workspace super-admin."
   extra-user-roles:
     type: string
     default:
