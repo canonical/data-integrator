@@ -120,16 +120,17 @@ class TestCharm(unittest.TestCase):
         )
         self.assertEqual(self.harness.charm.config["extra-group-roles"], "custom_role_1")
 
-    def test_config_changed_mlflow(self):
+    def test_config_changed_mlflow_not_related(self):
         entity_name = "my-username"
         entity_permissions = '{"my-workspace": "edit"}'
         self.harness.set_leader(True)
+        config_changed_event = Mock()
 
         self.harness.update_config({
             "entity-name": entity_name,
             "entity-permissions": entity_permissions,
         })
-        self.harness.charm._on_config_changed(Mock())
+        self.harness.charm._on_config_changed(config_changed_event)
 
         self.assertEqual(
             self.harness.model.unit.status,
@@ -157,18 +158,24 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_mlflow_entity_permissions_workspace_map(self):
+        workspace_a = "workspace-a"
+        workspace_b = "workspace-b"
+        grant_a = "admin"
+        grant_b = "read-only"
+
         self.harness.update_config({
-            "entity-permissions": '{"ws-a": "admin", "ws-b": "read-only"}'
+            "entity-permissions": f'{{"{workspace_a}": "{grant_a}", "{workspace_b}": "{grant_b}"}}'
         })
         permissions = {
             (p.resource_type, p.resource_name, tuple(p.privileges))
             for p in self.harness.charm.mlflow_entity_permissions
         }
+
         self.assertEqual(
             permissions,
             {
-                ("workspace", "ws-a", ("admin",)),
-                ("workspace", "ws-b", ("read-only",)),
+                ("workspace", workspace_a, (grant_a,)),
+                ("workspace", workspace_b, (grant_b,)),
             },
         )
 
@@ -189,20 +196,31 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.charm.mlflow_entity_permissions, [])
 
     def test_mlflow_grants_render_workspace_map(self):
+        workspace_a = "workspace-a"
+        workspace_b = "workspace-b"
+        grant_a = "admin"
+        grant_b = "read-only"
+
         self.harness.update_config({
-            "entity-permissions": '{"ws-b": "read-only", "ws-a": "admin"}'
+            "entity-permissions": f'{{"{workspace_b}": "{grant_b}", "{workspace_a}": "{grant_a}"}}'
         })
         rendered = self.harness.charm._render_mlflow_grants(
             self.harness.charm.mlflow_entity_permissions
         )
-        self.assertEqual(rendered, '{"ws-a": "admin", "ws-b": "read-only"}')
+
+        self.assertEqual(
+            rendered, f'{{"{workspace_a}": "{grant_a}", "{workspace_b}": "{grant_b}"}}'
+        )
 
     def test_mlflow_grants_render_super_admin(self):
-        self.harness.update_config({"entity-permissions": "super-admin"})
+        super_admin_grant = "super-admin"
+
+        self.harness.update_config({"entity-permissions": super_admin_grant})
         rendered = self.harness.charm._render_mlflow_grants(
             self.harness.charm.mlflow_entity_permissions
         )
-        self.assertEqual(rendered, "super-admin")
+
+        self.assertEqual(rendered, super_admin_grant)
 
     def test_get_unit_status(self):
         self.harness.set_leader(True)
