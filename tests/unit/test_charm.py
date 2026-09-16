@@ -125,12 +125,10 @@ class TestCharm(unittest.TestCase):
         entity_permissions = '{"my-workspace": "edit"}'
         self.harness.set_leader(True)
 
-        self.harness.update_config(
-            {
-                "entity-name": entity_name,
-                "entity-permissions": entity_permissions,
-            }
-        )
+        self.harness.update_config({
+            "entity-name": entity_name,
+            "entity-permissions": entity_permissions,
+        })
         self.harness.charm._on_config_changed(Mock())
 
         self.assertEqual(
@@ -147,12 +145,10 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(True)
         action_event = Mock()
 
-        self.harness.update_config(
-            {
-                "entity-name": entity_name,
-                "entity-permissions": entity_permissions,
-            }
-        )
+        self.harness.update_config({
+            "entity-name": entity_name,
+            "entity-permissions": entity_permissions,
+        })
         self.harness.charm._on_get_credentials_action(action_event)
 
         self.assertEqual(
@@ -161,9 +157,9 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_mlflow_entity_permissions_workspace_map(self):
-        self.harness.update_config(
-            {"entity-permissions": '{"ws-a": "admin", "ws-b": "read-only"}'}
-        )
+        self.harness.update_config({
+            "entity-permissions": '{"ws-a": "admin", "ws-b": "read-only"}'
+        })
         permissions = {
             (p.resource_type, p.resource_name, tuple(p.privileges))
             for p in self.harness.charm.mlflow_entity_permissions
@@ -193,9 +189,9 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.charm.mlflow_entity_permissions, [])
 
     def test_mlflow_grants_render_workspace_map(self):
-        self.harness.update_config(
-            {"entity-permissions": '{"ws-b": "read-only", "ws-a": "admin"}'}
-        )
+        self.harness.update_config({
+            "entity-permissions": '{"ws-b": "read-only", "ws-a": "admin"}'
+        })
         rendered = self.harness.charm._render_mlflow_grants(
             self.harness.charm.mlflow_entity_permissions
         )
