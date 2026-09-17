@@ -33,7 +33,7 @@ options:
   entity-permissions:
     type: string
     default:
-    description: "List of permissions to assign to the custom entity, as a JSON list of objects, each with `resource_name`, `resource_type` and `privileges`.
+    description: List of permissions to assign to the custom entity, as a JSON list of objects, each with `resource_name`, `resource_type` and `privileges`.
   extra-user-roles:
     type: string
     default:
