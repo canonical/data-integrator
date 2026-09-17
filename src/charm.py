@@ -740,37 +740,6 @@ class IntegratorCharm(CharmBase):
         return self.model.config.get("entity-permissions", None)
 
     @property
-    def mlflow_entity_permissions(self) -> list[EntityPermissionModel]:
-        """Return the MLflow entity permissions parsed from the entity-permissions config.
-
-        Accepts either the ``super-admin`` sentinel (requesting a single global-admin grant) or a
-        JSON object mapping each ``<workspace>`` to a ``<tier>`` (one per-workspace grant each),
-        turning the latter into workspace-typed models the MLflow provider reconciles into
-        per-workspace grants.
-        """
-        raw = self.entity_permissions
-        if not raw:
-            return []
-        if raw.strip() == MLFLOW_SUPER_ADMIN_GRANT:
-            return [
-                EntityPermissionModel(
-                    resource_name="*", resource_type=MLFLOW_SUPER_ADMIN_GRANT, privileges=[]
-                )
-            ]
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            return []
-        if not isinstance(parsed, dict):
-            return []
-        return [
-            EntityPermissionModel(
-                resource_name=str(workspace), resource_type="workspace", privileges=[str(tier)]
-            )
-            for workspace, tier in parsed.items()
-        ]
-
-    @property
     def extra_user_roles(self) -> Optional[str]:
         """Return the configured extra user roles."""
         return self.model.config.get("extra-user-roles", None)
@@ -1085,6 +1054,37 @@ class IntegratorCharm(CharmBase):
                 resource_type="keyspace",
                 privileges=json.loads(self.entity_permissions),
             )
+        ]
+
+    @property
+    def mlflow_entity_permissions(self) -> list[EntityPermissionModel]:
+        """Return the MLflow entity permissions parsed from the entity-permissions config.
+
+        Accepts either the ``super-admin`` sentinel (requesting a single global-admin grant) or a
+        JSON object mapping each ``<workspace>`` to a ``<tier>`` (one per-workspace grant each),
+        turning the latter into workspace-typed models the MLflow provider reconciles into
+        per-workspace grants.
+        """
+        raw = self.entity_permissions
+        if not raw:
+            return []
+        if raw.strip() == MLFLOW_SUPER_ADMIN_GRANT:
+            return [
+                EntityPermissionModel(
+                    resource_name="*", resource_type=MLFLOW_SUPER_ADMIN_GRANT, privileges=[]
+                )
+            ]
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(parsed, dict):
+            return []
+        return [
+            EntityPermissionModel(
+                resource_name=str(workspace), resource_type="workspace", privileges=[str(tier)]
+            )
+            for workspace, tier in parsed.items()
         ]
 
     @property
