@@ -362,11 +362,9 @@ class IntegratorCharm(CharmBase):
 
         if self.mlflow_relation:
             if not self.entity_name:
-                return BlockedStatus("Please specify 'entity-name' for the MLflow integration")
+                return BlockedStatus("Please specify 'entity-name' for MLflow")
             if not self.entity_permissions:
-                return BlockedStatus(
-                    "Please specify 'entity-permissions' for the MLflow integration"
-                )
+                return BlockedStatus("Please specify 'entity-permissions' for MLflow")
 
         if not any([
             self.is_database_related,
