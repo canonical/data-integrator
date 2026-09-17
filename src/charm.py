@@ -57,8 +57,8 @@ from literals import CASSANDRA, DATABASES, ETCD, KAFKA, MLFLOW, OPENSEARCH, PEER
 
 logger = logging.getLogger(__name__)
 
-# the `entity-permissions` config value (and library `resource_type`) that requests, for MLflow, a
-# single cross-workspace super-admin grant instead of a flat map of per-workspace tier grants:
+# the `resource_type` value of `entity-permissions` objects that requests, for MLflow, a
+# cross-workspace super-admin grant instead of a workspace-wide grant:
 MLFLOW_SUPER_ADMIN_GRANT = "super-admin"
 
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
@@ -1060,32 +1060,13 @@ class IntegratorCharm(CharmBase):
     def mlflow_entity_permissions(self) -> list[EntityPermissionModel]:
         """Return the MLflow entity permissions parsed from the entity-permissions config.
 
-        Accepts either the ``super-admin`` sentinel (requesting a single global-admin grant) or a
-        JSON object mapping each ``<workspace>`` to a ``<tier>`` (one per-workspace grant each),
-        turning the latter into workspace-typed models the MLflow provider reconciles into
-        per-workspace grants.
+        MLflow reuses the shared entity-permissions format (a JSON list of objects, each with
+        ``resource_name``, ``resource_type`` and ``privileges``), so the value also validates
+        against the v0 library the database/Kafka/OpenSearch backends load at startup. For MLflow,
+        ``resource_type`` is ``workspace`` (with the access tier as its single privilege) or
+        ``super-admin`` (whose ``resource_name`` and ``privileges`` are unused).
         """
-        raw = self.entity_permissions
-        if not raw:
-            return []
-        if raw.strip() == MLFLOW_SUPER_ADMIN_GRANT:
-            return [
-                EntityPermissionModel(
-                    resource_name="*", resource_type=MLFLOW_SUPER_ADMIN_GRANT, privileges=[]
-                )
-            ]
-        try:
-            parsed = json.loads(raw)
-        except json.JSONDecodeError:
-            return []
-        if not isinstance(parsed, dict):
-            return []
-        return [
-            EntityPermissionModel(
-                resource_name=str(workspace), resource_type="workspace", privileges=[str(tier)]
-            )
-            for workspace, tier in parsed.items()
-        ]
+        return self.entity_permissions_loaded
 
     @property
     def entity_permissions_loaded(self) -> list[EntityPermissionModel]:

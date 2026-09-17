@@ -1,5 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
@@ -158,14 +159,11 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_mlflow_entity_permissions_workspace_map(self):
-        workspace_a = "workspace-a"
-        workspace_b = "workspace-b"
-        grant_a = "admin"
-        grant_b = "read-only"
-
-        self.harness.update_config({
-            "entity-permissions": f'{{"{workspace_a}": "{grant_a}", "{workspace_b}": "{grant_b}"}}'
-        })
+        permissions_config = [
+            {"resource_name": "ws-a", "resource_type": "workspace", "privileges": ["admin"]},
+            {"resource_name": "ws-b", "resource_type": "workspace", "privileges": ["read-only"]},
+        ]
+        self.harness.update_config({"entity-permissions": json.dumps(permissions_config)})
         permissions = {
             (p.resource_type, p.resource_name, tuple(p.privileges))
             for p in self.harness.charm.mlflow_entity_permissions
@@ -174,53 +172,50 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             permissions,
             {
-                ("workspace", workspace_a, (grant_a,)),
-                ("workspace", workspace_b, (grant_b,)),
+                ("workspace", "ws-a", ("admin",)),
+                ("workspace", "ws-b", ("read-only",)),
             },
         )
 
     def test_mlflow_entity_permissions_super_admin(self):
-        self.harness.update_config({"entity-permissions": "super-admin"})
+        self.harness.update_config({
+            "entity-permissions": json.dumps(
+                [{"resource_name": "", "resource_type": "super-admin", "privileges": []}]
+            )
+        })
         permissions = self.harness.charm.mlflow_entity_permissions
         self.assertEqual(len(permissions), 1)
         self.assertEqual(permissions[0].resource_type, "super-admin")
-        self.assertEqual(permissions[0].resource_name, "*")
+        self.assertEqual(permissions[0].resource_name, "")
         self.assertEqual(permissions[0].privileges, [])
 
     def test_mlflow_entity_permissions_invalid_json(self):
         self.harness.update_config({"entity-permissions": "{not-valid"})
         self.assertEqual(self.harness.charm.mlflow_entity_permissions, [])
 
-    def test_mlflow_entity_permissions_non_mapping(self):
-        self.harness.update_config({"entity-permissions": '["a", "b"]'})
-        self.assertEqual(self.harness.charm.mlflow_entity_permissions, [])
-
     def test_mlflow_grants_render_workspace_map(self):
-        workspace_a = "workspace-a"
-        workspace_b = "workspace-b"
-        grant_a = "admin"
-        grant_b = "read-only"
+        permissions_config = [
+            {"resource_name": "ws-b", "resource_type": "workspace", "privileges": ["read-only"]},
+            {"resource_name": "ws-a", "resource_type": "workspace", "privileges": ["admin"]},
+        ]
+        self.harness.update_config({"entity-permissions": json.dumps(permissions_config)})
+        rendered = self.harness.charm._render_mlflow_grants(
+            self.harness.charm.mlflow_entity_permissions
+        )
 
+        self.assertEqual(rendered, '{"ws-a": "admin", "ws-b": "read-only"}')
+
+    def test_mlflow_grants_render_super_admin(self):
         self.harness.update_config({
-            "entity-permissions": f'{{"{workspace_b}": "{grant_b}", "{workspace_a}": "{grant_a}"}}'
+            "entity-permissions": json.dumps(
+                [{"resource_name": "", "resource_type": "super-admin", "privileges": []}]
+            )
         })
         rendered = self.harness.charm._render_mlflow_grants(
             self.harness.charm.mlflow_entity_permissions
         )
 
-        self.assertEqual(
-            rendered, f'{{"{workspace_a}": "{grant_a}", "{workspace_b}": "{grant_b}"}}'
-        )
-
-    def test_mlflow_grants_render_super_admin(self):
-        super_admin_grant = "super-admin"
-
-        self.harness.update_config({"entity-permissions": super_admin_grant})
-        rendered = self.harness.charm._render_mlflow_grants(
-            self.harness.charm.mlflow_entity_permissions
-        )
-
-        self.assertEqual(rendered, super_admin_grant)
+        self.assertEqual(rendered, "super-admin")
 
     def test_get_unit_status(self):
         self.harness.set_leader(True)

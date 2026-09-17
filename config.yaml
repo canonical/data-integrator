@@ -33,7 +33,7 @@ options:
   entity-permissions:
     type: string
     default:
-    description: "List of permissions to assign to the custom entity. For most products, a JSON list. For MLflow, either a JSON object mapping each `<workspace>` to a `<tier>` (with each tier being one of `read-only`, `member`, `edit`, `admin`) for workspace grants, or the literal, non-JSON `super-admin` keyword for a cross-workspace super-admin."
+    description: "List of permissions to assign to the custom entity, as a JSON list of objects, each with `resource_name`, `resource_type` and `privileges`.
   extra-user-roles:
     type: string
     default:

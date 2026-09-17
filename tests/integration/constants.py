@@ -39,9 +39,15 @@ MLFLOW = "mlflow-server"
 MLFLOW_ENTITY_NAME = "my-username"
 MLFLOW_WORKSPACE_NAME = "my-workspace"
 MLFLOW_TIER = "edit"
-MLFLOW_ENTITY_PERMISSIONS = json.dumps({MLFLOW_WORKSPACE_NAME: MLFLOW_TIER})
+MLFLOW_ENTITY_PERMISSIONS = json.dumps([{
+    "resource_name": MLFLOW_WORKSPACE_NAME,
+    "resource_type": "workspace",
+    "privileges": [MLFLOW_TIER],
+}])
 MLFLOW_WORKSPACE_NAME_UPDATED = "my-other-workspace"
 MLFLOW_TIER_UPDATED = "admin"
-MLFLOW_ENTITY_PERMISSIONS_UPDATED = json.dumps({
-    MLFLOW_WORKSPACE_NAME_UPDATED: MLFLOW_TIER_UPDATED
-})
+MLFLOW_ENTITY_PERMISSIONS_UPDATED = json.dumps([{
+    "resource_name": MLFLOW_WORKSPACE_NAME_UPDATED,
+    "resource_type": "workspace",
+    "privileges": [MLFLOW_TIER_UPDATED],
+}])

@@ -127,15 +127,16 @@ For etcd or Valkey, please configure the desired `prefix-name`:
 juju config data-integrator prefix-name="*"
 ```
 
-For MLflow, please configure the desired MLflow username via `entity-name` and the desired MLflow workspace grants via `entity-permissions`, with...
-- ... either a flat map of workspace names to their respective grants (`read-only`, `member`, `edit`, `admin`, `super-admin`), for workspace-wide grants:
+For MLflow, please configure the desired MLflow username via `entity-name` and the desired MLflow grants via `entity-permissions`, a JSON list of objects each with `resource_name`, `resource_type` and `privileges`, with such object representings...
+- ... either workspace-wide grants, each with `resource_type` set to `workspace`, with `resource_name` as the workspace name and with `privileges` containing one  the allowed permission levels (`read-only`, `member`, `edit`, `admin`):
   ```shell
-  juju config data-integrator entity-name='my-username' entity-permissions='{"analytics-team": "admin", "data-team": "read-only"}'
+  juju config data-integrator entity-name='my-username' entity-permissions='[{"resource_type": "workspace", "resource_name": "analytics-team", "privileges": ["admin"]}, {"resource_type": "workspace", "resource_name": "data-team", "privileges": ["read-only"]}]'
   ```
-- ... or a single `super-admin` keyword (not a key-value map), for a cross-workspace super-admin:
+- ... or a cross-workspace super-admin grant, with `resource_type` set to `super-admin` and without any redundant `resource_name` or `privileges`, since super-admins can already access all workspaces with admin privileges:
   ```shell
-  juju config data-integrator entity-name='my-username' entity-permissions='super-admin'
+  juju config data-integrator entity-name='my-username' entity-permissions='[{"resource_type": "super-admin", "resource_name": "", "privileges": []}]'
   ```
+Unlike the username (`entity-name`), the grants (`entity-permissions`) can be edited in place and take effect without recreating the relation.
 
 #### Relation with desired application
 
