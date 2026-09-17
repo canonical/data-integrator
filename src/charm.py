@@ -218,7 +218,7 @@ class IntegratorCharm(CharmBase):
                     resource=self.entity_name or "",
                     entity_type="USER",
                     entity_name=self.entity_name or "",
-                    entity_permissions=self.entity_permissions,
+                    entity_permissions=self.mlflow_entity_permissions,
                 ),
             ],
             response_model=ResourceProviderModel,
