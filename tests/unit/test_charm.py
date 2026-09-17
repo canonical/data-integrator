@@ -179,9 +179,9 @@ class TestCharm(unittest.TestCase):
 
     def test_mlflow_entity_permissions_super_admin(self):
         self.harness.update_config({
-            "entity-permissions": json.dumps(
-                [{"resource_name": "", "resource_type": "super-admin", "privileges": []}]
-            )
+            "entity-permissions": json.dumps([
+                {"resource_name": "", "resource_type": "super-admin", "privileges": []}
+            ])
         })
         permissions = self.harness.charm.mlflow_entity_permissions
         self.assertEqual(len(permissions), 1)
@@ -207,9 +207,9 @@ class TestCharm(unittest.TestCase):
 
     def test_mlflow_grants_render_super_admin(self):
         self.harness.update_config({
-            "entity-permissions": json.dumps(
-                [{"resource_name": "", "resource_type": "super-admin", "privileges": []}]
-            )
+            "entity-permissions": json.dumps([
+                {"resource_name": "", "resource_type": "super-admin", "privileges": []}
+            ])
         })
         rendered = self.harness.charm._render_mlflow_grants(
             self.harness.charm.mlflow_entity_permissions
