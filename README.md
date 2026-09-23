@@ -15,8 +15,9 @@ This charm allows a user to automatically create and manage product credentials 
 * [etcd](https://github.com/canonical/charmed-etcd-operator)
 * [Cassandra](https://github.com/canonical/cassandra-operator)
 * [Valkey](https://github.com/canonical/valkey-operator)
+* [MLflow](https://github.com/canonical/mlflow-operator)
 
-It grants access to several charmed applications developed by the data-platform by handling the management of their credentials. In particular, a user can request access to a database (MySQL, PostgreSQL and MongoDB), a topic (Kafka), or an index (OpenSearch). Moreover, a user can require additional privileges by specifying extra-user-roles.
+It grants access to several charmed applications developed by the data-platform by handling the management of their credentials. In particular, a user can request access to a database (MySQL, PostgreSQL and MongoDB), a topic (Kafka), an index (OpenSearch), or workspaces (MLflow). Moreover, a user can require additional privileges by specifying extra-user-roles or entity-permissions.
 
 This charm enables applications or users outside Juju to connect with the desired charmed application by providing credentials and endpoints that are needed to use the desired product.
 
@@ -35,25 +36,28 @@ prefix-name - `string`; The prefix for which the access is granted.
 
 keyspace-name - `string`; The keyspace name for which the access is granted.
 
+entity-name - `string`; The name of the entity to create when integrated (that for MLflow corresponds to the username).
+
 entity-type - `string`; The type of entity to create when integrated.
 
-entity-permissions - `string`; List of permissions to assigned to the custom entity, in JSON format.
+entity-permissions - `string`; Permissions to be assigned to the custom entity, in JSON format (that for MLflow correspond to workspace grants).
 
 extra-user-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 extra-group-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 
-| Product    | database-name      | topic-name         | index-name         | prefix-name        | keyspace-name      | entity-type         | entity-permissions | extra-user-roles   | extra-group-roles  |
-|------------|--------------------|--------------------|--------------------|--------------------|--------------------|---------------------|--------------------|--------------------|--------------------|
-| MySQL      | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| PostgreSQL | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| MongoDB    | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kafka      |                    | :heavy_check_mark: |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
-| OpenSearch |                    |                    | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| etcd       |                    |                    |                    | :heavy_check_mark: |                    |                     |                    |                    |                    |
-| Cassandra  |                    |                    |                    |                    | :heavy_check_mark: | :white_check_mark:  | :white_check_mark: |                    |                    |
-| Valkey     |                    |                    |                    | :heavy_check_mark: |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
+| Product    | database-name      | topic-name         | index-name         | prefix-name        | keyspace-name      | entity-name        | entity-type         | entity-permissions | extra-user-roles   | extra-group-roles  |
+|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|---------------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
+| OpenSearch |                    |                    | :heavy_check_mark: |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| etcd       |                    |                    |                    | :heavy_check_mark: |                    |                    |                     |                    |                    |                    |
+| Cassandra  |                    |                    |                    |                    | :heavy_check_mark: |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
+| Valkey     |                    |                    |                    | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
+| MLflow     |                    |                    |                    |                    |                    | :heavy_check_mark: |                     | :heavy_check_mark: |                    |                    |
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
@@ -122,6 +126,17 @@ For etcd or Valkey, please configure the desired `prefix-name`:
 ```shell
 juju config data-integrator prefix-name="*"
 ```
+
+For MLflow, please configure the desired MLflow username via `entity-name` and the desired MLflow grants via `entity-permissions`, a JSON list of objects each with `resource_name`, `resource_type` and `privileges`, with such object representings...
+- ... either workspace-wide grants, each with `resource_type` set to `workspace`, with `resource_name` as the workspace name and with `privileges` containing one  the allowed permission levels (`read-only`, `member`, `edit`, `admin`):
+  ```shell
+  juju config data-integrator entity-name='my-username' entity-permissions='[{"resource_type": "workspace", "resource_name": "analytics-team", "privileges": ["admin"]}, {"resource_type": "workspace", "resource_name": "data-team", "privileges": ["read-only"]}]'
+  ```
+- ... or a cross-workspace super-admin grant, with `resource_type` set to `super-admin` and without any redundant `resource_name` or `privileges`, since super-admins can already access all workspaces with admin privileges:
+  ```shell
+  juju config data-integrator entity-name='my-username' entity-permissions='[{"resource_type": "super-admin", "resource_name": "", "privileges": []}]'
+  ```
+Unlike the username (`entity-name`), the grants (`entity-permissions`) can be edited in place and take effect without recreating the relation.
 
 #### Relation with desired application
 
@@ -248,6 +263,7 @@ Supported [relations](https://juju.is/docs/olm/relations):
 - `postgresql_client`
 - `kafka_client`
 - `opensearch_client`
+- `mlflow_client`
 
 All applications that use the (`data_interfaces`)[https://github.com/canonical/data-platform-libs] library are supported by the Data Integrator Charm.
 

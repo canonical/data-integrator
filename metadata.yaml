@@ -57,6 +57,9 @@ requires:
   valkey:
     interface: valkey_client
     limit: 1
+  mlflow:
+    interface: mlflow_client
+    limit: 1
 
 # subordinate charm integrations
 provides:

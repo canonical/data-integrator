@@ -16,4 +16,5 @@ KYUUBI = "kyuubi"
 ETCD = "etcd"
 CASSANDRA = "cassandra"
 VALKEY = "valkey"
+MLFLOW = "mlflow"
 DATABASES = [MYSQL, MONGODB, POSTGRESQL, MONGOS, ZOOKEEPER, KYUUBI]

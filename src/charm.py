@@ -32,6 +32,7 @@ from charms.data_platform_libs.v0.data_interfaces import (
 from dpcharmlibs.interfaces import (
     EntityPermissionModel,
     RequirerCommonModel,
+    RequirerDataContractV1,
     ResourceCreatedEvent,
     ResourceEntityCreatedEvent,
     ResourceProviderModel,
@@ -52,9 +53,13 @@ from ops import (
     main,
 )
 
-from literals import CASSANDRA, DATABASES, ETCD, KAFKA, OPENSEARCH, PEER, VALKEY
+from literals import CASSANDRA, DATABASES, ETCD, KAFKA, MLFLOW, OPENSEARCH, PEER, VALKEY
 
 logger = logging.getLogger(__name__)
+
+# the `resource_type` value of `entity-permissions` objects that requests, for MLflow, a
+# cross-workspace super-admin grant instead of a workspace-wide grant:
+MLFLOW_SUPER_ADMIN_GRANT = "super-admin"
 
 Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
 EntityCreatedEvents = Union[
@@ -204,6 +209,25 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.valkey.on.resource_created, self._on_resource_created)
         self.framework.observe(self.on[VALKEY].relation_broken, self._on_relation_broken)
 
+        # MLflow
+        self.mlflow = ResourceRequirerEventHandler(
+            charm=self,
+            relation_name=MLFLOW,
+            requests=[
+                RequirerCommonModel(
+                    resource=self.entity_name or "",
+                    entity_type="USER",
+                    entity_name=self.entity_name or "",
+                    entity_permissions=self.mlflow_entity_permissions,
+                ),
+            ],
+            response_model=ResourceProviderModel,
+        )
+        self.framework.observe(
+            self.mlflow.on.resource_entity_created, self._on_resource_entity_created
+        )
+        self.framework.observe(self.on[MLFLOW].relation_broken, self._on_relation_broken)
+
     def _on_resource_created(self, event: ResourceCreatedEvent[ResourceProviderModel]) -> None:
         """Event triggered when a resource was created for this application."""
         logger.debug(f"Credentials are received: {event.response.username}")
@@ -292,6 +316,14 @@ class IntegratorCharm(CharmBase):
                 "prefix",
                 self.prefix_active,
             ),
+            # NOTE: for MLflow, grants (entity-permissions) are live-editable with immediate effect
+            # on the provider's side, while only entity-name changes require relation recreation:
+            (
+                self.is_mlflow_related and self.mlflow_entity_name_active != self.entity_name,
+                "MLflow",
+                "entity name",
+                self.mlflow_entity_name_active,
+            ),
         ):
             if mismatch:
                 logger.error(
@@ -301,7 +333,7 @@ class IntegratorCharm(CharmBase):
                     f"To change {name_type}: {active_name}, please remove relation and add it again"
                 )
 
-    def get_status(self) -> StatusBase:
+    def get_status(self) -> StatusBase:  # noqa: C901
         """Return the current application status."""
         if self.model.config.get("requested-entities-secret", None):
             if not self.model.juju_version.has_secrets:
@@ -315,9 +347,11 @@ class IntegratorCharm(CharmBase):
             self.index_name,
             self.prefix,
             self.keyspace_name,
+            self.entity_name,
         ]):
             return BlockedStatus(
-                "Please specify either topic, index, database name, keyspace name, or prefix"
+                "Please specify either topic, index, database name, keyspace name, entity name, "
+                "or prefix"
             )
 
         if self.topic_name and not KafkaRequires.is_topic_value_acceptable(self.topic_name):
@@ -326,6 +360,12 @@ class IntegratorCharm(CharmBase):
             )
             return BlockedStatus("Please pass an acceptable topic value")
 
+        if self.mlflow_relation:
+            if not self.entity_name:
+                return BlockedStatus("Please specify 'entity-name' for MLflow")
+            if not self.entity_permissions:
+                return BlockedStatus("Please specify 'entity-permissions' for MLflow")
+
         if not any([
             self.is_database_related,
             self.is_kafka_related,
@@ -333,6 +373,7 @@ class IntegratorCharm(CharmBase):
             self.is_etcd_related,
             self.is_cassandra_related,
             self.is_valkey_related,
+            self.is_mlflow_related,
         ]):
             return BlockedStatus("Please relate the data-integrator with the desired product")
 
@@ -365,6 +406,16 @@ class IntegratorCharm(CharmBase):
             self._on_config_changed_index()
         if self.prefix and (not self.prefix_active or self.mtls_client_cert):
             self._on_config_changed_prefix()
+        # NOTE: for MLflow, grants (entity-permissions) are live-editable with immediate effect on
+        # the provider's side, while only entity-name changes require relation recreation, so
+        # grants are (re)pushed to the existing relation when they drift from the committed ones:
+        if (
+            self.entity_name
+            and self.mlflow_entity_name_active == self.entity_name
+            and self.mlflow_grants_active
+            != self._render_mlflow_grants(self.mlflow_entity_permissions)
+        ):
+            self._on_config_changed_mlflow()
 
     def _on_config_changed_database(self) -> None:
         """Handle on config changed database event."""
@@ -437,7 +488,20 @@ class IntegratorCharm(CharmBase):
             self.etcd.update_relation_data(rel.id, prefix_relation_data)
             self.etcd.set_mtls_cert(rel.id, self.mtls_client_cert)
 
-    def _get_cassandra_credentials(self) -> dict | None:
+    def _on_config_changed_mlflow(self) -> None:
+        """Handle on config-changed MLflow event by rewriting the requested grants."""
+        entity_permissions = self.mlflow_entity_permissions
+        for relation in self.mlflow.relations:
+            model = self.mlflow.interface.build_model(
+                relation.id,
+                RequirerDataContractV1[RequirerCommonModel],
+                component=self.app,
+            )
+            for request in model.requests:
+                request.entity_permissions = entity_permissions
+            self.mlflow.interface.write_model(relation.id, model)
+
+    def _get_cassandra_credentials(self) -> Optional[None]:
         """Extract Cassandra credentials if relation and resources are present."""
         relation = self.cassandra_relation
         if not relation:
@@ -491,6 +555,27 @@ class IntegratorCharm(CharmBase):
 
         return None
 
+    def _get_mlflow_credentials(self) -> dict | None:
+        """Extract MLflow credentials if relation and resources are present."""
+        relation = self.mlflow_relation
+        if not relation or not self.mlflow.are_all_resources_created(relation.id):
+            return None
+
+        # since the requirer explicitly requests all the descriptive fields of the integration in
+        # the first place, with the provider only signaling creation and adding no fields with its
+        # response, any fields displayed to the user are directly read from the requirer's request
+        # rather than from the provider's response — NOTE: the requirer's request, and not the
+        # requirer's configs, are read, as some of the configs can be changed without taking effect
+        # until the relation is recreated, such as the entity name, so they would provide clients
+        # with fields not yet effective:
+        request = self._committed_mlflow_request()
+        if request is None or not request.entity_name:
+            return None
+        return {
+            "username": request.entity_name,
+            "grants": self._render_mlflow_grants(request.entity_permissions),
+        }
+
     def _on_get_credentials_action(self, event: ActionEvent) -> None:
         """Returns the credentials an action response."""
         if not any([
@@ -499,9 +584,11 @@ class IntegratorCharm(CharmBase):
             self.index_name,
             self.prefix,
             self.keyspace_name,
+            self.entity_name,
         ]):
             event.fail(
-                "The database name, topic name, index name, keyspace name, or prefix is not specified in the config."
+                "The database name, topic name, index name, keyspace name, entity name, or prefix "
+                "is not specified in the config."
             )
             event.set_results({"ok": False})
             return
@@ -513,6 +600,7 @@ class IntegratorCharm(CharmBase):
             self.is_etcd_related,
             self.is_cassandra_related,
             self.is_valkey_related,
+            self.is_mlflow_related,
         ]):
             event.fail("The action can be run only after relation is created.")
             event.set_results({"ok": False})
@@ -545,6 +633,9 @@ class IntegratorCharm(CharmBase):
 
         if valkey_credentials := self._get_valkey_credentials():
             result[VALKEY] = valkey_credentials
+
+        if mlflow_credentials := self._get_mlflow_credentials():
+            result[MLFLOW] = mlflow_credentials
 
         event.set_results(result)
 
@@ -627,6 +718,16 @@ class IntegratorCharm(CharmBase):
     def index_name(self) -> Optional[str]:
         """Return the configured database name."""
         return self.model.config.get("index-name", None)
+
+    @property
+    def workspace_name(self) -> Optional[str]:
+        """Return the configured workspace name."""
+        return self.model.config.get("workspace-name", None)
+
+    @property
+    def entity_name(self) -> Optional[str]:
+        """Return the configured entity name."""
+        return self.model.config.get("entity-name", None)
 
     @property
     def entity_type(self) -> Optional[str]:
@@ -720,6 +821,11 @@ class IntegratorCharm(CharmBase):
         return self.valkey.relations[0] if len(self.valkey.relations) else None
 
     @property
+    def mlflow_relation(self) -> Optional[Relation]:
+        """Return the MLflow relation if present."""
+        return self.mlflow.relations[0] if len(self.mlflow.relations) else None
+
+    @property
     def databases_active(self) -> Dict[str, str]:
         """Return the configured database name."""
         return {
@@ -746,6 +852,46 @@ class IntegratorCharm(CharmBase):
             resource = model.requests[0].resource
 
             return resource if resource != "" else None
+
+    def _committed_mlflow_request(self) -> Optional[RequirerCommonModel]:
+        """Return this integrator's own committed MLflow request, or None if not present.
+
+        Read from this integrator's own databag (not the provider's response, which does not echo
+        the request back), so callers see what was actually requested and provisioned.
+        """
+        if relation := self.mlflow_relation:
+            model = self.mlflow.interface.build_model(
+                relation.id,
+                RequirerDataContractV1[RequirerCommonModel],
+                component=self.app,
+            )
+            return model.requests[0] if model.requests else None
+        return None
+
+    @staticmethod
+    def _render_mlflow_grants(entity_permissions) -> str:
+        """Render MLflow entity permissions as a compact, order-independent, displayable string."""
+        permissions = entity_permissions or []
+        if any(p.resource_type == MLFLOW_SUPER_ADMIN_GRANT for p in permissions):
+            return MLFLOW_SUPER_ADMIN_GRANT
+        grants = {
+            p.resource_name: (p.privileges[0] if p.privileges else "")
+            for p in permissions
+            if p.resource_type == "workspace"
+        }
+        return json.dumps(grants, sort_keys=True)
+
+    @property
+    def mlflow_entity_name_active(self) -> Optional[str]:
+        """Return the entity name this integrator committed to the MLflow relation."""
+        request = self._committed_mlflow_request()
+        return request.entity_name if request else None
+
+    @property
+    def mlflow_grants_active(self) -> Optional[str]:
+        """Return the entity permissions this integrator committed to the MLflow relation."""
+        request = self._committed_mlflow_request()
+        return self._render_mlflow_grants(request.entity_permissions) if request else None
 
     @property
     def topic_active(self) -> Optional[str]:
@@ -778,6 +924,11 @@ class IntegratorCharm(CharmBase):
 
             resource = model.requests[0].resource
             return resource if resource != "" else None
+
+    @property
+    def entity_name_active(self) -> Optional[str]:
+        """Return the configured entity-name parameter."""
+        return self._get_active_value("entity-name")
 
     @property
     def entity_type_active(self) -> Optional[str]:
@@ -855,6 +1006,13 @@ class IntegratorCharm(CharmBase):
         )
 
     @property
+    def is_mlflow_related(self) -> bool:
+        """Return if a relation with MLflow is present."""
+        return bool(self.mlflow.relations) and all(
+            self.mlflow.are_all_resources_created(rel.id) for rel in self.mlflow.relations
+        )
+
+    @property
     def is_etcd_related(self) -> bool:
         """Return if a relation with etcd is present."""
         return (
@@ -897,6 +1055,18 @@ class IntegratorCharm(CharmBase):
                 privileges=json.loads(self.entity_permissions),
             )
         ]
+
+    @property
+    def mlflow_entity_permissions(self) -> list[EntityPermissionModel]:
+        """Return the MLflow entity permissions parsed from the entity-permissions config.
+
+        MLflow reuses the shared entity-permissions format (a JSON list of objects, each with
+        ``resource_name``, ``resource_type`` and ``privileges``), so the value also validates
+        against the v0 library the database/Kafka/OpenSearch backends load at startup. For MLflow,
+        ``resource_type`` is ``workspace`` (with the access tier as its single privilege) or
+        ``super-admin`` (whose ``resource_name`` and ``privileges`` are unused).
+        """
+        return self.entity_permissions_loaded
 
     @property
     def entity_permissions_loaded(self) -> list[EntityPermissionModel]:

@@ -2,6 +2,8 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
+
 DATA_INTEGRATOR = "data-integrator"
 
 TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
@@ -32,3 +34,24 @@ CASSANDRA_EXTRA_USER_ROLES = "ALTER,AUTHORIZE,DROP,MODIFY,SELECT,CREATE"
 
 VALKEY = "valkey"
 VALKEY_KEY_PREFIX = "client_application:"
+
+MLFLOW = "mlflow-server"
+MLFLOW_ENTITY_NAME = "my-username"
+MLFLOW_WORKSPACE_NAME = "my-workspace"
+MLFLOW_TIER = "edit"
+MLFLOW_ENTITY_PERMISSIONS = json.dumps([
+    {
+        "resource_name": MLFLOW_WORKSPACE_NAME,
+        "resource_type": "workspace",
+        "privileges": [MLFLOW_TIER],
+    }
+])
+MLFLOW_WORKSPACE_NAME_UPDATED = "my-other-workspace"
+MLFLOW_TIER_UPDATED = "admin"
+MLFLOW_ENTITY_PERMISSIONS_UPDATED = json.dumps([
+    {
+        "resource_name": MLFLOW_WORKSPACE_NAME_UPDATED,
+        "resource_type": "workspace",
+        "privileges": [MLFLOW_TIER_UPDATED],
+    }
+])
