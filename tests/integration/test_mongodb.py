@@ -54,15 +54,13 @@ async def test_deploy(
 @only_with_juju_secrets
 async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     """Test the relation with MongoDB and database accessibility."""
-    await asyncio.gather(
-        ops_test.model.deploy(
-            MONGODB[cloud_name],
-            channel="6/edge",
-            application_name=MONGODB[cloud_name],
-            num_units=1,
-            series="jammy",
-            trust=True,
-        )
+    await ops_test.model.deploy(
+        MONGODB[cloud_name],
+        channel="8/edge",
+        application_name=MONGODB[cloud_name],
+        num_units=1,
+        series="noble",
+        trust=True,
     )
     await ops_test.model.wait_for_idle(apps=[MONGODB[cloud_name]], wait_for_active=True)
     assert ops_test.model.applications[MONGODB[cloud_name]].status == "active"
