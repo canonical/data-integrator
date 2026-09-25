@@ -1,4 +1,6 @@
 summary: test_kafka.py
+# TODO: re-enable once the test moves to Kafka 4 
+manual: true
 environment:
   TEST_MODULE: test_kafka.py
 execute: |
