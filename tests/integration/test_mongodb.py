@@ -67,8 +67,14 @@ async def test_deploy_and_relate_mongodb(ops_test: OpsTest, cloud_name: str):
     await ops_test.model.wait_for_idle(apps=[MONGODB[cloud_name]], wait_for_active=True)
     assert ops_test.model.applications[MONGODB[cloud_name]].status == "active"
     integrator_relation = await ops_test.model.add_relation(DATA_INTEGRATOR, MONGODB[cloud_name])
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, MONGODB[cloud_name]])
-    assert ops_test.model.applications[DATA_INTEGRATOR].status == "active"
+    # mongodb-k8s reports active before its workload is up and skips client requests until the
+    # database is initialised, so wait for data-integrator to receive credentials
+    await ops_test.model.wait_for_idle(
+        apps=[DATA_INTEGRATOR, MONGODB[cloud_name]],
+        status="active",
+        idle_period=10,
+        timeout=1000,
+    )
 
     # check if secrets are used on Juju3
     assert await check_secrets_usage_matching_juju_version(

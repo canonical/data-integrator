@@ -33,6 +33,7 @@ KEYSPACE_NAME = "test_ks"
 CASSANDRA_EXTRA_USER_ROLES = "ALTER,AUTHORIZE,DROP,MODIFY,SELECT,CREATE"
 
 VALKEY = "valkey"
+VALKEY_BASE = "ubuntu@26.04"
 VALKEY_KEY_PREFIX = "client_application:"
 
 MLFLOW = "mlflow-server"
