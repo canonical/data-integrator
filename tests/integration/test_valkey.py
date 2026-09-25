@@ -10,7 +10,7 @@ from pathlib import PosixPath
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .constants import APP, DATA_INTEGRATOR, VALKEY, VALKEY_KEY_PREFIX
+from .constants import APP, DATA_INTEGRATOR, VALKEY, VALKEY_BASE, VALKEY_KEY_PREFIX
 from .helpers import (
     fetch_action_database,
     fetch_action_get_credentials,
@@ -31,14 +31,19 @@ async def test_deploy(
     }
     await ops_test.model.set_config(model_config)
 
+    # python-libjuju does not know the ubuntu@26.04 base yet, so deploy Valkey through the CLI;
+    # without an explicit base, Juju picks the older ubuntu@24.04 revision from the channel
+    return_code, _, stderr = await ops_test.juju(
+        "deploy",
+        VALKEY,
+        "--channel=9/edge",
+        f"--base={VALKEY_BASE}",
+        "--num-units=3",
+        "--trust",
+    )
+    assert return_code == 0, f"Failed to deploy {VALKEY}: {stderr}"
+
     await asyncio.gather(
-        ops_test.model.deploy(
-            VALKEY,
-            channel="9/edge",
-            application_name=VALKEY,
-            num_units=3,
-            trust=True,
-        ),
         ops_test.model.deploy(
             data_integrator_charm, application_name="data-integrator", num_units=1, series="jammy"
         ),
