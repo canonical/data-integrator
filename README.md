@@ -184,11 +184,11 @@ application is removed:**
   Integrator never asks the related charm to drop it.
 
 > **NOTE** The exact behaviour on removal is decided by the related charm, not by
-> the Data Integrator. For PostgreSQL and MySQL the database is always kept.
-> [MongoDB](https://charmhub.io/mongodb/configurations) has an `auto-delete`
-> config option (default `false`); when it is set to `true` on the MongoDB
-> application, databases that are no longer used by any relation are dropped
-> when the relation is removed. Check the documentation of the related charm if
+> the Data Integrator. For PostgreSQL, MySQL and MongoDB 8 the database is always kept.
+> [MongoDB 6](https://charmhub.io/mongodb/configurations?channel=6/stable#auto-delete)
+> has an `auto-delete` config option (default `false`); when it is set to `true` on
+> the MongoDB application, databases that are no longer used by any relation are
+> dropped when the relation is removed. Check the documentation of the related charm if
 > you rely on this behaviour.
 
 Because the resource is kept, relating a new Data Integrator (or re-relating the
