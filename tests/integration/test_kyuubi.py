@@ -157,7 +157,10 @@ async def test_deploy_kyuubi_setup(
 
     # Integrate Kyuubi with Integration Hub and wait
     logger.info("Integrating kyuubi charm with integration-hub charm...")
-    await ops_test.model.add_relation(INTEGRATION_HUB_APP_NAME, KYUUBI_APP_NAME)
+    await ops_test.model.add_relation(
+        f"{INTEGRATION_HUB_APP_NAME}:spark-service-account",
+        f"{KYUUBI_APP_NAME}:spark-service-account",
+    )
     logger.info(
         "Waiting for kyuubi, s3-integrator and integration_hub charms to be idle and active..."
     )
