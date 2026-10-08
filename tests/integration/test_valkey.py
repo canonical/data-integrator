@@ -104,10 +104,6 @@ async def test_read_write(ops_test: OpsTest, cloud_name: str):
     )
     assert result["ok"]
 
-    # https://github.com/canonical/valkey-operator/pull/158 introduced a regression for clients
-    # https://github.com/canonical/valkey-operator/issues/168
-    # disable the rest of the test until a fix is published
-    """
     await ops_test.model.applications[DATA_INTEGRATOR].remove_relation(
         f"{DATA_INTEGRATOR}:valkey", f"{VALKEY}:valkey-client"
     )
@@ -134,4 +130,3 @@ async def test_read_write(ops_test: OpsTest, cloud_name: str):
         database_name=VALKEY_KEY_PREFIX,
     )
     assert result["ok"]
-    """
