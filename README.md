@@ -96,6 +96,7 @@ In addition:
 - Optional field `entity-type` can be specified.
 ```shell
 juju config data-integrator database-name=test-database entity-type=GROUP
+```
 
 - Optional fields `entity-type` and `entity-permissions` can be specified.
 ```shell
@@ -157,6 +158,43 @@ juju remove-relation data-integrator <application>
 ```
 
 > If you need to modify `database-name`, `topic-name`, `index-name`, `entity-type`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation, change the desired fields, and then relate the data-integrator with the application again.
+
+#### Database creation and deletion
+
+The Data Integrator charm does not talk to the database itself. It only requests
+access over the relation, and the related data-platform charm (PostgreSQL, MySQL,
+MongoDB, etc.) is the one that creates the resource and the credentials.
+
+**When the relation is created:**
+
+- The requested resource (the database from `database-name`, the topic from
+  `topic-name`, the index from `index-name`, etc.) is created by the related
+  charm if it does not exist yet. You do not need to create it beforehand.
+- If the resource already exists, it is reused and no data is touched. Only a new
+  user with access to it is created.
+- A dedicated user (named `relation-<id>` unless `entity-name` is set) is created
+  and its credentials are exposed through the `get-credentials` action.
+
+**When the relation is removed** (`juju remove-relation`) **or the Data Integrator
+application is removed:**
+
+- The user created for the relation is deleted, so the previous credentials stop
+  working.
+- The database (or topic, index, ...) and its data are **kept**. The Data
+  Integrator never asks the related charm to drop it.
+
+> **NOTE** The exact behaviour on removal is decided by the related charm, not by
+> the Data Integrator. For PostgreSQL, MySQL and MongoDB 8 the database is always kept.
+> [MongoDB 6](https://charmhub.io/mongodb/configurations?channel=6/stable#auto-delete)
+> has an `auto-delete` config option (default `false`); when it is set to `true` on
+> the MongoDB application, databases that are no longer used by any relation are
+> dropped when the relation is removed. Check the documentation of the related charm if
+> you rely on this behaviour.
+
+Because the resource is kept, relating a new Data Integrator (or re-relating the
+same one) with the same `database-name` gives access to the existing data with a
+fresh set of credentials. If you want to remove the data, do it directly in the
+related product after removing the relation.
 
 #### Retrieve credentials
 
