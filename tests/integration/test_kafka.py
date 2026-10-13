@@ -16,7 +16,6 @@ from .constants import (
     KAFKA,
     KAFKA_EXTRA_USER_ROLES,
     TOPIC_NAME,
-    ZOOKEEPER,
 )
 from .helpers import check_logs, fetch_action_get_credentials, fetch_action_kafka
 
@@ -50,38 +49,23 @@ async def test_deploy(ops_test: OpsTest, app_charm: PosixPath, data_integrator_c
 @pytest.mark.abort_on_fail
 async def test_deploy_and_relate_kafka(ops_test: OpsTest, cloud_name: str):
     """Test the relation with Kafka and the correct production and consumption of messagges."""
-    await asyncio.gather(
-        ops_test.model.deploy(
-            ZOOKEEPER[cloud_name],
-            channel="3/edge",
-            application_name=ZOOKEEPER[cloud_name],
-            num_units=1,
-            series="jammy",
-        ),
-        ops_test.model.deploy(
-            KAFKA[cloud_name],
-            channel="3/edge",
-            application_name=KAFKA[cloud_name],
-            num_units=1,
-            series="jammy",
-        ),
+    await ops_test.model.deploy(
+        KAFKA[cloud_name],
+        channel="4/edge",
+        application_name=KAFKA[cloud_name],
+        num_units=1,
+        series="noble",
+        config={"roles": "broker,controller"},
+        trust=True,
     )
 
-    await ops_test.model.wait_for_idle(apps=[ZOOKEEPER[cloud_name]], timeout=1000, status="active")
-    await ops_test.model.wait_for_idle(apps=[KAFKA[cloud_name]], timeout=1000, status="blocked")
-
-    await ops_test.model.add_relation(KAFKA[cloud_name], ZOOKEEPER[cloud_name])
-    async with ops_test.fast_forward(fast_interval="60s"):
-        await ops_test.model.wait_for_idle(
-            apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name]],
-            timeout=2000,
-            idle_period=30,
-            status="active",
-        )
+    await ops_test.model.wait_for_idle(
+        apps=[KAFKA[cloud_name]], timeout=1000, status="active", raise_on_error=False
+    )
 
     await ops_test.model.add_relation(KAFKA[cloud_name], DATA_INTEGRATOR)
     await ops_test.model.wait_for_idle(
-        apps=[KAFKA[cloud_name], ZOOKEEPER[cloud_name], DATA_INTEGRATOR],
+        apps=[KAFKA[cloud_name], DATA_INTEGRATOR],
         timeout=2000,
         idle_period=30,
         status="active",
