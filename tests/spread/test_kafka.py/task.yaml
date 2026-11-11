@@ -1,7 +1,8 @@
 summary: test_kafka.py
-# TODO: re-enable once the test moves to Kafka 4 
-manual: true
 environment:
   TEST_MODULE: test_kafka.py
 execute: |
   tox run -e integration -- "tests/integration/$TEST_MODULE" --controller "$CONTROLLER_NAME" --model testing
+variants:
+  - -juju29_k8s
+  - -juju29_lxd
