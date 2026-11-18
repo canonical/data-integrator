@@ -53,6 +53,7 @@ async def test_deploy_data_integrator(
         ops_test.model.deploy(
             app_charm,
             application_name=ZOOKEEPER_APP_NAME,
+            channel="3/edge",
             num_units=1,
             series="jammy",
         ),
