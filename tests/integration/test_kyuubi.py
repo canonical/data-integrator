@@ -51,11 +51,9 @@ async def test_deploy_data_integrator(
             series="jammy",
         ),
         ops_test.model.deploy(
-            app_charm,
-            application_name=ZOOKEEPER_APP_NAME,
+            ZOOKEEPER_APP_NAME,
             channel="3/edge",
             num_units=1,
-            series="jammy",
         ),
     )
     await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP, ZOOKEEPER_APP_NAME])
