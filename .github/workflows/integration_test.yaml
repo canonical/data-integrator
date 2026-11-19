@@ -70,6 +70,7 @@ jobs:
     outputs:
       jobs: ${{ steps.collect-jobs.outputs.jobs }}
     permissions: {}
+    cache-mode: none
 
   integration-test:
     strategy:

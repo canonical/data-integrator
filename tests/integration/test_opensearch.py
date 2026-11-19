@@ -108,7 +108,9 @@ async def test_deploy(
         ),
         ops_test.model.deploy(app_charm, application_name=APP, num_units=1, series="jammy"),
     )
-    await ops_test.model.relate(OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME)
+    await ops_test.model.relate(
+        f"{OPENSEARCH[cloud_name]}:certificates", TLS_CERTIFICATES_APP_NAME
+    )
 
     await ops_test.model.wait_for_idle(
         apps=[DATA_INTEGRATOR, OPENSEARCH[cloud_name], TLS_CERTIFICATES_APP_NAME],
