@@ -8,6 +8,7 @@ from importlib.metadata import version
 from subprocess import PIPE, check_output
 from typing import Dict, Optional
 
+import requests
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 
@@ -141,3 +142,20 @@ async def check_secrets_usage_matching_juju_version(
     if juju_version > "3":
         return bool(await get_databag_field(ops_test, unit, relation_id, "secret-user"))
     return True
+
+
+def check_connect_api(results: dict) -> bool:
+    """Check connect API endpoint is accessible using the `get-credentials` action results."""
+    credentials = results.get("kafka-connect", {})
+    username = credentials.get("username")
+    password = credentials.get("password")
+    endpoint = credentials.get("endpoints").split(",")[0]
+    logger.info(f"Using {username}:**** on the connect REST endpoint: {endpoint}")
+    response = requests.get(
+        f"{endpoint}/health",
+        headers={"Content-Type": "application/json"},
+        auth=(username, password),
+    )
+    health_json = response.json()
+    logger.info(health_json)
+    return health_json.get("status") == "healthy"

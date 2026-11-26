@@ -39,6 +39,9 @@ requires:
   kafka:
     interface: kafka_client
     limit: 1
+  kafka-connect:
+    interface: connect_client
+    limit: 1
   zookeeper:
     interface: zookeeper
     limit: 1

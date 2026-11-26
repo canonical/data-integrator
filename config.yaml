@@ -10,6 +10,10 @@ options:
     type: string
     default:
     description: The topic name for which the access is granted (this parameter is needed for Kafka).
+  plugin-url:
+    type: string
+    default:
+    description: The URL to the Apache Kafka Connect plugin tarball, or the string "NOT-REQUIRED" if this integration is only intended for administration purposes (this parameter is needed for Kafka Connect).
   index-name:
     type: string
     default:

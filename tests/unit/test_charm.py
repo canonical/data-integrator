@@ -4,7 +4,7 @@ import json
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-from charms.data_platform_libs.v0.data_interfaces import ENTITY_USER
+from charms.data_platform_libs.v0.data_interfaces import ENTITY_USER, PLUGIN_URL_NOT_REQUIRED
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
@@ -12,7 +12,7 @@ from charm import IntegratorCharm
 
 BLOCKED_STATUS_INVALID_KF_TOPIC = BlockedStatus("Please pass an acceptable topic value")
 BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
-    "Please specify either topic, index, database name, keyspace name, entity name, or prefix",
+    "Please specify either topic, plugin URL, index, database name, keyspace name, entity name, or prefix",
 )
 BLOCKED_STATUS_RELATE = BlockedStatus(
     "Please relate the data-integrator with the desired product",
@@ -56,7 +56,7 @@ class TestCharm(unittest.TestCase):
             action_event.fail.call_args,
             [
                 (
-                    "The database name, topic name, index name, keyspace name, entity name, or prefix is not specified in the config.",
+                    "The database name, topic name, plugin URL, index name, keyspace name, entity name, or prefix is not specified in the config.",
                 )
             ],
         )
@@ -337,3 +337,32 @@ class TestCharm(unittest.TestCase):
                 "database": "test-database",
             },
         })
+
+    def test_is_plugin_url_valid(self):
+        """Asserts plugin-url validation accepts only http(s) URLs or the NOT-REQUIRED sentinel."""
+        valid_urls = [
+            PLUGIN_URL_NOT_REQUIRED,
+            "http://example.com/plugin.tar",
+            "https://example.com/plugin.tar",
+            "http://10.0.0.1:8080/plugin.tar",
+            "https://user:pass@example.com:8443/path/to/plugin.tar.gz?x=1",
+        ]
+        invalid_urls = [
+            "",
+            "   ",
+            "not-required",
+            "example.com/plugin.tar",
+            "ftp://example.com/plugin.tar",
+            "file:///tmp/plugin.tar",
+            "http://",
+            "https:///plugin.tar",
+            "http://[::1/plugin.tar",  # urlparse raises ValueError
+        ]
+
+        for url in valid_urls:
+            with self.subTest(url=url):
+                self.assertTrue(IntegratorCharm._is_plugin_url_valid(url))
+
+        for url in invalid_urls:
+            with self.subTest(url=url):
+                self.assertFalse(IntegratorCharm._is_plugin_url_valid(url))
