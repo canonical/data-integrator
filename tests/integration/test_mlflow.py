@@ -77,12 +77,8 @@ async def test_deploy_and_relate_mlflow(ops_test: OpsTest, cloud_name: str):
         ops_test.model.deploy(
             POSTGRESQL_K8S, channel="14/stable", config={"profile": "testing"}, trust=True
         ),
-        # TODO: restore once https://github.com/canonical/mlflow-operator/pull/494 lands on main,
-        # that is on channel "latest/edge", as python-libjuju breaks with this channel format:
-        ops_test.juju(
-            "deploy", MLFLOW, "--trust", "--channel", "latest/edge/pr-494", "--revision", "1529"
-        ),
-        # ops_test.model.deploy(MLFLOW, channel="latest/edge", trust=True),
+        # TODO: Fix deployment and unpin revision
+        ops_test.model.deploy(MLFLOW, channel="latest/edge", revision=1586, trust=True),
     )
     await ops_test.model.wait_for_idle(
         apps=[MINIO, POSTGRESQL_K8S], status="active", raise_on_blocked=False, timeout=1000

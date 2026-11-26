@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 KYUUBI = "kyuubi"
 KYUUBI_APP_NAME = "kyuubi-k8s"
+ZOOKEEPER_APP_NAME = "zookeeper-k8s"
 S3_APP_NAME = "s3-integrator"
 INTEGRATION_HUB_APP_NAME = "spark-integration-hub-k8s"
 POSTGRESQL_APP_NAME = "postgresql-k8s"
@@ -49,8 +50,13 @@ async def test_deploy_data_integrator(
             num_units=1,
             series="jammy",
         ),
+        ops_test.model.deploy(
+            ZOOKEEPER_APP_NAME,
+            channel="3/edge",
+            num_units=1,
+        ),
     )
-    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP])
+    await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR, APP, ZOOKEEPER_APP_NAME])
     assert ops_test.model.applications[DATA_INTEGRATOR].status == "blocked"
 
     # config database name
@@ -83,6 +89,7 @@ async def test_deploy_kyuubi_setup(
     # Deploy the Kyuubi charm and wait
     logger.info("Deploying kyuubi-k8s charm...")
     await ops_test.model.deploy(KYUUBI_APP_NAME, **kyuubi_deploy_args)
+    await ops_test.model.add_relation(KYUUBI_APP_NAME, ZOOKEEPER_APP_NAME)
     logger.info("Waiting for kyuubi-k8s app to be settle...")
     await ops_test.model.wait_for_idle(apps=[KYUUBI_APP_NAME], status="blocked")
     logger.info(f"State of kyuubi-k8s app: {ops_test.model.applications[KYUUBI_APP_NAME].status}")
@@ -157,7 +164,10 @@ async def test_deploy_kyuubi_setup(
 
     # Integrate Kyuubi with Integration Hub and wait
     logger.info("Integrating kyuubi charm with integration-hub charm...")
-    await ops_test.model.add_relation(INTEGRATION_HUB_APP_NAME, KYUUBI_APP_NAME)
+    await ops_test.model.add_relation(
+        f"{INTEGRATION_HUB_APP_NAME}:spark-service-account",
+        f"{KYUUBI_APP_NAME}:spark-service-account",
+    )
     logger.info(
         "Waiting for kyuubi, s3-integrator and integration_hub charms to be idle and active..."
     )
