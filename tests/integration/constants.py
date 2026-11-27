@@ -20,6 +20,9 @@ ZOOKEEPER = {"localhost": "zookeeper", "k8s": "zookeeper-k8s"}
 TOPIC_NAME = "test_topic"
 KAFKA_EXTRA_USER_ROLES = "producer,consumer,admin"
 
+KARAPACE = {"localhost": "karapace", "k8s": "karapace-k8s"}
+SUBJECT_NAME = "test-subject"
+
 OPENSEARCH = {"localhost": "opensearch"}
 INDEX_NAME = "albums"
 OPENSEARCH_EXTRA_USER_ROLES = "default"

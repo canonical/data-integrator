@@ -12,7 +12,7 @@ from charm import IntegratorCharm
 
 BLOCKED_STATUS_INVALID_KF_TOPIC = BlockedStatus("Please pass an acceptable topic value")
 BLOCKED_STATUS_NO_CONFIG = BlockedStatus(
-    "Please specify either topic, index, database name, keyspace name, entity name, or prefix",
+    "Please specify either topic, subject, index, database name, keyspace name, entity name, or prefix",
 )
 BLOCKED_STATUS_RELATE = BlockedStatus(
     "Please relate the data-integrator with the desired product",
@@ -56,7 +56,7 @@ class TestCharm(unittest.TestCase):
             action_event.fail.call_args,
             [
                 (
-                    "The database name, topic name, index name, keyspace name, entity name, or prefix is not specified in the config.",
+                    "The database name, topic name, subject name, index name, keyspace name, entity name, or prefix is not specified in the config.",
                 )
             ],
         )

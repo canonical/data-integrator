@@ -8,6 +8,7 @@ from importlib.metadata import version
 from subprocess import PIPE, check_output
 from typing import Dict, Optional
 
+import requests
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 
@@ -141,3 +142,20 @@ async def check_secrets_usage_matching_juju_version(
     if juju_version > "3":
         return bool(await get_databag_field(ops_test, unit, relation_id, "secret-user"))
     return True
+
+
+def check_karapace_api(results: dict) -> bool:
+    """Check Karapace API endpoint is accessible using the `get-credentials` action results."""
+    credentials = results.get("karapace", {})
+    username = credentials.get("username")
+    password = credentials.get("password")
+    endpoint = credentials.get("endpoints").split(",")[0]
+    logger.info(f"Using {username}:**** on the Karapace REST endpoint: {endpoint}")
+    response = requests.get(
+        f"http://{endpoint}/subjects",
+        headers={"Content-Type": "application/vnd.schemaregistry.v1+json"},
+        auth=(username, password),
+    )
+    subjects_json = response.json()
+    logger.info(subjects_json)
+    return response.status_code == 200
