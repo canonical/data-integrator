@@ -201,7 +201,7 @@ related product after removing the relation.
 In order to retrieve the credentials use the following action:
 
 ```shell
-juju run-action data-integrator/leader get-credentials --wait
+juju run data-integrator/leader get-credentials --wait 1m
 ```
 
 ## Tutorial
@@ -266,7 +266,7 @@ mongodb:database-peers                 mongodb:database-peers                 mo
 ```
 To retrieve information such as the username, password, and database. Enter:
 ```shell
-juju run-action data-integrator/leader get-credentials --wait
+juju run data-integrator/leader get-credentials --wait 1m
 ```
 This should output something like:
 ```yaml
