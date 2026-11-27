@@ -24,8 +24,11 @@ from charms.data_platform_libs.v0.data_interfaces import (
     IndexCreatedEvent,
     IndexEntityCreatedEvent,
     KafkaRequires,
+    KarapaceRequires,
     OpenSearchRequires,
     RequirerData,
+    SubjectAllowedEvent,
+    SubjectEntityCreatedEvent,
     TopicCreatedEvent,
     TopicEntityCreatedEvent,
 )
@@ -53,7 +56,17 @@ from ops import (
     main,
 )
 
-from literals import CASSANDRA, DATABASES, ETCD, KAFKA, MLFLOW, OPENSEARCH, PEER, VALKEY
+from literals import (
+    CASSANDRA,
+    DATABASES,
+    ETCD,
+    KAFKA,
+    KARAPACE,
+    MLFLOW,
+    OPENSEARCH,
+    PEER,
+    VALKEY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +78,7 @@ Statuses = Enum("Statuses", ["ACTIVE", "BROKEN", "REMOVED"])
 EntityCreatedEvents = Union[
     DatabaseEntityCreatedEvent,
     IndexEntityCreatedEvent,
+    SubjectEntityCreatedEvent,
     TopicEntityCreatedEvent,
 ]
 
@@ -163,6 +177,24 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.kafka.on.topic_created, self._on_topic_created)
         self.framework.observe(self.kafka.on.topic_entity_created, self._on_entity_created)
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
+
+        # Karapace
+        self.karapace = KarapaceRequires(
+            self,
+            relation_name=KARAPACE,
+            subject=(
+                self.subject_name
+                if (self.subject_name is not None and self.subject_name != "*")
+                else ""
+            ),
+            entity_type=self.entity_type or "",
+            entity_permissions=self.entity_permissions or "",
+            extra_user_roles=self.extra_user_roles or "",
+            extra_group_roles=self.extra_group_roles or "",
+        )
+        self.framework.observe(self.karapace.on.subject_allowed, self._on_subject_allowed)
+        self.framework.observe(self.karapace.on.subject_entity_created, self._on_entity_created)
+        self.framework.observe(self.on[KARAPACE].relation_broken, self._on_relation_broken)
 
         # OpenSearch
         _entity_name, _entity_password = self.requested_entities_secret_content
@@ -270,6 +302,8 @@ class IntegratorCharm(CharmBase):
 
         if relation := self.kafka_relation:
             return self.kafka.fetch_relation_field(relation.id, key)
+        if relation := self.karapace_relation:
+            return self.karapace.fetch_relation_field(relation.id, key)
         if relation := self.opensearch_relation:
             return self.opensearch.fetch_relation_field(relation.id, key)
         if relation := self.etcd_relation:
@@ -282,6 +316,12 @@ class IntegratorCharm(CharmBase):
                 "Kafka",
                 "topic",
                 self.topic_active,
+            ),
+            (
+                self.is_karapace_related and self.subject_active != self.subject_name,
+                "Karapace",
+                "subject",
+                self.subject_active,
             ),
             (
                 self.is_opensearch_related and self.index_active != self.index_name,
@@ -343,6 +383,7 @@ class IntegratorCharm(CharmBase):
 
         if not any([
             self.topic_name,
+            self.subject_name,
             self.database_name,
             self.index_name,
             self.prefix,
@@ -350,7 +391,7 @@ class IntegratorCharm(CharmBase):
             self.entity_name,
         ]):
             return BlockedStatus(
-                "Please specify either topic, index, database name, keyspace name, entity name, "
+                "Please specify either topic, subject, index, database name, keyspace name, entity name, "
                 "or prefix"
             )
 
@@ -359,6 +400,12 @@ class IntegratorCharm(CharmBase):
                 f"Trying to pass an invalid topic value: {self.topic_name}, please pass an acceptable value instead"
             )
             return BlockedStatus("Please pass an acceptable topic value")
+
+        if self.subject_name == "*":
+            logger.error(
+                f"Trying to pass an invalid subject value: {self.subject_name}, please pass an acceptable value instead"
+            )
+            return BlockedStatus("Please pass an acceptable subject value")
 
         if self.mlflow_relation:
             if not self.entity_name:
@@ -369,6 +416,7 @@ class IntegratorCharm(CharmBase):
         if not any([
             self.is_database_related,
             self.is_kafka_related,
+            self.is_karapace_related,
             self.is_opensearch_related,
             self.is_etcd_related,
             self.is_cassandra_related,
@@ -402,6 +450,8 @@ class IntegratorCharm(CharmBase):
             self._on_config_changed_database()
         if self.topic_name and not self.topic_active:
             self._on_config_changed_topic()
+        if self.subject_name and not self.subject_active:
+            self._on_config_changed_subject()
         if self.index_name and not self.index_active:
             self._on_config_changed_index()
         if self.prefix and (not self.prefix_active or self.mtls_client_cert):
@@ -458,6 +508,29 @@ class IntegratorCharm(CharmBase):
 
         for rel in self.kafka.relations:
             self.kafka.update_relation_data(rel.id, topic_relation_data)
+
+    def _on_config_changed_subject(self) -> None:
+        """Handle on config changed for Karapace subject events."""
+        if self.subject_name == "*":
+            return
+
+        if self.entity_type:
+            subject_relation_data = {
+                "subject": self.subject_name,
+                "entity-type": self.entity_type,
+                "entity-permissions": self.entity_permissions or "",
+                "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
+            }
+        else:
+            subject_relation_data = {
+                "subject": self.subject_name,
+                "extra-user-roles": self.extra_user_roles or "",
+                "extra-group-roles": self.extra_group_roles or "",
+            }
+
+        for rel in self.karapace.relations:
+            self.karapace.update_relation_data(rel.id, subject_relation_data)
 
     def _on_config_changed_index(self) -> None:
         """Handle on config changed index event."""
@@ -576,18 +649,19 @@ class IntegratorCharm(CharmBase):
             "grants": self._render_mlflow_grants(request.entity_permissions),
         }
 
-    def _on_get_credentials_action(self, event: ActionEvent) -> None:
+    def _on_get_credentials_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Returns the credentials an action response."""
         if not any([
             self.database_name,
             self.topic_name,
+            self.subject_name,
             self.index_name,
             self.prefix,
             self.keyspace_name,
             self.entity_name,
         ]):
             event.fail(
-                "The database name, topic name, index name, keyspace name, entity name, or prefix "
+                "The database name, topic name, subject name, index name, keyspace name, entity name, or prefix "
                 "is not specified in the config."
             )
             event.set_results({"ok": False})
@@ -596,6 +670,7 @@ class IntegratorCharm(CharmBase):
         if not any([
             self.is_database_related,
             self.is_kafka_related,
+            self.is_karapace_related,
             self.is_opensearch_related,
             self.is_etcd_related,
             self.is_cassandra_related,
@@ -613,6 +688,9 @@ class IntegratorCharm(CharmBase):
 
         if self.is_kafka_related:
             result[KAFKA] = list(self.kafka.fetch_relation_data().values())[0]
+
+        if self.is_karapace_related:
+            result[KARAPACE] = list(self.karapace.fetch_relation_data().values())[0]
 
         if self.is_opensearch_related:
             result[OPENSEARCH] = list(self.opensearch.fetch_relation_data().values())[0]
@@ -649,6 +727,13 @@ class IntegratorCharm(CharmBase):
     def _on_topic_created(self, event: TopicCreatedEvent) -> None:
         """Event triggered when a topic was created for this application."""
         logger.debug(f"Kafka credentials are received: {event.username}")
+        self._on_config_changed(event)
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
+
+    def _on_subject_allowed(self, event: SubjectAllowedEvent) -> None:
+        """Event triggered when a subject was allowed for this application."""
+        logger.debug(f"Karapace credentials are received: {event.username}")
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
         self._update_relation_status(event.relation, Statuses.ACTIVE.name)
@@ -713,6 +798,11 @@ class IntegratorCharm(CharmBase):
     def topic_name(self) -> Optional[str]:
         """Return the configured topic name."""
         return self.model.config.get("topic-name", None)
+
+    @property
+    def subject_name(self) -> Optional[str]:
+        """Return the configured subject name."""
+        return self.model.config.get("subject-name", None)
 
     @property
     def index_name(self) -> Optional[str]:
@@ -805,6 +895,11 @@ class IntegratorCharm(CharmBase):
     def kafka_relation(self) -> Optional[Relation]:
         """Return the kafka relation if present."""
         return self.kafka.relations[0] if len(self.kafka.relations) else None
+
+    @property
+    def karapace_relation(self) -> Optional[Relation]:
+        """Return the karapace relation if present."""
+        return self.karapace.relations[0] if len(self.karapace.relations) else None
 
     @property
     def etcd_relation(self) -> Optional[Relation]:
@@ -900,6 +995,12 @@ class IntegratorCharm(CharmBase):
             return self.kafka.fetch_relation_field(relation.id, "topic")
 
     @property
+    def subject_active(self) -> Optional[str]:
+        """Return the configured subject name."""
+        if relation := self.karapace_relation:
+            return self.karapace.fetch_relation_field(relation.id, "subject")
+
+    @property
     def index_active(self) -> Optional[str]:
         """Return the configured index name."""
         if relation := self.opensearch_relation:
@@ -985,6 +1086,11 @@ class IntegratorCharm(CharmBase):
     def is_kafka_related(self) -> bool:
         """Return if a relation with kafka is present."""
         return self._check_for_credentials(self.kafka)
+
+    @property
+    def is_karapace_related(self) -> bool:
+        """Return if a relation with karapace is present."""
+        return self._check_for_credentials(self.karapace)
 
     @property
     def is_opensearch_related(self) -> bool:

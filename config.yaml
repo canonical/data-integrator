@@ -10,6 +10,10 @@ options:
     type: string
     default:
     description: The topic name for which the access is granted (this parameter is needed for Kafka).
+  subject-name:
+    type: string
+    default:
+    description: The subject name for which the access is granted (this parameter is needed for Karapace).
   index-name:
     type: string
     default:

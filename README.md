@@ -11,13 +11,14 @@ This charm allows a user to automatically create and manage product credentials 
 * [MySQL](https://github.com/canonical/mysql-operator)
 * [PostgreSQL](https://github.com/canonical/postgresql-operator)
 * [Kafka](https://github.com/canonical/kafka-operator)
+* [Karapace](https://github.com/canonical/karapace-operator)
 * [OpenSearch](https://github.com/canonical/opensearch-operator)
 * [etcd](https://github.com/canonical/charmed-etcd-operator)
 * [Cassandra](https://github.com/canonical/cassandra-operator)
 * [Valkey](https://github.com/canonical/valkey-operator)
 * [MLflow](https://github.com/canonical/mlflow-operator)
 
-It grants access to several charmed applications developed by the data-platform by handling the management of their credentials. In particular, a user can request access to a database (MySQL, PostgreSQL and MongoDB), a topic (Kafka), an index (OpenSearch), or workspaces (MLflow). Moreover, a user can require additional privileges by specifying extra-user-roles or entity-permissions.
+It grants access to several charmed applications developed by the data-platform by handling the management of their credentials. In particular, a user can request access to a database (MySQL, PostgreSQL and MongoDB), a topic (Kafka), a subject (Karapace), an index (OpenSearch), or workspaces (MLflow). Moreover, a user can require additional privileges by specifying extra-user-roles or entity-permissions.
 
 This charm enables applications or users outside Juju to connect with the desired charmed application by providing credentials and endpoints that are needed to use the desired product.
 
@@ -29,6 +30,8 @@ The supported configuration options are the following:
 database-name - `string`; The desired database name for which the access will be granted.
 
 topic-name - `string`; The topic name for which the access is granted.
+
+subject-name - `string`; The subject name for which the access is granted. [KARAPACE ONLY]
 
 index-name - `string`; The index name for which the access is granted. [OPENSEARCH ONLY]
 
@@ -47,17 +50,18 @@ extra-user-roles - `string`; a comma-separated list of values that contains the 
 extra-group-roles - `string`; a comma-separated list of values that contains the required extra roles `admin` in case of a database or opensearch, or `producer`, `consumer` in case of Kafka.
 
 
-| Product    | database-name      | topic-name         | index-name         | prefix-name        | keyspace-name      | entity-name        | entity-type         | entity-permissions | extra-user-roles   | extra-group-roles  |
-|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|---------------------|--------------------|--------------------|--------------------|
-| MySQL      | :heavy_check_mark: |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| PostgreSQL | :heavy_check_mark: |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| MongoDB    | :heavy_check_mark: |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Kafka      |                    | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
-| OpenSearch |                    |                    | :heavy_check_mark: |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| etcd       |                    |                    |                    | :heavy_check_mark: |                    |                    |                     |                    |                    |                    |
-| Cassandra  |                    |                    |                    |                    | :heavy_check_mark: |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
-| Valkey     |                    |                    |                    | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
-| MLflow     |                    |                    |                    |                    |                    | :heavy_check_mark: |                     | :heavy_check_mark: |                    |                    |
+| Product    | database-name      | topic-name         | subject-name       | index-name         | prefix-name        | keyspace-name      | entity-name        | entity-type         | entity-permissions | extra-user-roles   | extra-group-roles  |
+|------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|--------------------|---------------------|--------------------|--------------------|--------------------|
+| MySQL      | :heavy_check_mark: |                    |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| PostgreSQL | :heavy_check_mark: |                    |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| MongoDB    | :heavy_check_mark: |                    |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Kafka      |                    | :heavy_check_mark: |                    |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
+| Karapace   |                    |                    | :heavy_check_mark: |                    |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :heavy_check_mark: | :white_check_mark: |
+| OpenSearch |                    |                    |                    | :heavy_check_mark: |                    |                    |                    | :white_check_mark:  | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| etcd       |                    |                    |                    |                    | :heavy_check_mark: |                    |                    |                     |                    |                    |                    |
+| Cassandra  |                    |                    |                    |                    |                    | :heavy_check_mark: |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
+| Valkey     |                    |                    |                    |                    | :heavy_check_mark: |                    |                    | :white_check_mark:  | :white_check_mark: |                    |                    |
+| MLflow     |                    |                    |                    |                    |                    |                    | :heavy_check_mark: |                     | :heavy_check_mark: |                    |                    |
 
 :heavy_check_mark: -> mandatory field
 :white_check_mark: -> optional field
@@ -118,6 +122,12 @@ For Kafka, please configure the desired `topic-name`:
 juju config data-integrator topic-name=test-topic extra-user-roles=producer,consumer
 ```
 
+For Karapace, please configure the desired `subject-name`:
+
+```shell
+juju config data-integrator subject-name=test-subject extra-user-roles=admin
+```
+
 For OpenSearch, please configure the desired `index-name` and `extra-user-roles`:
 ```shell
 juju config data-integrator index-name=test-topic extra-user-roles=admin
@@ -157,7 +167,7 @@ When the relation is removed, the access with the previous credentials will be r
 juju remove-relation data-integrator <application>
 ```
 
-> If you need to modify `database-name`, `topic-name`, `index-name`, `entity-type`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation, change the desired fields, and then relate the data-integrator with the application again.
+> If you need to modify `database-name`, `topic-name`, `subject-name`, `index-name`, `entity-type`, `extra-user-roles` or `extra-group-roles` and the relation has been already established, you need to remove the relation, change the desired fields, and then relate the data-integrator with the application again.
 
 #### Database creation and deletion
 
@@ -300,6 +310,7 @@ Supported [relations](https://juju.is/docs/olm/relations):
 - `mysql_client`
 - `postgresql_client`
 - `kafka_client`
+- `karapace_client`
 - `opensearch_client`
 - `mlflow_client`
 
