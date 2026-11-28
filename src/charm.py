@@ -14,8 +14,10 @@ import logging
 import re
 from enum import Enum
 from typing import Dict, MutableMapping, Optional, Tuple, Union
+from urllib.parse import urlparse
 
 from charms.data_platform_libs.v0.data_interfaces import (
+    PLUGIN_URL_NOT_REQUIRED,
     DatabaseCreatedEvent,
     DatabaseEntityCreatedEvent,
     DatabaseRequires,
@@ -23,6 +25,8 @@ from charms.data_platform_libs.v0.data_interfaces import (
     EtcdRequires,
     IndexCreatedEvent,
     IndexEntityCreatedEvent,
+    IntegrationCreatedEvent,
+    KafkaConnectRequires,
     KafkaRequires,
     OpenSearchRequires,
     RequirerData,
@@ -53,7 +57,17 @@ from ops import (
     main,
 )
 
-from literals import CASSANDRA, DATABASES, ETCD, KAFKA, MLFLOW, OPENSEARCH, PEER, VALKEY
+from literals import (
+    CASSANDRA,
+    DATABASES,
+    ETCD,
+    KAFKA,
+    KAFKA_CONNECT,
+    MLFLOW,
+    OPENSEARCH,
+    PEER,
+    VALKEY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +178,19 @@ class IntegratorCharm(CharmBase):
         self.framework.observe(self.kafka.on.topic_entity_created, self._on_entity_created)
         self.framework.observe(self.on[KAFKA].relation_broken, self._on_relation_broken)
 
+        # Kafka Connect
+        self.connect = KafkaConnectRequires(
+            self,
+            relation_name=KAFKA_CONNECT,
+            plugin_url=self.plugin_url
+            if self.plugin_url and self._is_plugin_url_valid(self.plugin_url)
+            else PLUGIN_URL_NOT_REQUIRED,
+        )
+        self.framework.observe(
+            self.connect.on.integration_created, self._on_connect_integration_created
+        )
+        self.framework.observe(self.on[KAFKA_CONNECT].relation_broken, self._on_relation_broken)
+
         # OpenSearch
         _entity_name, _entity_password = self.requested_entities_secret_content
         self.opensearch = OpenSearchRequires(
@@ -270,6 +297,8 @@ class IntegratorCharm(CharmBase):
 
         if relation := self.kafka_relation:
             return self.kafka.fetch_relation_field(relation.id, key)
+        if relation := self.connect_relation:
+            return self.connect.fetch_relation_field(relation.id, key)
         if relation := self.opensearch_relation:
             return self.opensearch.fetch_relation_field(relation.id, key)
         if relation := self.etcd_relation:
@@ -282,6 +311,14 @@ class IntegratorCharm(CharmBase):
                 "Kafka",
                 "topic",
                 self.topic_active,
+            ),
+            (
+                self.is_connect_related
+                and self.plugin_url_active
+                and self.plugin_url_active != self.plugin_url,
+                "Kafka Connect",
+                "plugin-url",
+                self.plugin_url_active,
             ),
             (
                 self.is_opensearch_related and self.index_active != self.index_name,
@@ -343,6 +380,7 @@ class IntegratorCharm(CharmBase):
 
         if not any([
             self.topic_name,
+            self.plugin_url,
             self.database_name,
             self.index_name,
             self.prefix,
@@ -350,7 +388,7 @@ class IntegratorCharm(CharmBase):
             self.entity_name,
         ]):
             return BlockedStatus(
-                "Please specify either topic, index, database name, keyspace name, entity name, "
+                "Please specify either topic, plugin URL, index, database name, keyspace name, entity name, "
                 "or prefix"
             )
 
@@ -359,6 +397,9 @@ class IntegratorCharm(CharmBase):
                 f"Trying to pass an invalid topic value: {self.topic_name}, please pass an acceptable value instead"
             )
             return BlockedStatus("Please pass an acceptable topic value")
+
+        if self.plugin_url and not self._is_plugin_url_valid(self.plugin_url):
+            return BlockedStatus("Please pass an acceptable plugin-url value")
 
         if self.mlflow_relation:
             if not self.entity_name:
@@ -369,6 +410,7 @@ class IntegratorCharm(CharmBase):
         if not any([
             self.is_database_related,
             self.is_kafka_related,
+            self.is_connect_related,
             self.is_opensearch_related,
             self.is_etcd_related,
             self.is_cassandra_related,
@@ -406,6 +448,8 @@ class IntegratorCharm(CharmBase):
             self._on_config_changed_index()
         if self.prefix and (not self.prefix_active or self.mtls_client_cert):
             self._on_config_changed_prefix()
+        if self.plugin_url and not self.plugin_url_active:
+            self._on_config_changed_connect()
         # NOTE: for MLflow, grants (entity-permissions) are live-editable with immediate effect on
         # the provider's side, while only entity-name changes require relation recreation, so
         # grants are (re)pushed to the existing relation when they drift from the committed ones:
@@ -458,6 +502,15 @@ class IntegratorCharm(CharmBase):
 
         for rel in self.kafka.relations:
             self.kafka.update_relation_data(rel.id, topic_relation_data)
+
+    def _on_config_changed_connect(self) -> None:
+        """Handle on config changed for Kafka Connect entity events."""
+        if not self._is_plugin_url_valid(self.plugin_url):
+            return
+
+        # entity_type/entity_name/roles is meaningless for connect
+        for rel in self.connect.relations:
+            self.connect.update_relation_data(rel.id, {"plugin-url": self.plugin_url})
 
     def _on_config_changed_index(self) -> None:
         """Handle on config changed index event."""
@@ -576,18 +629,19 @@ class IntegratorCharm(CharmBase):
             "grants": self._render_mlflow_grants(request.entity_permissions),
         }
 
-    def _on_get_credentials_action(self, event: ActionEvent) -> None:
+    def _on_get_credentials_action(self, event: ActionEvent) -> None:  # noqa: C901
         """Returns the credentials an action response."""
         if not any([
             self.database_name,
             self.topic_name,
+            self.plugin_url,
             self.index_name,
             self.prefix,
             self.keyspace_name,
             self.entity_name,
         ]):
             event.fail(
-                "The database name, topic name, index name, keyspace name, entity name, or prefix "
+                "The database name, topic name, plugin URL, index name, keyspace name, entity name, or prefix "
                 "is not specified in the config."
             )
             event.set_results({"ok": False})
@@ -596,6 +650,7 @@ class IntegratorCharm(CharmBase):
         if not any([
             self.is_database_related,
             self.is_kafka_related,
+            self.is_connect_related,
             self.is_opensearch_related,
             self.is_etcd_related,
             self.is_cassandra_related,
@@ -613,6 +668,9 @@ class IntegratorCharm(CharmBase):
 
         if self.is_kafka_related:
             result[KAFKA] = list(self.kafka.fetch_relation_data().values())[0]
+
+        if self.is_connect_related:
+            result[KAFKA_CONNECT] = list(self.connect.fetch_relation_data().values())[0]
 
         if self.is_opensearch_related:
             result[OPENSEARCH] = list(self.opensearch.fetch_relation_data().values())[0]
@@ -649,6 +707,12 @@ class IntegratorCharm(CharmBase):
     def _on_topic_created(self, event: TopicCreatedEvent) -> None:
         """Event triggered when a topic was created for this application."""
         logger.debug(f"Kafka credentials are received: {event.username}")
+        self._on_config_changed(event)
+        # update status of the relations in the peer-databag
+        self._update_relation_status(event.relation, Statuses.ACTIVE.name)
+
+    def _on_connect_integration_created(self, event: IntegrationCreatedEvent) -> None:
+        """Event triggered when a Kafka Connect integration was created for this application."""
         self._on_config_changed(event)
         # update status of the relations in the peer-databag
         self._update_relation_status(event.relation, Statuses.ACTIVE.name)
@@ -713,6 +777,11 @@ class IntegratorCharm(CharmBase):
     def topic_name(self) -> Optional[str]:
         """Return the configured topic name."""
         return self.model.config.get("topic-name", None)
+
+    @property
+    def plugin_url(self) -> Optional[str]:
+        """Return the configured plugin URL."""
+        return self.model.config.get("plugin-url", None)
 
     @property
     def index_name(self) -> Optional[str]:
@@ -805,6 +874,11 @@ class IntegratorCharm(CharmBase):
     def kafka_relation(self) -> Optional[Relation]:
         """Return the kafka relation if present."""
         return self.kafka.relations[0] if len(self.kafka.relations) else None
+
+    @property
+    def connect_relation(self) -> Optional[Relation]:
+        """Return the Kafka Connect relation if present."""
+        return self.connect.relations[0] if len(self.connect.relations) else None
 
     @property
     def etcd_relation(self) -> Optional[Relation]:
@@ -900,6 +974,12 @@ class IntegratorCharm(CharmBase):
             return self.kafka.fetch_relation_field(relation.id, "topic")
 
     @property
+    def plugin_url_active(self) -> Optional[str]:
+        """Return the configured plugin URL."""
+        if relation := self.connect_relation:
+            return self.connect.fetch_my_relation_field(relation.id, "plugin-url")
+
+    @property
     def index_active(self) -> Optional[str]:
         """Return the configured index name."""
         if relation := self.opensearch_relation:
@@ -981,10 +1061,36 @@ class IntegratorCharm(CharmBase):
 
         return False
 
+    @staticmethod
+    def _is_plugin_url_valid(plugin_url: str) -> bool:
+        """Check if provided plugin-url is valid or not."""
+        if not plugin_url.strip():
+            return False
+
+        if plugin_url == PLUGIN_URL_NOT_REQUIRED:
+            return True
+
+        try:
+            result = urlparse(plugin_url)
+            if result.scheme not in ("http", "https"):
+                return False
+
+            if not result.netloc:
+                return False
+
+            return True
+        except ValueError:
+            return False
+
     @property
     def is_kafka_related(self) -> bool:
         """Return if a relation with kafka is present."""
         return self._check_for_credentials(self.kafka)
+
+    @property
+    def is_connect_related(self) -> bool:
+        """Return True if a relation with Kafka Connect is present."""
+        return self._check_for_credentials(self.connect)
 
     @property
     def is_opensearch_related(self) -> bool:

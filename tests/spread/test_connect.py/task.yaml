@@ -1,0 +1,7 @@
+summary: test_connect.py
+environment:
+  TEST_MODULE: test_connect.py
+variants:
+  - juju36_lxd
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --controller "$CONTROLLER_NAME" --model testing

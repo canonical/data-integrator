@@ -16,6 +16,8 @@ MONGODB = {"localhost": "mongodb", "k8s": "mongodb-k8s"}
 DATABASE_NAME = "test_database"
 
 KAFKA = {"localhost": "kafka", "k8s": "kafka-k8s"}
+KAFKA_CONNECT = {"localhost": "kafka-connect", "k8s": "kafka-connect-k8s"}
+PLUGIN_URL_NOT_REQUIRED = "NOT-REQUIRED"
 ZOOKEEPER = {"localhost": "zookeeper", "k8s": "zookeeper-k8s"}
 TOPIC_NAME = "test_topic"
 KAFKA_EXTRA_USER_ROLES = "producer,consumer,admin"
